@@ -79,7 +79,7 @@ int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int proto
 			if ((err = HID_ReadReport(rsp)))
 				break;
 
-			const uint8_t r=rsp[1]&0xF0;
+			const uint8_t r=rsp[1]&COMMAND_MASK;
 
 			if (r==RESPONSE_READ_FLASH_DATA) {
 				if (seq!=rsp[2]) {
@@ -89,7 +89,7 @@ int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int proto
 					break;
 				}
 				seq+=0x11;
-				const unsigned int rxlen=rxlenmap[rsp[1]&0x0F];
+				const unsigned int rxlen=rxlenmap[rsp[1]&LENGTH_MASK];
 				//ASSERT(rxlen);
 				//TRACE2("%06X %i\n",addr,rxlen);
 				if (rxlen) {
@@ -193,11 +193,15 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 {
 #ifdef WIN32
 	GetConsoleScreenBufferInfo(con,&sbi);
+#else
+	printf("              ");
 #endif
 
-	static const unsigned int txlenmap[] =
-		{ 0x0A, 63, 30, 14, 6, 5, 4, 3, 2,1 };
-	/// todo: map for safe mode (protocol 0)
+	static const unsigned int txlenmap0[] =
+		{ 0x07, 7, 6, 5, 4, 3, 2, 1 };
+	static const unsigned int txlenmapx[] =
+		{ 0x0A, 63, 31, 15, 7, 6, 5, 4, 3, 2, 1 };
+	const unsigned int *txlenmap = protocol ? txlenmapx : txlenmap0;
 
 	const uint8_t *pw=wr;
 	const uint32_t end=addr+len;
@@ -205,10 +209,6 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 	int err = 0;
 
 	do {
-		/*
-		 * FIXME: This can probably be abstracted and ReadFlash()
-		 * and WriteFlash() can both use some function to set this up
-		 */
 		static uint8_t write_setup_cmd[8];
 		write_setup_cmd[0] = 0;
 		write_setup_cmd[1] = COMMAND_WRITE_FLASH | 0x05;
@@ -227,7 +227,7 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 		while (chunk_len) {
 			unsigned int n=txlenmap[0];
 			unsigned int i=1;
-			//while (chunk_len < txlenmap[i]) ++i, --n;
+			while (chunk_len < txlenmap[i]) ++i, --n;
 			unsigned int block_len=txlenmap[i];
 			uint8_t wd[68];
 			wd[0] = 0;
@@ -238,9 +238,8 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 			pw += block_len;
 			addr += block_len;
 			bytes_written += block_len;
-			//chunk_len -= block_len;
-			chunk_len = (chunk_len<block_len)
-				? 0 : chunk_len-block_len;
+			chunk_len -= block_len;
+			//chunk_len = (chunk_len<block_len) ? 0 : chunk_len-block_len;
 		}
 		
 		uint8_t end_cmd[3] = { 0x00, COMMAND_DONE, 0x30 };
@@ -257,9 +256,9 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 		printf("%3i%%  %4i KiB",bytes_written*100/len,
 			bytes_written>>10);
 #else
-		//printf("%3i%%  %4i KiB",bytes_written*100/len,
-		//	bytes_written>>10);
-		printf("*");
+		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3i%%  %4i KiB",
+			bytes_written*100/len,bytes_written>>10);
+		//printf("*");
 #endif
 	} while (addr < end);
 
@@ -291,7 +290,7 @@ int LearnIR(string *learn_string)
 		uint8_t rsp[68];
 		if ((err = HID_ReadReport(rsp,ir_word ? 500 : 4000)))
 			break;
-		const uint8_t r=rsp[1]&0xF0;
+		const uint8_t r=rsp[1]&COMMAND_MASK;
 		if (r == COMMAND_IRCAP_DATA) {
 			if (rsp[2] != seq) {
 				if (rsp[2] == 0x1F && seq == 0x10) {
@@ -363,7 +362,7 @@ int LearnIR(string *learn_string)
 				err = 3;
 				break;
 			}
-		} else if (r == 0xF0) {
+		} else if (r == RESPONSE_DONE) {
 			break;
 		} else {
 			printf("\nInvalid response [%02X]\n",rsp[1]);

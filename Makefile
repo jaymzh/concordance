@@ -43,8 +43,13 @@ install:
 	$(INSTALL) -D --mode=755 harmony $(BINDIR)/harmony
 
 clean:
-	/bin/rm -rf harmony
-	/bin/rm -rf strip
+	/bin/rm -f harmony
+	/bin/rm -f strip
+	/bin/rm -f snoop/snoop
 
 uninstall:
-	/bin/rm -rf $(BIN)/harmony
+	/bin/rm -f $(BIN)/harmony
+
+snoop: snoop/snoop.cpp
+	$(CXX) $(CXXFLAGS) snoop/snoop.cpp -o snoop/snoop $(CPPFLAGS)
+

@@ -33,6 +33,12 @@
  */
 
 /*
+ * Masks for command nibble and length nibble
+ */
+#define COMMAND_MASK 0xF0
+#define LENGTH_MASK 0x0F
+
+/*
  * Base commands one can send to the Harmony
  */
 #define COMMAND_INVALID 0x00

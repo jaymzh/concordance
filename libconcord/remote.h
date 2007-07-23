@@ -58,6 +58,9 @@ struct TRemoteInfo {
 	uint8_t			protocol;
 	const TModel	*model;
 	string			serial[3];
+	bool			valid_config;
+	uint32_t		config_bytes_used;
+	uint32_t		max_config_size;
 };
 
 int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);

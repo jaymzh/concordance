@@ -25,126 +25,139 @@
 #include "web.h"
 #include "protocol.h"
 #include <iostream>
-#include <getopt.h>
 
 #ifdef WIN32
+#include "win/getopt/getopt.h"
 #include <conio.h>
 #include <winsock.h>
 HANDLE con;
 CONSOLE_SCREEN_BUFFER_INFO sbi;
+#else
+#include <getopt.h>
 #endif
 
-#define VERSION "0.8"
+#define VERSION "0.9"
+
+#define MODE_UNSET 0
+#define MODE_CONNECTIVITY 1
+#define MODE_DUMP_CONFIG 2
+#define MODE_WRITE_CONFIG 3
+#define MODE_DUMP_FIRMWARE 4
+#define MODE_WRITE_FIRMWARE 5
+#define MODE_DUMP_SAFEMODE 6
+#define MODE_HELP 7
+#define MODE_LEARN_IR 8
+#define MODE_RESET 9
 
 struct options_t {
-	bool config;
-	bool firmware;
-	bool connect;
-	bool safemode;
-	bool write;
 	bool binary;
-	bool learn;
-	bool reset;
 	bool verbose;
-	bool help;
 };
 
-
+void set_mode(int &mode, int val)
+{
+	if (mode == MODE_UNSET) {
+		mode = val;
+	} else {
+		cerr << "ERROR: More than one mode specified. Please specify"
+			<< " only one.\n";
+		exit(1);
+	}
+}
+		
+		
 /*
  * Parse our options.
- *
- *   This probably isn't very cross-platform. Dunno if gnu's getopt
- *   is available in windows - we may have to include getopt with our
- *   distribution.
- *
- *   There's also stuff like SimpleOpt thats cross-platform...
- *
- *   Dunno...
  */
-void parse_options(struct options_t &options, char *file_name, int argc,
-	char *argv[])
+void parse_options(struct options_t &options, int &mode, char *&file_name,
+	int argc, char *argv[])
 {
 
 	static struct option long_options[] = {
 		{"binary", no_argument, 0, 'b'},
-		{"config", no_argument, 0, 'c'},
-		{"connect", required_argument, 0, 'C'},
-		{"firmware", no_argument, 0, 'f'},
+		{"dump-config", optional_argument, 0, 'c'},
+		{"write-config", required_argument, 0, 'C'},
+		{"dump-firmware", optional_argument, 0, 'f'},
+		{"write-firmware", required_argument, 0, 'F'},
 		{"help", no_argument, 0, 'h'},
-		{"learn", optional_argument, 0, 'l'},
+		{"learn-ir", required_argument, 0, 'l'},
 		{"reset", no_argument, 0, 'r'},
-		{"safemode", no_argument, 0, 's'},
+		{"dump-safemode", optional_argument, 0, 's'},
+		{"connectivity-test", required_argument, 0, 't'},
 		{"verbose", no_argument, 0, 'v'},
-		{"write", required_argument, 0, 'w'},
 		{0,0,0,0} // terminating null entry
 	};
 
-	options.config = false;
-	options.firmware = false;
-	options.connect = false;
-	options.safemode = false;
-	options.write = false;
-	options.binary = false;
-	options.learn = false;
-	options.reset = false;
 	options.verbose = false;
-	options.help = false;
+	options.binary = false;
 
-	int tmpint = 0, option_index = 0;
+	mode = MODE_UNSET;
 
-	while ((tmpint = getopt_long(argc, argv, "bcC:fhl:rv", long_options,
-					&option_index)) != EOF) {
+	int tmpint = 0;
+
+	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl:rs::t:v",
+				long_options, NULL)) != EOF) {
 		switch (tmpint) {
 		case 0:
-			if (long_options[option_index].flag != 0)
-				break;
-
 			/* Long-only options go here */
 			break;
 		case 'b':
 			options.binary = true;
 			break;
 		case 'c':
-			options.config = true;
+			set_mode(mode, MODE_DUMP_CONFIG);
+			if (optarg != NULL) {
+				file_name = optarg;
+			}
 			break;
 		case 'C':
 			if (optarg == NULL) {
-				cerr << "Missing argument for -C\n";
+				cerr << "Missing config file to read from.\n";
 				exit(1);
 			}
+			set_mode(mode, MODE_WRITE_CONFIG);
 			file_name = optarg;
-			options.connect = true;
 			break;
 		case 'f':
-			options.firmware = true;
+			set_mode(mode, MODE_DUMP_FIRMWARE);
+			if (optarg != NULL)
+				file_name = optarg;
 			break;
+		case 'F':
+			if (optarg == NULL) {
+				cerr << "Missing firmware file to read from.\n";
+				exit(1);
+			}
+			set_mode(mode, MODE_WRITE_FIRMWARE);
 		case 'h':
-			options.help = true;
+			set_mode(mode, MODE_HELP);
 			break;
 		case 'l':
 			if (optarg == NULL) {
-				cerr << "Missing argument for -l\n";
+				cerr << "Missing LearnIR file to read from.\n";
 				exit(1);
 			}
+			set_mode(mode, MODE_LEARN_IR);
 			file_name = optarg;
-			options.learn = true;
 			break;
 		case 'r':
-			options.reset = true;
+			set_mode(mode, MODE_RESET);
 			break;
 		case 's':
-			options.safemode = true;
+			set_mode(mode, MODE_DUMP_SAFEMODE);
+			if (optarg != NULL)
+				file_name = optarg;
+			break;
+		case 't':
+			if (optarg == NULL) {
+				cerr << "Missing LearnIR file to read from.\n";
+				exit(1);
+			}
+			set_mode(mode, MODE_CONNECTIVITY);
+			file_name = optarg;
 			break;
 		case 'v':
 			options.verbose = true;
-			break;
-		case 'w':
-			if (optarg == NULL) {
-				cerr << "Missing argument for -w\n";
-				exit(1);
-			}
-			file_name = optarg;
-			options.write = true;
 			break;
 		default:
 			exit(1);
@@ -152,112 +165,39 @@ void parse_options(struct options_t &options, char *file_name, int argc,
 	}
 
 	/*
-	 * For starters, lets make sure we don't have conflicting options.
-	 * If we're writing, we can only write one thing at a time, and
-	 * certain things can't be written.
-	 */
-
-	/*
-	 *   FIXME: Rather than track all of this and trying to allow a user
-	 *      to do multiple things and potentially do bad we should have
-	 *      modes... see the TODO for the possible UI setups being
-	 *      considered.
-	 *
-	 *      - Phil
-	 */
-	if (options.write && options.config && options.firmware) {
-		cerr << "Please specify only one thing to write at a time.\n";
-		exit(1);
-	}
-
-	if (options.write && (options.learn || options.connect
-							|| options.reset)) {
-		cerr << "You specified write with something unwritable,"
-			<< " ignoring write flag\n";
-		options.write = false;
-	}
-
-	/*
 	 * Now, in case someone passed in just a filename, check arguments
 	 */
-	if (optind < argc) {
-		if (option_index + 1 < argc) {
-			cerr << "Multiple arguments were specified after the"
-				<< " options - not sure what to do, exiting\n";
-			exit(1);
-		}
-		if (!file_name) {
-			file_name = argv[option_index];
+	if (mode == MODE_UNSET) {
+		if (optind < argc) {
+			if (optind + 1 < argc) {
+				cerr << "Multiple arguments were specified"
+					<< " after the options - not sure what"
+					<< " to do, exiting\n";
+				exit(1);
+			}
+
+			file_name = argv[optind];
 			/*
 			 * If no filename is set, and we have a filename,
 			 * we're being expected to figure it out on our own!
 			 */
 			if (!stricmp(file_name,"connectivity.ezhex")) {
-				options.connect=true;
+				mode = MODE_CONNECTIVITY;
 			} else if (!stricmp(file_name,"update.ezhex")) {
-				options.config=true;
-				options.write=true;
+				mode = MODE_WRITE_CONFIG;
 			} else if (!stricmp(file_name,"learnir.eztut")) {
-				options.learn=true;
+				mode = MODE_LEARN_IR;
 			} else {
 				cerr << "Don't know what to do with"
 					<< file_name << endl;
 				exit(1);
 			}
-		}
-	}
-
-/*
- * The following is commented out because I don't know of getopt.h
- * is easily available in winblows, and we want to keep this cross-platform.
- * So I've moved to getopt in hopes that it is, but kept the original code
- * around incase it isn't. TDB.
- * 	- Phil
- */
-#if 0
-	for (int arg=1; arg<argc; ++arg) {
-		char *a=argv[arg];
-		if (*a == '-') {
-			++a;
-			if (!strcmp("config",a)) {
-				option_config=true;
-			} else if (!strcmp("firmware",a)) {
-				option_firmware=true;
-			} else if (!strcmp("safemode",a)) {
-				option_safemode=true;
-			} else if (!strcmp("connect",a)) {
-				option_connect=true;
-			} else if (!strcmp("write",a)) {
-				option_write=true;
-			} else if (!strcmp("binary",a)) {
-				option_binary=true;
-			} else if (!strcmp("learn",a)) {
-				option_learn=true;
-			} else if (!strcmp("reset",a)) {
-				option_reset=true;
-			} else if (!strcmp("v",a)) {
-				option_verbose=true;
-			}
 		} else {
-			if (!file_name) file_name=a;
+			cerr << "No file specified, and no mode specified..."
+				<< " nothing to do.\n";
+			exit(0);
 		}
 	}
-
-	if (file_name) {
-		if (!stricmp(file_name,"connectivity.ezhex")) {
-			option_connect=true;
-		} else if (!stricmp(file_name,"update.ezhex")) {
-			option_config=true;
-			option_write=true;
-		} else if (!stricmp(file_name,"learnir.eztut")) {
-			option_learn=true;
-		} else {
-			printf("WARNING: Don't know what to do with %s\n\n",
-				file_name);
-		}
-	}
-
-#endif
 }
 
 void make_guid(const uint8_t * const in, string& out)
@@ -274,43 +214,62 @@ void help()
 {
 
 	//cout << "Harmony Control " << VERSION << endl;
-	cout << "Usage:\n\tharmony <options>\n\tharmony <file>\n\n";
-	cout << "If a file is passed in instead of options, harmony will"
-		<< "attempt\nto determine the filetype and do the right"
-		<< "thing with it.\n\n";
+	cout << "There are two ways to invoke this software. You can specify"
+		<< " what you want\nto do:\n";
+	cout << "\tharmony <options>\n\n";
+	cout << "Or you can let the software attempt to figure out what to"
+		<< " do for you:\n";
+	cout << "\tharmony <file>\n\n";
 
-	cout << "Options:\n"
-		<< "\t--config\t\tRead the remote's config and write it to\n"
-		<< "\t\t\t\tconfig.EZHex. If --write is specified, read a"
-		<< " config\n"
-		<< "\t\t\t\tfrom the specified file and write it to the"
-		<< " remote\n";
+	cout << "In automatic mode, just pass in the file, and the software\n"
+		<< " will use the filename to figure out the proper mode.\n\n";
 
-	cout << "\t--firmware\t\tRead and remote's firmware and write it"
-		<< " to\n"
-		<< "\t\t\t\tfirmware.EZUp. If --write is specified,\n"
-		<< "\t\t\t\tread the firmware from the specified file and"
-		<< " write\n"
-		<< "\t\t\t\tit to the remote. Writing is not currently"
-		<< " supported.\n";
+	cout << "When specifying options, you must first choose a mode:\n\n";
 
-	cout << "\t--safemode\t\tRead safemode firmware and write it to\n"
-		<< "\t\t\t\tsafe.bin.\n";
+	cout << "   -c, --dump-config [<filename>]\n"
+		<< "\tRead the config from the remote and write it to a file."
+		<< "\n\tIf no filename is specified, config.EZHex is used.\n\n";
+	cout << "   -C, --write-config <filename>\n"
+		<< "\tRead a config from <filename> and write it to the"
+		<< " remote.\n\n";
+	cout << "   -f, --dump-firmware [<filename>]\n"
+		<< "\tRead firmware from the remote and write it to a file.\n"
+		<< "\tIf no filename is specified firmware.EZUp is used.\n\n";
+	cout << "   -F, --write-firmware <filename>\n"
+		<< "\tRead firmware from <filename> and write it to the"
+		<< " remote\n\n";
+	cout << "   -s, --dump-safemode [<filename>]\n"
+		<< "\tRead the safemode firmware from the remote and write it"
+		<< " to a file.\n\tIf no filename is psecified, safe.bin is"
+		<< " used.\n\n";
+	cout << "   -t, --connectivity-test <filename>\n"
+		<< "\tDo a connectivity test using <filename>\n\n";
+	cout << "   -r, --reset\n"
+		<< "\tReset (power-cycle) the remote control\n\n";
+	cout << "   -h, --help\n"
+		<< "\tPrint this help message and exit.\n\n";
+	cout << "   -l, --learn-ir <filename>\n"
+		<< "\t Learn IR from other remotes. Use <filename>.\n\n";
 
-	cout << "\t--connect <file>\tDo a connectivity test.\n";
+	cout << "NOTE: If using the short options (e.g. -c), then *optional*"
+		<< " arguements\nmust be adjacent: -c/path/to/file."
+		<< " Required arguments don't have this\nlimitation, and can"
+		<< " be specified -C /path/to/file or -C/path/to/file.\n\n";
 
-	cout << "\t--write <file>\t\tDefines another option as being in"
-		<< " write mode\n\t\t\t\tinstead of read mode\n";
+	cout << "Additionally, you can specify options to adjust the behavior"
+		<< "of the software:\n\n";
 
-	cout << "\t--binary\t\tThe config file is already truncated\n"
-		<< "\t\t\t\tto just the binary portions. If in --write mode\n"
-		<< "\t\t\t\tthen write binary only portion out to .bin file\n";
+	cout << "  -b, --binary-only\n"
+		<< "\tWhen dumping a config or firmware, this specifies to dump"
+		<< "only the\n\tbinary portion. When use without a specific"
+		<< "filename, the default\n\tfilename's extension is changed to"
+		<< " .bin.\n"
+		<< "\tWhen writing a config or firmware, this specifies the"
+		<< "filename\n\tpassed in has just the binary blob, not the"
+		<< "XML.\n\n";
 
-	cout<< "\t--learn [<file>]\tLearn IR commands from other remotes\n";
-
-	cout << "\t--reset\t\t\tReboot the remote\n";
-
-	cout << "\t--verbose\t\tVerbose mode\n";
+	cout << "  -v, --verbose\n"
+		<< "\tEnable verbose output.\n\n";
 }
 
 /*
@@ -318,8 +277,7 @@ void help()
  *
  * Then populate our struct with all the relevant info.
  */
-int get_version_info(TRemoteInfo &ri, uint8_t *ser, uint32_t &cookie,
-			uint32_t &end)
+int get_version_info(TRemoteInfo &ri)
 {
 	int err = 0;
 
@@ -370,6 +328,7 @@ int get_version_info(TRemoteInfo &ri, uint8_t *ser, uint32_t &cookie,
 	ri.model = (ri.skin<max_model)
 			? &ModelList[ri.skin] : &ModelList[max_model];
 
+
 	printf("\nReading Flash... ");
 	uint8_t rd[1024];
 	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol))) {
@@ -377,23 +336,36 @@ int get_version_info(TRemoteInfo &ri, uint8_t *ser, uint32_t &cookie,
 		return 1;
 	}
 
-	// Calculate end
-	end = rd[ri.arch->end_vector]
-			| (rd[ri.arch->end_vector+1]<<8)
-			| (rd[ri.arch->end_vector+2]<<16);
-
 	// Calculate cookie
-	cookie = (ri.arch->cookie_size == 2)
+	const uint32_t cookie = (ri.arch->cookie_size == 2)
 			? rd[0]|(rd[1]<<8)
 			: rd[0]|(rd[1]<<8)|(rd[2]<<16)|(rd[3]<<24);
-	//TRACE1("Cookie: %08X\n",cookie);
-	//ASSERT(cookie == ri.arch->cookie);
 
+	ri.valid_config = (cookie == ri.arch->cookie);
+
+	if(ri.valid_config) {
+		ri.max_config_size = (ri.flash->size<<10)
+			- (ri.arch->config_base - ri.arch->flash_base);
+		const uint32_t end = rd[ri.arch->end_vector]
+				| (rd[ri.arch->end_vector+1]<<8)
+				| (rd[ri.arch->end_vector+2]<<16);
+		ri.config_bytes_used =
+			(end - (ri.arch->config_base - ri.arch->flash_base)) + 4;
+	} else {
+		ri.config_bytes_used=0;
+		ri.max_config_size=1;
+	}
+		
 	// read serial
+	uint8_t ser[48];
 	if ((err=ReadFlash(0x000110,48,ser,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
+
+	make_guid(ser,ri.serial[0]);
+	make_guid(ser+16,ri.serial[1]);
+	make_guid(ser+32,ri.serial[2]);
 
 	printf("\n");
 
@@ -404,8 +376,8 @@ int get_version_info(TRemoteInfo &ri, uint8_t *ser, uint32_t &cookie,
 /*
  * Print all version info in a format readable by humans.
  */
-int print_version_info(TRemoteInfo &ri, bool &option_verbose,
-			THIDINFO &hid_info, uint8_t *ser)
+int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
+					   struct options_t &options)
 {
 	if (ri.model->code_name) {
 		printf("            Model: %s %s (%s)\n",ri.model->mfg,
@@ -415,17 +387,17 @@ int print_version_info(TRemoteInfo &ri, bool &option_verbose,
 			ri.model->model);
 	}
 
-	if (option_verbose)
+	if (options.verbose)
 		printf("             Skin: %i\n",ri.skin);
 
 	printf(" Firmware Version: %i.%i\n",ri.fw_ver>>4, ri.fw_ver&0x0F);
 
-	if (option_verbose)
+	if (options.verbose)
 		printf("    Firmware Type: %i\n",ri.fw_type);
 
 	printf(" Hardware Version: %i.%i\n",ri.hw_ver>>4, ri.hw_ver&0x0F);
 
-	if (option_verbose) {
+	if (options.verbose) {
 		if ((ri.flash->size&0x03FF) == 0 && (ri.flash->size>>10)!=0) {
 			printf("   External Flash: %i MiB - %02X:%02X %s\n",
 				ri.flash->size>>10,ri.flash_mfg,
@@ -437,13 +409,13 @@ int print_version_info(TRemoteInfo &ri, bool &option_verbose,
 		}
 	}
 
-	if (option_verbose)
+	if (options.verbose)
 		printf("     Architecture: %i\n",ri.architecture);
 
-	if (option_verbose)
+	if (options.verbose)
 		printf("         Protocol: %i\n",ri.protocol);
 
-	if (option_verbose) {
+	if (options.verbose) {
 		printf("\n");
 		printf("     Manufacturer: %s\n",hid_info.mfg.c_str());
 		printf("          Product: %s\n",hid_info.prod.c_str());
@@ -464,15 +436,20 @@ int print_version_info(TRemoteInfo &ri, bool &option_verbose,
 		return 1;
 	}
 
-	make_guid(ser,ri.serial[0]);
-	make_guid(ser+16,ri.serial[1]);
-	make_guid(ser+32,ri.serial[2]);
-	if (option_verbose) {
+	if (options.verbose) {
 		printf("\n    Serial Number: %s\n",
 			ri.serial[0].c_str());
 		printf("                   %s\n",ri.serial[1].c_str());
 		printf("                   %s\n",ri.serial[2].c_str());
 	}
+
+	if (ri.valid_config)
+		printf("\nConfig Flash Used: %i%% (%i of %i KiB)\n",
+			(ri.config_bytes_used*100+99) / ri.max_config_size,
+			(ri.config_bytes_used+1023)>>10,
+			(ri.max_config_size+1023)>>10);
+	else
+		printf("\nInvalid config!\n");
 
 	return 0;
 }
@@ -480,46 +457,30 @@ int print_version_info(TRemoteInfo &ri, bool &option_verbose,
 /*
  * Pull the config from the remote and write it to a file
  */
-int dump_config(TRemoteInfo &ri, uint32_t &cookie, bool &option_verbose,
-		bool &option_binary, uint32_t &end)
+int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 {
 	int err = 0;
 
-	if (cookie!=ri.arch->cookie) {
-		printf("\nInvalid cookie %X %X\n",cookie,ri.arch->cookie);
-		printf("Can not read config\n");
+	if (!ri.valid_config) {
+		printf("\nInvalid config - can not read\n");
 		return 1;
-	}
-
-	const uint32_t flash_config_bytes = (ri.flash->size<<10)
-		- (ri.arch->config_base - ri.arch->flash_base);
-	const uint32_t flash_config_bytes_used =
-		(end - (ri.arch->config_base - ri.arch->flash_base)) + 4;
-	const uint32_t flash_config_percent_used =
-		(flash_config_bytes_used*100+99) / flash_config_bytes;
-
-	if (option_verbose) {
-		printf("\nConfig Flash Used: %i%% (%i of %i KiB)\n",
-			flash_config_percent_used,
-			(flash_config_bytes_used+1023)>>10,
-			(flash_config_bytes+1023)>>10);
 	}
 
 	printf("\nReading Config ");
 
-	uint8_t *config = new uint8_t[flash_config_bytes_used];
-	if ((err = ReadFlash(ri.arch->config_base, flash_config_bytes_used,
+	uint8_t *config = new uint8_t[ri.config_bytes_used];
+	if ((err = ReadFlash(ri.arch->config_base, ri.config_bytes_used,
 			config,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
 
 	binaryoutfile of;
-	if (option_binary) {
-		of.open("config.bin");
-		of.write(config,flash_config_bytes_used);
+	if (options.binary) {
+		of.open((file_name) ? file_name : "config.bin");
+		of.write(config,ri.config_bytes_used);
 	} else {
-		uint32_t u = flash_config_bytes_used;
+		uint32_t u = ri.config_bytes_used;
 		uint8_t chk = 0x69;
 		uint8_t *pc = config;
 		while (u--)
@@ -536,11 +497,11 @@ int dump_config(TRemoteInfo &ri, uint32_t &cookie, bool &option_verbose,
 			ri.flash_mfg,ri.flash_id,
 			ri.hw_ver>>4,ri.hw_ver&0x0F,
 			ri.fw_type,
-			flash_config_bytes_used,chk);
-		of.open("config.EZHex");
+			ri.config_bytes_used,chk);
+		of.open(file_name ? file_name : "config.EZHex");
 		of.write(reinterpret_cast<uint8_t*>(ch),
 			chlen);
-		of.write(config,flash_config_bytes_used);
+		of.write(config,ri.config_bytes_used);
 	}
 	of.close();
 
@@ -577,12 +538,12 @@ int connect_test(TRemoteInfo &ri, char *file_name)
 /*
  * Read the config from a file and write it to the remote
  */
-int write_config(TRemoteInfo &ri, char *file_name, bool &option_binary)
+int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 {
 	int err = 0;
 	binaryinfile file;
 
-	if (option_binary) {
+	if (options.binary) {
 		file.open(file_name?file_name:"config.bin");
 	} else {
 		file.open(file_name?file_name:"Config.EZHex");
@@ -596,7 +557,7 @@ int write_config(TRemoteInfo &ri, char *file_name, bool &option_binary)
 
 	uint8_t *y=x;
 
-	if (!option_binary) {
+	if (!options.binary) {
 		/*
 		 * If we were passed in a full XML file, parse it, check
 		 * that the size/checksum reported in it matches the binary
@@ -660,7 +621,7 @@ int write_config(TRemoteInfo &ri, char *file_name, bool &option_binary)
 		return 1;
 	}
 
-	if (file_name && !option_binary)
+	if (file_name && !options.binary)
 		Post(x,"COMPLETEPOSTOPTIONS",ri);
 
 	delete[] x;
@@ -668,7 +629,7 @@ int write_config(TRemoteInfo &ri, char *file_name, bool &option_binary)
 	return 0;
 }
 
-int dump_safemode(TRemoteInfo &ri)
+int dump_safemode(TRemoteInfo &ri, char *file_name)
 {
 	binaryoutfile of;
 	uint8_t * const safe = new uint8_t[64*1024];
@@ -682,7 +643,7 @@ int dump_safemode(TRemoteInfo &ri)
 		return 1;
 	}
 
-	of.open("safe.bin");
+	of.open((file_name) ? file_name : "safe.bin");
 	of.write(safe,64*1024);
 	of.close();
 
@@ -691,7 +652,7 @@ int dump_safemode(TRemoteInfo &ri)
 	return 0;
 }
 
-int dump_firmware(TRemoteInfo &ri, bool &option_binary)
+int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 {
 	binaryoutfile of;
 	int err = 0;
@@ -704,8 +665,8 @@ int dump_firmware(TRemoteInfo &ri, bool &option_binary)
 		return 1;
 	}
 
-	if (option_binary) {
-		of.open("firmware.bin");
+	if (options.binary) {
+		of.open((file_name) ? file_name : "firmware.bin");
 		of.write(firmware,64*1024);
 	} else {
 		/// todo: file header
@@ -718,7 +679,7 @@ int dump_firmware(TRemoteInfo &ri, bool &option_binary)
 
 		firmware[0] = firmware[1] = firmware[2] = firmware[3] = 0xFF;
 
-		of.open("firmware.EZUp");
+		of.open((file_name) ? file_name : "firmware.EZUp");
 
 		uint8_t *pf = firmware;
 		const uint8_t *fwend = firmware+64*1024;
@@ -772,6 +733,17 @@ int learn_ir_commands(TRemoteInfo &ri, char *file_name)
 	return 0;
 }
 
+int reset_harmony()
+{
+	int err;
+	uint8_t reset_cmd[]={ 0x00, COMMAND_RESET, COMMAND_RESET_DEVICE };
+
+	if ((err=HID_WriteReport(reset_cmd)))
+		return 1;
+
+	return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -798,10 +770,18 @@ int main(int argc, char *argv[])
 #endif
 
 	struct options_t options;
-	char *file_name=NULL;
-	parse_options(options, file_name, argc, argv);
+	char *file_name = NULL;
+	int mode = MODE_UNSET;
+	parse_options(options, mode, file_name, argc, argv);
+/*
+	printf("filename is %s\n",file_name);
+	exit(1);
+*/
 
-	if (options.help) {
+	/*
+	 * If we're in "help" mode, do that and exit before we set too much up.
+	 */
+	if (mode == MODE_HELP) {
 		help();
 		exit(0);
 	}
@@ -821,80 +801,71 @@ int main(int argc, char *argv[])
 		goto cleanup;
 	}
 
-	if (options.reset) {
-		uint8_t reset_cmd[]={ 0x00, COMMAND_RESET,
-			COMMAND_RESET_DEVICE };
-		if ((err=HID_WriteReport(reset_cmd)))
+	/*
+	 * If we're in reset mode, not only do we not need to read and print
+	 * data from the device, but it may not even be fully functional, so
+	 * we probably want to do as little as possible. This we do this
+	 * near the beginning instead of the SWITCH below.
+	 */
+	if (mode == MODE_RESET) {
+		if ((err = reset_harmony()))
 			goto cleanup;
 	}
 
 	/*
 	 * Get and print all the version info
 	 */
-	uint32_t cookie, end;
-	uint8_t ser[48];
+
+	if ((err = get_version_info(ri)))
+		goto cleanup;
+
+	if ((err = print_version_info(ri, hid_info, options)))
+		goto cleanup;
 
 	/*
-	 * FIXME:
-	 * 	This should be just a simple case statement. This
-	 * 	test-then-goto is to preserve the original behavior.
-	 * 	
-	 * 	See the TODO file for possible UI options being considered.
-	 * 	Once that's chosen, this will get changed.
-	 *
+	 * Now do whatever we've been asked to do
 	 */
-	if ((err = get_version_info(ri, ser, cookie, end)))
-		goto cleanup;
 
-	if ((err = print_version_info(ri, options.verbose, hid_info, ser)))
-		goto cleanup;
+	switch (mode) {
+		case MODE_CONNECTIVITY:
+			err = connect_test(ri, file_name);
+			break;
 
-	if (options.connect && file_name != NULL) {
-		if ((err = connect_test(ri, file_name)))
-			goto cleanup;
-	}
+		case MODE_DUMP_CONFIG:
+			err = dump_config(ri, options, file_name);
+			break;
 
-	if (options.config) {
-		if (options.write) {
-			if ((err = write_config(ri, file_name, options.binary)))
-				goto cleanup;
-		} else {
-			if ((err = dump_config(ri, cookie, options.verbose,
-					options.binary, end)))
-				goto cleanup;
-		}
-	}
+		case MODE_WRITE_CONFIG:
+			if ((err = write_config(ri, file_name, options)))
+				break;
+			err = reset_harmony();
+			break;
 
-	if (options.safemode) {
-		if (options.write) {
-			/*
-			 * note: It *can* be written, but it would be a
-			 * bad idea to allow it
-			 */
-			printf("\nSafe mode firmware may not be written\n");
-		} else {
-			if ((err = dump_safemode(ri)))
-				goto cleanup;
-		}
-	}
+		case MODE_DUMP_FIRMWARE:
+			err = dump_firmware(ri, options, file_name);
+			break;
 
-	if (options.firmware) {
-		if (options.write) {
+		case MODE_WRITE_FIRMWARE:
 			printf("This isn't supported yet.\n");
 			/*
 			 * FIXME: Implement this.
 			 */
-		} else {
-			if ((err = dump_firmware(ri, options.binary)))
-				goto cleanup;
-		}
-	}
+			break;
 
-	if (options.learn) {
-		if ((err = learn_ir_commands(ri, file_name)))
-			goto cleanup;
-	}
+		case MODE_DUMP_SAFEMODE:
+			err = dump_safemode(ri, file_name);
+			break;
 
+		case MODE_LEARN_IR:
+			err = learn_ir_commands(ri, file_name);
+			break;
+
+		default:
+			cerr << "ERROR: Got to a place I don't understand!\n";
+			break;
+
+	}
+			
 cleanup:
 	ShutdownUSB();
 
