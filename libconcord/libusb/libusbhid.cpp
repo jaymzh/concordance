@@ -79,8 +79,8 @@ int FindRemote(THIDINFO &hid_info)
 	usb_find_busses();
 	usb_find_devices();
 
-	struct usb_device *h_dev;
-	bool found=false;
+	struct usb_device *h_dev = NULL;
+	bool found = false;
 	for (usb_bus *bus = usb_busses; bus && !found; bus = bus->next)
 		for (h_dev = bus->devices; h_dev; h_dev = h_dev->next)
 			if (h_dev->descriptor.idVendor == 0x046D

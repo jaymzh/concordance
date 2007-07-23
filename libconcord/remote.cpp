@@ -279,7 +279,7 @@ int LearnIR(string *learn_string)
 
 	uint8_t seq=0;
 	unsigned int ir_word=0;
-	unsigned int t_on;
+	unsigned int t_on=0;
 	unsigned int t_off=0;
 
 	unsigned int freq=0;
