@@ -1,0 +1,24 @@
+0. PRE-REQ'S
+
+You *MUST* install libusb. This library is in most distributions, so
+apt-get/yum/up2date/etc. it.
+
+1. BUILD THE SOFTARE
+
+As a normal user, simply run "make"
+
+2. INSTALL THE SOFTWARE
+
+As root, simply run "make install"
+
+
+By default this software installs in /usr/bin. You can override the PREFIX
+(/usr) by passing a PREFIX variable to make:
+
+  make PREFIX=/usr/local
+
+You can override the bin directory by passing a BIN variable to make:
+
+  make BIN=$(PREFIX)/bin
+
+
