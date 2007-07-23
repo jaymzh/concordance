@@ -100,8 +100,11 @@ int FindRemote(THIDINFO &hid_info)
 	usb_set_configuration(h_hid,1);
 
 	int err;
-	if ((err=usb_claim_interface(h_hid,0)))
+	if ((err=usb_claim_interface(h_hid,0))) {
+		printf("Failed to claim interface: %d (%s)\n", err,
+			usb_strerror());
 		return err;
+	}
 
 	unsigned char maxconf = h_dev->descriptor.bNumConfigurations;
 	for (unsigned char j = 0; j < maxconf; ++j) {

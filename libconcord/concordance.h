@@ -16,6 +16,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#ifndef harmony_h
+#define harmony_h
 
 #ifdef WIN32
 
@@ -36,7 +38,8 @@ using namespace std;
 #define stricmp strcasecmp
 #define strnicmp strncasecmp
 
-#endif
+#endif // end 'not Windows'
 
 #include <string>
 
+#endif // ifndef harmony_h
