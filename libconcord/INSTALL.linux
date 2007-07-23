@@ -1,4 +1,6 @@
-0. PRE-REQ'S
+==== BASIC INSTALLATION ====
+
+0. INSTALL REQUIRED SOFTWARE
 
 You *MUST* install libusb. This library is in most distributions, so
 apt-get/yum/up2date/etc. it.
@@ -12,6 +14,7 @@ As a normal user, simply run "make"
 As root, simply run "make install"
 
 
+==== EXTRA INSTALL NOTES ====
 By default this software installs in /usr/bin. You can override the PREFIX
 (/usr) by passing a PREFIX variable to make:
 
@@ -19,6 +22,12 @@ By default this software installs in /usr/bin. You can override the PREFIX
 
 You can override the bin directory by passing a BIN variable to make:
 
-  make BIN=$(PREFIX)/bin
+  make BIN=sbin
+
+
+==== RUNNING THE SOFTWARE IN UNIX ====
+
+Because this software uses libusb, it does Direct IO. That means you must
+either be root to use it, or you must have the RAWIO capability.
 
 

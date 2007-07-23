@@ -17,8 +17,8 @@
 # 
 
 PREFIX?=/usr
-BIN=/bin
-BINDIR=$(PREFIX)$(BIN)
+BIN=bin
+BINDIR=$(PREFIX)/$(BIN)
 INSTALL?=/usr/bin/install
 STRIP?=/usr/bin/strip
 MAN?=$(PREFIX)/share/man
