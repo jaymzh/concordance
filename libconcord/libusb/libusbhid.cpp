@@ -17,6 +17,7 @@
  *  (C) Copyright Phil Dibowitz 2007
  */
 
+// test
 #include "../harmony.h"
 
 #ifdef LIBUSB
