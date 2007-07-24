@@ -596,7 +596,8 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	 * nothing will attempt to reference it while we're working.
 	 */
 	printf("Invalidating flash... ");
-	const uint8_t ivf[]={ 0x00, 0xA1, 0x02 };
+	const uint8_t ivf[]={ 0x00, COMMAND_WRITE_MISC | 0x01, 
+				COMMAND_MISC_INVALIDATE_FLASH };
 	HID_WriteReport(ivf);
 	uint8_t junk[68];
 	HID_ReadReport(junk);
