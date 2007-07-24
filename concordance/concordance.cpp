@@ -592,6 +592,21 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	}
 
 	/*
+	 * We must invalidate flash before we erase and write so that
+	 * nothing will attempt to reference it while we're working.
+	 */
+	printf("Invalidating flash... ");
+	const uint8_t ivf[]={ 0x00, 0xA1, 0x02 };
+	HID_WriteReport(ivf);
+	uint8_t junk[68];
+	HID_ReadReport(junk);
+	if (junk[0] != 0x00 || junk[1] != 0xf0 || junk[2] != 0xa0) {
+		printf("Failed to invalidate flash! Bailing out!\n");
+		return 1;
+	}
+	printf("done\n");
+
+	/*
 	 * Flash can be changed to 0, but not back to 1, so you must
 	 * erase the flash (to 1) in order to write the flash.
 	 */
