@@ -126,13 +126,6 @@ int FindRemote(THIDINFO &hid_info)
 		return 2;
 	}
 
-	int err;
-	if ((err = usb_set_configuration(h_hid,1))) {
-		printf("Failed to set device configuration: %d (%s)\n", err,
-			usb_strerror());
-		return err;
-	}
-
 #ifdef linux
 	/*
 	 * Before we attempt to claim the interface, lets go ahead and get
@@ -143,6 +136,13 @@ int FindRemote(THIDINFO &hid_info)
 	 */
 	usb_detach_kernel_driver_np(h_hid, 0);
 #endif
+
+	int err;
+	if ((err = usb_set_configuration(h_hid,1))) {
+		printf("Failed to set device configuration: %d (%s)\n", err,
+			usb_strerror());
+		return err;
+	}
 
 	if ((err=usb_claim_interface(h_hid,0))) {
 		printf("Failed to claim interface: %d (%s)\n", err,
