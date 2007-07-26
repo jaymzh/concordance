@@ -59,9 +59,8 @@
 #define COMMAND_START_IRCAP 0x70
 #define COMMAND_STOP_IRCAP 0x80
 #define COMMAND_IRCAP_DATA 0x90
-#define COMMAND_WRITE_MISC 0xa0
-#define COMMAND_READ_MISC 0xb0
-#define COMMAND_READ_MISC_DATA 0xc0
+#define COMMAND_WRITE_MISC 0xA0
+#define COMMAND_READ_MISC 0xB0
 /*
  * Byte 2 for COMMAND_*_MISC
  */
@@ -75,12 +74,12 @@
 #define COMMAND_MISC_REGISTER 0x07
 #define COMMAND_MISC_CLOCK_RECALCULATE 0x08
 #define COMMAND_MISC_QUEUE_EVENT 0x09
-#define COMMAND_MISC_RESTART_CONFIG 0x0a
+#define COMMAND_MISC_RESTART_CONFIG 0x0A
 /*
  * Continuing with base commands...
  */
-#define COMMAND_ERASE_FLASH 0xd3
-#define COMMAND_RESET 0xe1
+#define COMMAND_ERASE_FLASH 0xD3
+#define COMMAND_RESET 0xE1
 /*
  * Byte 2 for COMMAND_RESET
  */
@@ -91,7 +90,7 @@
 /*
  * Continuing with base commands...
  */
-#define COMMAND_DONE 0xf1
+#define COMMAND_DONE 0xF1
 
 
 /*
@@ -99,4 +98,5 @@
  */
 #define RESPONSE_VERSION_DATA 0x20
 #define RESPONSE_READ_FLASH_DATA 0x60
+#define RESPONSE_READ_MISC_DATA 0xC0
 #define RESPONSE_DONE 0xF0

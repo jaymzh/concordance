@@ -129,6 +129,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 				exit(1);
 			}
 			set_mode(mode, MODE_WRITE_FIRMWARE);
+			break;
 		case 'h':
 			set_mode(mode, MODE_HELP);
 			break;
@@ -358,7 +359,11 @@ int get_version_info(TRemoteInfo &ri)
 		
 	// read serial
 	uint8_t ser[48];
-	if ((err=ReadFlash(0x000110,48,ser,ri.protocol))) {
+	if ((err = ri.architecture==2 ?
+		// The old 745 stores the serial number in EEPROM
+		ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,ser) :
+		// All newer models store it in Flash
+		ReadFlash(0x000110,48,ser,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
@@ -367,11 +372,41 @@ int get_version_info(TRemoteInfo &ri)
 	make_guid(ser+16,ri.serial[1]);
 	make_guid(ser+32,ri.serial[2]);
 
+
 	printf("\n");
 
 	return 0;
 }
 
+int get_time(const TRemoteInfo &ri)
+{
+	// NOTE: This is experimental
+	printf("\n\n");
+	if(ri.architecture < 8) {
+		uint8_t tsv[8];
+		ReadMiscByte(0,6,COMMAND_MISC_STATE,tsv);
+		printf("Second %i\n",tsv[0]);
+		printf("Minute %i\n",tsv[1]);
+		printf("Hour   %i\n",tsv[2]);
+		printf("Day    %i\n",1+tsv[3]);
+		printf("Month  %i\n",1+tsv[4]);
+		printf("Year   %i\n",2000+tsv[5]);
+	} else {
+		static const char * const dow[8] =
+		{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "???" };
+		uint16_t tsv[8];
+		ReadMiscWord(0,7,COMMAND_MISC_STATE,tsv);
+		printf("Second %i\n",tsv[0]);
+		printf("Minute %i\n",tsv[1]);
+		printf("Hour   %i\n",tsv[2]);
+		printf("Day    %i\n",1+tsv[3]);
+		printf("DOW    %s\n",dow[tsv[4]&7]);
+		printf("Month  %i\n",1+tsv[5]);
+		printf("Year   %i\n",2000+tsv[6]);
+	}
+	printf("\n");
+	return 0;
+}
 
 /*
  * Print all version info in a format readable by humans.
@@ -595,27 +630,21 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	 * We must invalidate flash before we erase and write so that
 	 * nothing will attempt to reference it while we're working.
 	 */
-	printf("Invalidating flash... ");
-	const uint8_t ivf[]={ 0x00, COMMAND_WRITE_MISC | 0x01, 
-				COMMAND_MISC_INVALIDATE_FLASH };
-	HID_WriteReport(ivf);
-	uint8_t junk[68];
-	HID_ReadReport(junk);
-	if (junk[0] != 0x00 || junk[1] != 0xf0 || junk[2] != 0xa0) {
+	if (options.verbose)
+		printf("Invalidating flash... ");
+	if ((err=InvalidateFlash())) {
+		delete[] x;
 		printf("Failed to invalidate flash! Bailing out!\n");
-		return 1;
+		return err;
 	}
-	printf("done\n");
-
 	/*
 	 * Flash can be changed to 0, but not back to 1, so you must
 	 * erase the flash (to 1) in order to write the flash.
 	 */
-	if ((err = EraseFlash(ri.arch->config_base,size,
-				ri.flash->sectors))) {
+	if ((err = EraseFlash(ri.arch->config_base,size, ri))) {
 		delete[] x;
 		printf("Failed to erase flash! Bailing out!\n");
-		return 1;
+		return err;
 	}
 
 	printf("\nWrite Config ");
@@ -623,18 +652,15 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 			ri.protocol))) {
 		delete[] x;
 		printf("Failed to write flash! Bailing out!\n");
-		return 1;
+		return err;
 	}
 
-	/*
-	 * We don't really verify yet, just do a read as a basic test.
-	 */
 	printf("\nVerify Config ");
 	if ((err=ReadFlash(ri.arch->config_base,size,y,
 			ri.protocol,true))) {
 		delete[] x;
 		printf("Failed to read flash! Bailing out!\n");
-		return 1;
+		return err;
 	}
 
 	if (file_name && !options.binary)
@@ -749,18 +775,6 @@ int learn_ir_commands(TRemoteInfo &ri, char *file_name)
 	return 0;
 }
 
-int reset_harmony()
-{
-	int err;
-	uint8_t reset_cmd[]={ 0x00, COMMAND_RESET, COMMAND_RESET_DEVICE };
-
-	if ((err=HID_WriteReport(reset_cmd)))
-		return 1;
-
-	return 0;
-}
-
-
 int main(int argc, char *argv[])
 {
 
@@ -824,7 +838,7 @@ int main(int argc, char *argv[])
 	 * near the beginning instead of the SWITCH below.
 	 */
 	if (mode == MODE_RESET) {
-		if ((err = reset_harmony()))
+		if ((err = ResetHarmony(COMMAND_RESET_DEVICE)))
 			goto cleanup;
 	}
 
@@ -837,6 +851,9 @@ int main(int argc, char *argv[])
 
 	if ((err = print_version_info(ri, hid_info, options)))
 		goto cleanup;
+
+	// NOTE: Experimental
+	if (options.verbose) get_time(ri);
 
 	/*
 	 * Now do whatever we've been asked to do
@@ -854,7 +871,7 @@ int main(int argc, char *argv[])
 		case MODE_WRITE_CONFIG:
 			if ((err = write_config(ri, file_name, options)))
 				break;
-			err = reset_harmony();
+			err = ResetHarmony(COMMAND_RESET_DEVICE);
 			break;
 
 		case MODE_DUMP_FIRMWARE:

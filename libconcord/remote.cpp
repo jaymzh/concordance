@@ -30,6 +30,13 @@ extern HANDLE con;
 extern CONSOLE_SCREEN_BUFFER_INFO sbi;
 #endif
 
+int ResetHarmony(uint8_t kind)
+{
+	uint8_t reset_cmd[]={ 0, COMMAND_RESET, kind };
+
+	return HID_WriteReport(reset_cmd);
+}
+
 int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify)
 {
 #ifdef WIN32
@@ -37,6 +44,9 @@ int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int proto
 #else
 	if (len>2048) printf("              ");
 #endif
+
+	const unsigned int max_chunk_len = 
+		protocol == 0 ? 700 : 1022;
 
 	/*
 	 * This is a mapping of the lower-half of the first command byte to
@@ -64,8 +74,8 @@ int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int proto
 		cmd[3] = (addr>>8)&0xFF;
 		cmd[4] = addr&0xFF;
 		unsigned int chunk_len = end-addr;
-		if (chunk_len > 1024) 
-			chunk_len=1024;
+		if (chunk_len > max_chunk_len) 
+			chunk_len=max_chunk_len;
 		cmd[5] = (chunk_len>>8)&0xFF;
 		cmd[6] = chunk_len&0xFF;
 
@@ -134,9 +144,30 @@ int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int proto
 	return err;
 }
 
-
-int EraseFlash(uint32_t addr, uint32_t len, const uint32_t *sectors)
+int InvalidateFlash(void)
 {
+	const uint8_t ivf[]={ 0x00, COMMAND_WRITE_MISC | 0x01, 
+				COMMAND_MISC_INVALIDATE_FLASH };
+	int err;
+	if ((err=HID_WriteReport(ivf))) return err;
+
+	uint8_t rsp[68];
+	if ((err=HID_ReadReport(rsp))) return err;
+
+	if (rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
+		rsp[2]&COMMAND_MASK != COMMAND_MISC_INVALIDATE_FLASH) {
+		return 1;
+	}
+
+	return 0;
+}
+
+
+int EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
+{
+	const unsigned int *sectors=ri.flash->sectors;
+	const unsigned int flash_base=ri.arch->flash_base;
+
 	printf("\nErasing... ");
 
 	const uint32_t end=addr+len;
@@ -148,10 +179,11 @@ int EraseFlash(uint32_t addr, uint32_t len, const uint32_t *sectors)
 	int err = 0;
 
 	unsigned int n=0;
-	uint32_t sector_begin=0;
+	uint32_t sector_begin=flash_base;
 	uint32_t sector_end=sectors[n];
 
 	do {
+		sector_end += flash_base;
 		if (sector_begin<end && sector_end>addr) {
 			static uint8_t erase_cmd[8];
 			erase_cmd[0] = 0;
@@ -197,6 +229,9 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 	printf("              ");
 #endif
 
+	const unsigned int max_chunk_len = 
+		protocol == 0 ? 749 : 1023;
+
 	static const unsigned int txlenmap0[] =
 		{ 0x07, 7, 6, 5, 4, 3, 2, 1 };
 	static const unsigned int txlenmapx[] =
@@ -216,8 +251,8 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 		write_setup_cmd[3] = (addr>>8)&0xFF;
 		write_setup_cmd[4] = addr&0xFF;
 		uint32_t chunk_len=end-addr;
-		if (chunk_len>1024)
-			chunk_len=1024;
+		if (chunk_len>max_chunk_len)
+			chunk_len=max_chunk_len;
 		write_setup_cmd[5] = (chunk_len>>8)&0xFF;
 		write_setup_cmd[6] = chunk_len&0xFF;
 
@@ -265,6 +300,53 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 	printf("\n");
 	
 	return err;
+}
+
+int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd)
+{
+	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 2, kind, 0 };
+
+	while (len--) {
+		rmb[3]=addr++;
+
+		int err;
+		if ((err=HID_WriteReport(rmb))) return err;
+
+		uint8_t rsp[68];
+		if ((err=HID_ReadReport(rsp))) return err;
+
+		if(rsp[1] != (RESPONSE_READ_MISC_DATA | 2) ||
+			rsp[2] != kind)
+			return 1;
+
+		*rd++=rsp[3];
+	}
+	return 0;
+}
+
+int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd)
+{
+	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 3, kind, 0, 0 };
+
+	while (len--) {
+		rmb[3] = addr>>8;
+		rmb[4] = addr&0xFF;
+		++addr;
+
+		int err;
+		if ((err=HID_WriteReport(rmb))) return err;
+
+		uint8_t rsp[68];
+		if ((err=HID_ReadReport(rsp))) return err;
+
+		// WARNING: The 880 responds with C2 rather than C3
+		if(rsp[1]&COMMAND_MASK != RESPONSE_READ_MISC_DATA ||
+			rsp[2] != kind)
+			return 1;
+
+		*rd++ = rsp[3]<<8 | rsp[4];
+	}
+	return 0;
 }
 
 int LearnIR(string *learn_string)
@@ -392,4 +474,3 @@ int LearnIR(string *learn_string)
 	
 	return err;
 }
-

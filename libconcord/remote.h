@@ -63,7 +63,11 @@ struct TRemoteInfo {
 	uint32_t		max_config_size;
 };
 
+int ResetHarmony(uint8_t kind);
 int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
-int EraseFlash(uint32_t addr, uint32_t len, const uint32_t *sectors);
+int InvalidateFlash(void);
+int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri);
 int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol);
+int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd);
+int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd);
 int LearnIR(string *learn_string=NULL);
