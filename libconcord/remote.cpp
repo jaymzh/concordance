@@ -293,6 +293,7 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 #else
 		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3i%%  %4i KiB",
 			bytes_written*100/len,bytes_written>>10);
+		fflush(stdout);
 		//printf("*");
 #endif
 	} while (addr < end);

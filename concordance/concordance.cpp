@@ -134,10 +134,6 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			set_mode(mode, MODE_HELP);
 			break;
 		case 'l':
-			if (optarg == NULL) {
-				cerr << "Missing LearnIR file to read from.\n";
-				exit(1);
-			}
 			set_mode(mode, MODE_LEARN_IR);
 			file_name = optarg;
 			break;
@@ -151,7 +147,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			break;
 		case 't':
 			if (optarg == NULL) {
-				cerr << "Missing LearnIR file to read from.\n";
+				cerr << "Missing connectivity file to read from.\n";
 				exit(1);
 			}
 			set_mode(mode, MODE_CONNECTIVITY);
@@ -193,10 +189,12 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 					<< file_name << endl;
 				exit(1);
 			}
+			/*
 		} else {
 			cerr << "No file specified, and no mode specified..."
 				<< " nothing to do.\n";
 			exit(0);
+			*/
 		}
 	}
 }
@@ -892,11 +890,11 @@ int main(int argc, char *argv[])
 		case MODE_LEARN_IR:
 			err = learn_ir_commands(ri, file_name);
 			break;
-
+/*
 		default:
 			cerr << "ERROR: Got to a place I don't understand!\n";
 			break;
-
+*/
 	}
 			
 cleanup:
@@ -915,4 +913,3 @@ cleanup:
 
 	return err;
 }
-
