@@ -100,8 +100,6 @@ int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int proto
 				}
 				seq+=0x11;
 				const unsigned int rxlen=rxlenmap[rsp[1]&LENGTH_MASK];
-				//ASSERT(rxlen);
-				//TRACE2("%06X %i\n",addr,rxlen);
 				if (rxlen) {
 					if (verify) {
 						if (memcmp(pr,rsp+3,rxlen)) {
@@ -188,11 +186,9 @@ int EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 			static uint8_t erase_cmd[8];
 			erase_cmd[0] = 0;
 			erase_cmd[1] = COMMAND_ERASE_FLASH;
-			erase_cmd[2] = (addr>>16)&0xFF;
-			erase_cmd[3] = (addr>>8)&0xFF;
-			erase_cmd[4] = addr&0xFF;
-
-			addr+=0x10000;
+			erase_cmd[2] = (sector_begin>>16)&0xFF;
+			erase_cmd[3] = (sector_begin>>8)&0xFF;
+			erase_cmd[4] = sector_begin&0xFF;
 
 			if ((err = HID_WriteReport(erase_cmd)))
 				break;
@@ -274,17 +270,13 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 			addr += block_len;
 			bytes_written += block_len;
 			chunk_len -= block_len;
-			//chunk_len = (chunk_len<block_len) ? 0 : chunk_len-block_len;
 		}
 		
-		uint8_t end_cmd[3] = { 0x00, COMMAND_DONE, 0x30 };
+		uint8_t end_cmd[3] = { 0, COMMAND_DONE, COMMAND_WRITE_FLASH };
 		HID_WriteReport(end_cmd);
-
-		//printf("data sent\n");
 
 		uint8_t rsp[68];
 		if ((err = HID_ReadReport(rsp,5000))) break;
-		//printf("%02X %02X\n",rsp[1],rsp[2]);
 
 #ifdef WIN32
 		SetConsoleCursorPosition(con,sbi.dwCursorPosition);
@@ -305,7 +297,7 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 
 int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd)
 {
-	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 2, kind, 0 };
+	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 0x02, kind, 0 };
 
 	while (len--) {
 		rmb[3]=addr++;
@@ -316,7 +308,7 @@ int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd)
 		uint8_t rsp[68];
 		if ((err=HID_ReadReport(rsp))) return err;
 
-		if(rsp[1] != (RESPONSE_READ_MISC_DATA | 2) ||
+		if(rsp[1] != (RESPONSE_READ_MISC_DATA | 0x02) ||
 			rsp[2] != kind)
 			return 1;
 
@@ -327,7 +319,7 @@ int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd)
 
 int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd)
 {
-	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 3, kind, 0, 0 };
+	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 0x03, kind, 0, 0 };
 
 	while (len--) {
 		rmb[3] = addr>>8;
@@ -356,7 +348,7 @@ int LearnIR(string *learn_string)
 
 	int err = 0;
 
-	const static uint8_t start_ir_learn[] = { 0x00, COMMAND_START_IRCAP };
+	const static uint8_t start_ir_learn[] = { 0, COMMAND_START_IRCAP };
 	if ((err = HID_WriteReport(start_ir_learn))) return err;
 
 	uint8_t seq=0;
