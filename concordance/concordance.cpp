@@ -137,6 +137,9 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			set_mode(mode, MODE_HELP);
 			break;
 		case 'l':
+			if (optarg != NULL) {
+				file_name = optarg;
+			}
 			set_mode(mode, MODE_LEARN_IR);
 			file_name = optarg;
 			break;
