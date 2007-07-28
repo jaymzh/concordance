@@ -21,7 +21,9 @@
 #include "hid.h"
 #include "protocol.h"
 #include "remote.h"
-//#include "remote_info.h"
+#include "remote_info.h"
+
+#include <iostream>
 
 #ifdef WIN32
 #include <conio.h>
@@ -30,14 +32,140 @@ extern HANDLE con;
 extern CONSOLE_SCREEN_BUFFER_INFO sbi;
 #endif
 
-int ResetHarmony(uint8_t kind)
+
+void setup_ri_pointers(TRemoteInfo &ri)
+{
+	unsigned int u;
+	for (u = 0; u < sizeof(FlashList)/sizeof(TFlash)-1; ++u) {
+		if (ri.flash_id == FlashList[u].id
+		    && ri.flash_mfg == FlashList[u].mfg)
+			break;
+	}
+	ri.flash = &FlashList[u];
+
+	ri.arch = (ri.architecture < sizeof(ArchList)/sizeof(TArchInfo))
+			? &ArchList[ri.architecture] : NULL;
+
+	ri.model = (ri.skin<max_model)
+			? &ModelList[ri.skin] : &ModelList[max_model];
+}
+
+void make_guid(const uint8_t * const in, string& out)
+{
+	char x[48];
+	sprintf(x,
+	"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+		in[3],in[2],in[1],in[0],in[5],in[4],in[7],in[6],
+		in[8],in[9],in[10],in[11],in[12],in[13],in[14],in[15]);
+	out=x;
+}
+
+void make_serial(uint8_t *ser, TRemoteInfo &ri)
+{
+	make_guid(ser   ,ri.serial[0]);
+	make_guid(ser+16,ri.serial[1]);
+	make_guid(ser+32,ri.serial[2]);
+}
+
+
+int CRemote::Reset(uint8_t kind)
 {
 	uint8_t reset_cmd[]={ 0, COMMAND_RESET, kind };
 
 	return HID_WriteReport(reset_cmd);
 }
 
-int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify)
+/*
+ * Send the GET_VERSION command to the remote, and read the response.
+ *
+ * Then populate our struct with all the relevant info.
+ */
+int CRemote::GetIdentity(TRemoteInfo &ri)
+{
+	int err = 0;
+
+	const uint8_t qid[]={ 0x00, COMMAND_GET_VERSION };
+
+	printf("Requesting Identity...\n");
+
+	if ((err = HID_WriteReport(qid))) {
+		cerr << "Failed to talk to remote\n";
+		return 1;
+	}
+
+	uint8_t rsp[68];
+	if ((err = HID_ReadReport(rsp))) {
+		cerr << "Failed to talk to remote\n";
+		return 1;
+	}
+
+	const unsigned int rx_len = rsp[1]&0x0F;
+
+	if ((rsp[1]&0xF0) != RESPONSE_VERSION_DATA ||
+	    (rx_len != 7 && rx_len != 5)) {
+		printf("Bogus ident response: %02X\n",rsp[1]);
+		err=-3;
+		return 1;
+	}
+
+	ri.fw_ver_major = rsp[2]>>4;
+	ri.fw_ver_minor = rsp[2]&0x0F;
+	ri.hw_ver_major = rsp[3]>>4;
+	ri.hw_ver_minor = rsp[3]&0x0F;
+	ri.flash_id = rsp[4];
+	ri.flash_mfg = rsp[5];
+	ri.architecture = rx_len<6?2:rsp[6]>>4;
+	ri.fw_type = rx_len<6?0:rsp[6]&0x0F;
+	ri.skin = rx_len<6?2:rsp[7];
+	ri.protocol = rx_len<7?0:rsp[8];
+
+	setup_ri_pointers(ri);
+
+	printf("\nReading Flash... ");
+	uint8_t rd[1024];
+	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol))) {
+		printf("Failed to read flash\n");
+		return 1;
+	}
+
+	// Calculate cookie
+	const uint32_t cookie = (ri.arch->cookie_size == 2)
+			? rd[0]|(rd[1]<<8)
+			: rd[0]|(rd[1]<<8)|(rd[2]<<16)|(rd[3]<<24);
+
+	ri.valid_config = (cookie == ri.arch->cookie);
+
+	if(ri.valid_config) {
+		ri.max_config_size = (ri.flash->size<<10)
+			- (ri.arch->config_base - ri.arch->flash_base);
+		const uint32_t end = rd[ri.arch->end_vector]
+				| (rd[ri.arch->end_vector+1]<<8)
+				| (rd[ri.arch->end_vector+2]<<16);
+		ri.config_bytes_used =
+			(end - (ri.arch->config_base - ri.arch->flash_base)) + 4;
+	} else {
+		ri.config_bytes_used=0;
+		ri.max_config_size=1;
+	}
+		
+	// read serial
+	if ((err = ri.architecture==2 ?
+		// The old 745 stores the serial number in EEPROM
+		ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,rsp) :
+		// All newer models store it in Flash
+		ReadFlash(0x000110,48,rsp,ri.protocol))) {
+		printf("Failed to read flash\n");
+		return 1;
+	}
+
+	make_serial(rsp,ri);
+
+	printf("\n");
+
+	return 0;
+}
+
+int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify)
 {
 #ifdef WIN32
 	GetConsoleScreenBufferInfo(con,&sbi);
@@ -142,7 +270,7 @@ int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int proto
 	return err;
 }
 
-int InvalidateFlash(void)
+int CRemote::InvalidateFlash(void)
 {
 	const uint8_t ivf[]={ 0x00, COMMAND_WRITE_MISC | 0x01, 
 				COMMAND_MISC_INVALIDATE_FLASH };
@@ -161,7 +289,7 @@ int InvalidateFlash(void)
 }
 
 
-int EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
+int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 {
 	const unsigned int *sectors=ri.flash->sectors;
 	const unsigned int flash_base=ri.arch->flash_base;
@@ -217,7 +345,7 @@ int EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 	return err;
 }
 
-int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol)
+int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol)
 {
 #ifdef WIN32
 	GetConsoleScreenBufferInfo(con,&sbi);
@@ -295,7 +423,7 @@ int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned in
 	return err;
 }
 
-int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd)
+int CRemote::ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd)
 {
 	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 0x02, kind, 0 };
 
@@ -317,7 +445,7 @@ int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd)
 	return 0;
 }
 
-int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd)
+int CRemote::ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd)
 {
 	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 0x03, kind, 0, 0 };
 
@@ -342,7 +470,84 @@ int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd)
 	return 0;
 }
 
-int LearnIR(string *learn_string)
+int CRemote::WriteMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *wr)
+{
+	/// todo
+	return 0;
+}
+
+int CRemote::WriteMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *wr)
+{
+	/// todo
+	return 0;
+}
+
+
+int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
+{
+	// NOTE: This is experimental
+	int err=0;
+
+	if(ri.architecture < 8) {
+		uint8_t tsv[8];
+		err = ReadMiscByte(0,6,COMMAND_MISC_STATE,tsv);
+		ht.second = tsv[0];
+		ht.minute = tsv[1];
+		ht.hour = tsv[2];
+		ht.dow = 7;
+		ht.day = 1+tsv[3];
+		ht.month = 1+tsv[4];
+		ht.year = 2000+tsv[5];
+	} else {
+		uint16_t tsv[8];
+		err = ReadMiscWord(0,7,COMMAND_MISC_STATE,tsv);
+		ht.second = tsv[0];
+		ht.minute = tsv[1];
+		ht.hour = tsv[2];
+		ht.day = 1+tsv[3];
+		ht.dow = tsv[4]&7;
+		ht.month = 1+tsv[5];
+		ht.year = 2000+tsv[6];
+	}
+
+	ht.utc_offset=0;
+	ht.timezone="";
+
+	return err;
+}
+
+int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
+{
+	// NOTE: This is experimental
+	int err=0;
+
+	if(ri.architecture < 8) {
+		uint8_t tsv[8];
+		tsv[0] = ht.second;
+		tsv[1] = ht.minute;
+		tsv[2] = ht.hour;
+		tsv[3] = ht.day-1;
+		tsv[4] = ht.month-1;
+		tsv[5] = ht.year-2000;
+		err = WriteMiscByte(0,6,COMMAND_MISC_STATE,tsv);
+	} else {
+		uint16_t tsv[8];
+		tsv[0] = ht.second;
+		tsv[1] = ht.minute;
+		tsv[2] = ht.hour;
+		tsv[3] = ht.day-1;
+		tsv[4] = ht.dow;
+		tsv[5] = ht.month-1;
+		tsv[6] = ht.year-2000;
+		err = WriteMiscWord(0,7,COMMAND_MISC_STATE,tsv);
+
+		// todo: Send Recalc Clock command for 880 (not 360/520/550)
+	}
+
+	return err;
+}
+
+int CRemote::LearnIR(string *learn_string)
 {
 	printf("\nLearn IR - Waiting...\n\n");
 

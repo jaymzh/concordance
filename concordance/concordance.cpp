@@ -21,7 +21,6 @@
 #include "binaryfile.h"
 #include "hid.h"
 #include "remote.h"
-#include "remote_info.h"
 #include "web.h"
 #include "protocol.h"
 #include <iostream>
@@ -36,18 +35,22 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 #include <getopt.h>
 #endif
 
-#define VERSION "0.9"
+const char * const VERSION = "0.9";
 
-#define MODE_UNSET 0
-#define MODE_CONNECTIVITY 1
-#define MODE_DUMP_CONFIG 2
-#define MODE_WRITE_CONFIG 3
-#define MODE_DUMP_FIRMWARE 4
-#define MODE_WRITE_FIRMWARE 5
-#define MODE_DUMP_SAFEMODE 6
-#define MODE_HELP 7
-#define MODE_LEARN_IR 8
-#define MODE_RESET 9
+static const enum {
+	MODE_UNSET,
+	MODE_CONNECTIVITY,
+	MODE_DUMP_CONFIG,
+	MODE_WRITE_CONFIG,
+	MODE_DUMP_FIRMWARE,
+	MODE_WRITE_FIRMWARE,
+	MODE_DUMP_SAFEMODE,
+	MODE_HELP,
+	MODE_LEARN_IR,
+	MODE_RESET
+};
+
+static CRemoteBase *rmt = NULL;
 
 struct options_t {
 	bool binary;
@@ -199,16 +202,6 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 	}
 }
 
-void make_guid(const uint8_t * const in, string& out)
-{
-	char x[48];
-	sprintf(x,
-	"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
-		in[3],in[2],in[1],in[0],in[5],in[4],in[7],in[6],
-		in[8],in[9],in[10],in[11],in[12],in[13],in[14],in[15]);
-	out=x;
-}
-
 void help()
 {
 
@@ -271,140 +264,6 @@ void help()
 		<< "\tEnable verbose output.\n\n";
 }
 
-/*
- * Send the GET_VERSION command to the remote, and read the response.
- *
- * Then populate our struct with all the relevant info.
- */
-int get_version_info(TRemoteInfo &ri)
-{
-	int err = 0;
-
-	const uint8_t qid[]={ 0x00, COMMAND_GET_VERSION };
-
-	printf("Requesting Identity...\n");
-
-	if ((err = HID_WriteReport(qid))) {
-		cerr << "Failed to talk to remote\n";
-		return 1;
-	}
-
-	uint8_t rsp[68];
-	if ((err = HID_ReadReport(rsp))) {
-		cerr << "Failed to talk to remote\n";
-		return 1;
-	}
-
-	const unsigned int rx_len = rsp[1]&0x0F;
-
-	if ((rsp[1]&0xF0) != RESPONSE_VERSION_DATA ||
-	    (rx_len != 7 && rx_len != 5)) {
-		printf("Bogus ident response: %02X\n",rsp[1]);
-		err=-3;
-		return 1;
-	}
-
-	ri.fw_ver = rsp[2];
-	ri.hw_ver = rsp[3];
-	ri.flash_id = rsp[4];
-	ri.flash_mfg = rsp[5];
-	ri.architecture = rx_len<6?2:rsp[6]>>4;
-	ri.fw_type = rx_len<6?0:rsp[6]&0x0F;
-	ri.skin = rx_len<6?2:rsp[7];
-	ri.protocol = rx_len<7?0:rsp[8];
-
-	unsigned int u;
-	for (u = 0; u < sizeof(FlashList)/sizeof(TFlash)-1; ++u) {
-		if (ri.flash_id == FlashList[u].id
-		    && ri.flash_mfg == FlashList[u].mfg)
-			break;
-	}
-	ri.flash = &FlashList[u];
-
-	ri.arch = (ri.architecture < sizeof(ArchList)/sizeof(TArchInfo))
-			? &ArchList[ri.architecture] : NULL;
-
-	ri.model = (ri.skin<max_model)
-			? &ModelList[ri.skin] : &ModelList[max_model];
-
-
-	printf("\nReading Flash... ");
-	uint8_t rd[1024];
-	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol))) {
-		printf("Failed to read flash\n");
-		return 1;
-	}
-
-	// Calculate cookie
-	const uint32_t cookie = (ri.arch->cookie_size == 2)
-			? rd[0]|(rd[1]<<8)
-			: rd[0]|(rd[1]<<8)|(rd[2]<<16)|(rd[3]<<24);
-
-	ri.valid_config = (cookie == ri.arch->cookie);
-
-	if(ri.valid_config) {
-		ri.max_config_size = (ri.flash->size<<10)
-			- (ri.arch->config_base - ri.arch->flash_base);
-		const uint32_t end = rd[ri.arch->end_vector]
-				| (rd[ri.arch->end_vector+1]<<8)
-				| (rd[ri.arch->end_vector+2]<<16);
-		ri.config_bytes_used =
-			(end - (ri.arch->config_base - ri.arch->flash_base)) + 4;
-	} else {
-		ri.config_bytes_used=0;
-		ri.max_config_size=1;
-	}
-		
-	// read serial
-	uint8_t ser[48];
-	if ((err = ri.architecture==2 ?
-		// The old 745 stores the serial number in EEPROM
-		ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,ser) :
-		// All newer models store it in Flash
-		ReadFlash(0x000110,48,ser,ri.protocol))) {
-		printf("Failed to read flash\n");
-		return 1;
-	}
-
-	make_guid(ser,ri.serial[0]);
-	make_guid(ser+16,ri.serial[1]);
-	make_guid(ser+32,ri.serial[2]);
-
-
-	printf("\n");
-
-	return 0;
-}
-
-int get_time(const TRemoteInfo &ri)
-{
-	// NOTE: This is experimental
-	printf("\n\n");
-	if(ri.architecture < 8) {
-		uint8_t tsv[8];
-		ReadMiscByte(0,6,COMMAND_MISC_STATE,tsv);
-		printf("Second %i\n",tsv[0]);
-		printf("Minute %i\n",tsv[1]);
-		printf("Hour   %i\n",tsv[2]);
-		printf("Day    %i\n",1+tsv[3]);
-		printf("Month  %i\n",1+tsv[4]);
-		printf("Year   %i\n",2000+tsv[5]);
-	} else {
-		static const char * const dow[8] =
-		{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "???" };
-		uint16_t tsv[8];
-		ReadMiscWord(0,7,COMMAND_MISC_STATE,tsv);
-		printf("Second %i\n",tsv[0]);
-		printf("Minute %i\n",tsv[1]);
-		printf("Hour   %i\n",tsv[2]);
-		printf("Day    %i\n",1+tsv[3]);
-		printf("DOW    %s\n",dow[tsv[4]&7]);
-		printf("Month  %i\n",1+tsv[5]);
-		printf("Year   %i\n",2000+tsv[6]);
-	}
-	printf("\n");
-	return 0;
-}
 
 /*
  * Print all version info in a format readable by humans.
@@ -423,12 +282,12 @@ int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 	if (options.verbose)
 		printf("             Skin: %i\n",ri.skin);
 
-	printf(" Firmware Version: %i.%i\n",ri.fw_ver>>4, ri.fw_ver&0x0F);
+	printf(" Firmware Version: %i.%i\n",ri.fw_ver_major, ri.fw_ver_minor);
 
 	if (options.verbose)
 		printf("    Firmware Type: %i\n",ri.fw_type);
 
-	printf(" Hardware Version: %i.%i\n",ri.hw_ver>>4, ri.hw_ver&0x0F);
+	printf(" Hardware Version: %i.%i\n",ri.hw_ver_major, ri.hw_ver_minor);
 
 	if (options.verbose) {
 		if ((ri.flash->size&0x03FF) == 0 && (ri.flash->size>>10)!=0) {
@@ -459,6 +318,13 @@ int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 		printf("          USB Ver: %04X\n",hid_info.ver);
 	}
 
+	if (options.verbose) {
+		printf("\n    Serial Number: %s\n",
+			ri.serial[0].c_str());
+		printf("                   %s\n",ri.serial[1].c_str());
+		printf("                   %s\n",ri.serial[2].c_str());
+	}
+
 	if (ri.flash->size == 0) {
 		printf("Unsupported flash type\n");
 		return 1;
@@ -467,13 +333,6 @@ int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 	if (ri.arch == NULL || ri.arch->cookie==0) {
 		printf("Unsupported architecure\n");
 		return 1;
-	}
-
-	if (options.verbose) {
-		printf("\n    Serial Number: %s\n",
-			ri.serial[0].c_str());
-		printf("                   %s\n",ri.serial[1].c_str());
-		printf("                   %s\n",ri.serial[2].c_str());
 	}
 
 	if (ri.valid_config)
@@ -502,7 +361,7 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 	printf("\nReading Config ");
 
 	uint8_t *config = new uint8_t[ri.config_bytes_used];
-	if ((err = ReadFlash(ri.arch->config_base, ri.config_bytes_used,
+	if ((err = rmt->ReadFlash(ri.arch->config_base, ri.config_bytes_used,
 			config,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
@@ -524,11 +383,11 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 		const int chlen = sprintf(ch,
 			config_header,ri.protocol,
 			ri.skin,ri.flash_mfg,
-			ri.flash_id,ri.hw_ver>>4,
-			ri.hw_ver&0x0F,ri.fw_type,
+			ri.flash_id,ri.hw_ver_major,
+			ri.hw_ver_minor,ri.fw_type,
 			ri.protocol,ri.skin,
 			ri.flash_mfg,ri.flash_id,
-			ri.hw_ver>>4,ri.hw_ver&0x0F,
+			ri.hw_ver_major,ri.hw_ver_minor,
 			ri.fw_type,
 			ri.config_bytes_used,chk);
 		of.open(file_name ? file_name : "config.EZHex");
@@ -630,7 +489,7 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	 */
 	if (options.verbose)
 		printf("Invalidating flash... ");
-	if ((err=InvalidateFlash())) {
+	if ((err = rmt->InvalidateFlash())) {
 		delete[] x;
 		printf("Failed to invalidate flash! Bailing out!\n");
 		return err;
@@ -639,14 +498,14 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	 * Flash can be changed to 0, but not back to 1, so you must
 	 * erase the flash (to 1) in order to write the flash.
 	 */
-	if ((err = EraseFlash(ri.arch->config_base,size, ri))) {
+	if ((err = rmt->EraseFlash(ri.arch->config_base,size, ri))) {
 		delete[] x;
 		printf("Failed to erase flash! Bailing out!\n");
 		return err;
 	}
 
 	printf("\nWrite Config ");
-	if ((err=WriteFlash(ri.arch->config_base,size,y,
+	if ((err = rmt->WriteFlash(ri.arch->config_base,size,y,
 			ri.protocol))) {
 		delete[] x;
 		printf("Failed to write flash! Bailing out!\n");
@@ -654,7 +513,7 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	}
 
 	printf("\nVerify Config ");
-	if ((err=ReadFlash(ri.arch->config_base,size,y,
+	if ((err = rmt->ReadFlash(ri.arch->config_base,size,y,
 			ri.protocol,true))) {
 		delete[] x;
 		printf("Failed to read flash! Bailing out!\n");
@@ -676,7 +535,7 @@ int dump_safemode(TRemoteInfo &ri, char *file_name)
 	int err = 0;
 
 	printf("\nReading Safe Mode Firmware ");
-	if ((err = ReadFlash(ri.arch->flash_base,64*1024,safe,
+	if ((err = rmt->ReadFlash(ri.arch->flash_base,64*1024,safe,
 							ri.protocol))) {
 		delete[] safe;
 		printf("Failed to read Safe Mode firmware.\n");
@@ -699,7 +558,7 @@ int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 	uint8_t * const firmware = new uint8_t[64*1024];
 
 	printf("\nReading Firmware ");
-	if ((err = ReadFlash(ri.arch->firmware_base,64*1024,firmware,
+	if ((err = rmt->ReadFlash(ri.arch->firmware_base,64*1024,firmware,
 							ri.protocol))) {
 		printf("Failed to read firmware.\n");
 		return 1;
@@ -762,16 +621,39 @@ int learn_ir_commands(TRemoteInfo &ri, char *file_name)
 		printf("Key Name: %s\n",keyname.c_str());
 
 		string ls;
-		LearnIR(&ls);
+		rmt->LearnIR(&ls);
 		//printf("%s\n",ls.c_str());
 
 		Post(x,"POSTOPTIONS",ri,&ls,&keyname);
 	} else {
-		LearnIR();
+		rmt->LearnIR();
 	}
 
 	return 0;
 }
+
+void print_harmony_time(const THarmonyTime &ht)
+{
+	static const char * const dow[8] =
+	{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "" };
+
+#if 0
+	printf("\nSecond      %i\n",ht.second);
+	printf("Minute      %i\n",ht.minute);
+	printf("Hour        %i\n",ht.hour);
+	printf("Day         %i\n",ht.day);
+	printf("DOW         %s\n",dow[ht.dow&7]);
+	printf("Month       %i\n",ht.month);
+	printf("Year        %i\n",ht.year);
+	printf("UTC offset +%i\n",ht.utc_offset);
+	printf("Timezone    %s\n",ht.timezone.c_str());
+#endif
+
+	printf("\n%04i/%02i/%02i %s %02i/%02i/%02i %+i %s\n",
+		ht.year,ht.month,ht.day,dow[ht.dow&7],
+		ht.hour,ht.minute,ht.second,ht.utc_offset,ht.timezone.c_str());
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -825,9 +707,19 @@ int main(int argc, char *argv[])
 	}
 
 	if ((err = FindRemote(hid_info))) {
-		printf("Unable to find a remote (error %i)\n",err);
+		printf("Unable to find a HID remote (error %i)\n",err);
 		goto cleanup;
 	}
+
+	if(hid_info.pid == 0xC11F) {
+		printf("Harmony 1000 is not supported yet\n");
+		goto cleanup;
+	}
+
+	if (hid_info.pid == 0xC112)	// 890
+		rmt = new CRemoteZ_HID;
+	else
+		rmt = new CRemote;
 
 	/*
 	 * If we're in reset mode, not only do we not need to read and print
@@ -836,7 +728,7 @@ int main(int argc, char *argv[])
 	 * near the beginning instead of the SWITCH below.
 	 */
 	if (mode == MODE_RESET) {
-		if ((err = ResetHarmony(COMMAND_RESET_DEVICE)))
+		if ((err = rmt->Reset(COMMAND_RESET_DEVICE)))
 			goto cleanup;
 	}
 
@@ -844,14 +736,18 @@ int main(int argc, char *argv[])
 	 * Get and print all the version info
 	 */
 
-	if ((err = get_version_info(ri)))
+	if ((err = rmt->GetIdentity(ri)))
 		goto cleanup;
 
 	if ((err = print_version_info(ri, hid_info, options)))
 		goto cleanup;
 
 	// NOTE: Experimental
-	if (options.verbose) get_time(ri);
+	if (options.verbose) {
+		THarmonyTime ht;
+		rmt->GetTime(ri,ht);
+		print_harmony_time(ht);
+	}
 
 	/*
 	 * Now do whatever we've been asked to do
@@ -869,7 +765,7 @@ int main(int argc, char *argv[])
 		case MODE_WRITE_CONFIG:
 			if ((err = write_config(ri, file_name, options)))
 				break;
-			err = ResetHarmony(COMMAND_RESET_DEVICE);
+			err = rmt->Reset(COMMAND_RESET_DEVICE);
 			break;
 
 		case MODE_DUMP_FIRMWARE:
@@ -899,6 +795,8 @@ int main(int argc, char *argv[])
 			
 cleanup:
 	ShutdownUSB();
+
+	delete rmt;
 
 	if (err) printf("Failed with error %i\n",err);
 		

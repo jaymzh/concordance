@@ -46,13 +46,15 @@ struct TArchInfo {
 };
 
 struct TRemoteInfo {
-	uint8_t			fw_ver;
+	uint16_t		hw_ver_major;
+	uint16_t		hw_ver_minor;
+	uint16_t		fw_ver_major;
+	uint16_t		fw_ver_minor;
 	uint8_t			fw_type;
-	uint8_t			hw_ver;
 	uint8_t			flash_mfg;
 	uint8_t			flash_id;
 	const TFlash	*flash;
-	uint8_t			architecture;
+	uint16_t		architecture;
 	const TArchInfo	*arch;
 	uint8_t			skin;
 	uint8_t			protocol;
@@ -63,11 +65,103 @@ struct TRemoteInfo {
 	uint32_t		max_config_size;
 };
 
-int ResetHarmony(uint8_t kind);
-int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
-int InvalidateFlash(void);
-int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri);
-int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol);
-int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd);
-int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd);
-int LearnIR(string *learn_string=NULL);
+struct THarmonyTime {
+	unsigned int	second;
+	unsigned int	minute;
+	unsigned int	hour;
+	unsigned int	dow;
+	unsigned int	day;
+	unsigned int	month;
+	unsigned int	year;
+	int				utc_offset;
+	string			timezone;
+};
+
+
+void setup_ri_pointers(TRemoteInfo &ri);
+void make_serial(uint8_t *ser, TRemoteInfo &ri);
+
+class CRemoteBase
+{
+public:
+	virtual int Reset(uint8_t kind)=0;
+	virtual int GetIdentity(TRemoteInfo &ri)=0;
+
+	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false)=0;
+	virtual int InvalidateFlash(void)=0;
+	virtual int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri)=0;
+	virtual int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol)=0;
+
+	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
+	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)=0;
+
+	virtual int LearnIR(string *learn_string=NULL)=0;
+};
+
+class CRemote : public CRemoteBase
+{
+private:
+	int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd);
+	int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd);
+	int WriteMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *wr);
+	int WriteMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *wr);
+
+public:
+	int Reset(uint8_t kind);
+	int GetIdentity(TRemoteInfo &ri);
+
+	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
+	int InvalidateFlash(void);
+	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri);
+	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol);
+
+	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
+	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
+
+	int LearnIR(string *learn_string=NULL);
+};
+
+class CRemoteZ_Base : public CRemoteBase
+{
+protected:
+	virtual int UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL)=0;
+	virtual int UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data)=0;
+	virtual int TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL)=0;
+	virtual int TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data)=0;
+
+public:
+	int Reset(uint8_t kind);
+	int GetIdentity(TRemoteInfo &ri);
+
+	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
+	int InvalidateFlash(void);
+	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri);
+	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol);
+
+	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
+	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
+
+	int LearnIR(string *learn_string=NULL);
+};
+
+class CRemoteZ_HID : public CRemoteZ_Base	// 890, 890Pro, AVL-300, RF Extender
+{
+private:
+	uint8_t m_tx_seq;
+	uint8_t m_rx_seq;
+
+protected:
+	int UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
+	int UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
+	int TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
+	int TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
+};
+
+class CRemoteZ_TCP : public CRemoteZ_Base	// 1000, 1000i
+{
+protected:
+	int UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
+	int UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
+	int TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
+	int TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
+};
