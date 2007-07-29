@@ -193,8 +193,8 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 		string serial=ri.serial[0]+ri.serial[1]+ri.serial[2];
 		char post_data[2000];
 		sprintf(post_data,post_xml,
-			ri.fw_ver>>4,ri.fw_ver&0x0F,ri.fw_type,serial.c_str(),
-			ri.hw_ver>>4,ri.hw_ver&0x0F,ri.flash_mfg,ri.flash_id,
+			ri.fw_ver_major,ri.fw_ver_minor,ri.fw_type,serial.c_str(),
+			ri.hw_ver_major,ri.hw_ver_minor,ri.flash_mfg,ri.flash_id,
 			ri.protocol,ri.architecture,ri.skin);
 		//printf("\n%s\n",post_data);
 
