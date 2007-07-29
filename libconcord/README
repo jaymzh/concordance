@@ -16,7 +16,7 @@ This will attempt to figure out what to do, and do it.
 
 This will read the config off of your remote and write it to Update.EZHex.
 It's a good tool for development as well as backing up your config. This can
-however be created from the members.harmony.com website.
+however be created from the members.harmonyremote.com website.
 
 2. Write a config
 
