@@ -17,6 +17,7 @@
  */
 
 #include "harmony.h"
+#include "hid.h"
 #include "remote.h"
 #include "xml_headers.h"
 

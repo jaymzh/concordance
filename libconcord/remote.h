@@ -16,6 +16,31 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+
+
+/*
+ * WARNING: Do not change this!
+ * These values have special meaning to the Z-Wave remotes
+ */
+enum TRegion {
+    REGION_BOOTLOADER=0,		// 0
+    REGION_SAFEMODE,			// 1
+    REGION_APPLICATION,			// 2
+    REGION_EMBEDDING_CONFIG,	// 3
+    REGION_USER_CONFIG,			// 4
+    REGION_PIC_REGION,			// 5
+    REGION_SPARE1,				// 6
+    REGION_ZWAVE,				// 7
+    REGION_BLASTER_CONFIG,		// 8
+    REGION_STATE_VARIABLE,		// 9
+    REGION_LOGGING_REGION,		// 10
+    REGION_SPARE2,				// 11
+    REGION_SPARE3,				// 12
+    REGION_SPARE4,				// 13
+    REGION_SPARE5,				// 14
+    REGION_SPARE6				// 15
+};
+
 struct TModel {
 	const char	*mfg;
 	const char	*model;
@@ -81,11 +106,13 @@ struct THarmonyTime {
 void setup_ri_pointers(TRemoteInfo &ri);
 void make_serial(uint8_t *ser, TRemoteInfo &ri);
 
-class CRemoteBase
+class CRemoteBase			// Base class for all remotes
 {
 public:
+	CRemoteBase() {};
+	~CRemoteBase() {};
 	virtual int Reset(uint8_t kind)=0;
-	virtual int GetIdentity(TRemoteInfo &ri)=0;
+	virtual int GetIdentity(TRemoteInfo &ri, THIDINFO &hid)=0;
 
 	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false)=0;
 	virtual int InvalidateFlash(void)=0;
@@ -98,7 +125,7 @@ public:
 	virtual int LearnIR(string *learn_string=NULL)=0;
 };
 
-class CRemote : public CRemoteBase
+class CRemote : public CRemoteBase	// All non-Z-Wave remotes
 {
 private:
 	int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *rd);
@@ -107,8 +134,10 @@ private:
 	int WriteMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *wr);
 
 public:
+	CRemote() {};
+	~CRemote() {};
 	int Reset(uint8_t kind);
-	int GetIdentity(TRemoteInfo &ri);
+	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
 	int InvalidateFlash(void);
@@ -121,17 +150,23 @@ public:
 	int LearnIR(string *learn_string=NULL);
 };
 
-class CRemoteZ_Base : public CRemoteBase
+class CRemoteZ_Base : public CRemoteBase	// Base class for all Z-Wave remotes
 {
 protected:
-	virtual int UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL)=0;
-	virtual int UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data)=0;
-	virtual int TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL)=0;
-	virtual int TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data)=0;
+	struct TParamList {
+		unsigned int count;
+		uint8_t *p[32];
+	};
+	virtual int Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL)=0;
+	virtual int Read(uint8_t &status, unsigned int &len, uint8_t *data)=0;
+	virtual int ParseParams(unsigned int len, uint8_t *data, TParamList &pl)=0;
+	virtual uint16_t GetWord(uint8_t *x)=0;
 
 public:
+	CRemoteZ_Base() {};
+	~CRemoteZ_Base() {};
 	int Reset(uint8_t kind);
-	int GetIdentity(TRemoteInfo &ri);
+	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
 	int InvalidateFlash(void);
@@ -149,19 +184,31 @@ class CRemoteZ_HID : public CRemoteZ_Base	// 890, 890Pro, AVL-300, RF Extender
 private:
 	uint8_t m_tx_seq;
 	uint8_t m_rx_seq;
-
-protected:
 	int UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
 	int UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
 	int TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
 	int TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
+
+protected:
+	virtual int Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
+	virtual int Read(uint8_t &status, unsigned int &len, uint8_t *data);
+	virtual int ParseParams(unsigned int len, uint8_t *data, TParamList &pl);
+	virtual uint16_t GetWord(uint8_t *x) { return x[1]<<8 | x[0]; };
+
+public:
+	CRemoteZ_HID() {};
+	~CRemoteZ_HID() {};
 };
 
 class CRemoteZ_TCP : public CRemoteZ_Base	// 1000, 1000i
 {
 protected:
-	int UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
-	int UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
-	int TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
-	int TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
+	virtual int Write(uint8_t typ, uint8_t cmd, unsigned int len=0, uint8_t *data=NULL);
+	virtual int Read(uint8_t &status, unsigned int &len, uint8_t *data);
+	virtual int ParseParams(unsigned int len, uint8_t *data, TParamList &pl);
+	virtual uint16_t GetWord(uint8_t *x) { return x[0]<<8 | x[1]; };
+
+public:
+	CRemoteZ_TCP() {};
+	~CRemoteZ_TCP() {};
 };

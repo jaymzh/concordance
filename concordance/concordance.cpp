@@ -20,6 +20,7 @@
 #include "harmony.h"
 #include "binaryfile.h"
 #include "hid.h"
+#include "usblan.h"
 #include "remote.h"
 #include "web.h"
 #include "protocol.h"
@@ -35,7 +36,7 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 #include <getopt.h>
 #endif
 
-const char * const VERSION = "0.9";
+const char * const VERSION = "0.10";
 
 static const enum {
 	MODE_UNSET,
@@ -50,7 +51,7 @@ static const enum {
 	MODE_RESET
 };
 
-static CRemoteBase *rmt = NULL;
+static CRemoteBase *rmt = reinterpret_cast<CRemoteBase*>(NULL);
 
 struct options_t {
 	bool binary;
@@ -652,7 +653,7 @@ void print_harmony_time(const THarmonyTime &ht)
 	printf("Timezone    %s\n",ht.timezone.c_str());
 #endif
 
-	printf("\n%04i/%02i/%02i %s %02i/%02i/%02i %+i %s\n",
+	printf("\n%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
 		ht.year,ht.month,ht.day,dow[ht.dow&7],
 		ht.hour,ht.minute,ht.second,ht.utc_offset,ht.timezone.c_str());
 }
@@ -711,18 +712,26 @@ int main(int argc, char *argv[])
 
 	if ((err = FindRemote(hid_info))) {
 		printf("Unable to find a HID remote (error %i)\n",err);
-		goto cleanup;
+		hid_info.pid=0;
+
+		if ((err = FindUsbLanRemote())) {
+			printf("Unable to find a TCP remote (error %i)\n",err);
+			goto cleanup;
+		}
+		rmt = new CRemoteZ_TCP;
 	}
 
 	if(hid_info.pid == 0xC11F) {
-		printf("Harmony 1000 is not supported yet\n");
+		printf("Harmony 1000 requires Belcarra USB LAN driver\n");
 		goto cleanup;
 	}
 
-	if (hid_info.pid == 0xC112)	// 890
-		rmt = new CRemoteZ_HID;
-	else
-		rmt = new CRemote;
+	if (!rmt) {
+		if (hid_info.pid == 0xC112)	// 890
+			rmt = new CRemoteZ_HID;
+		else
+			rmt = new CRemote;
+	}
 
 	/*
 	 * If we're in reset mode, not only do we not need to read and print
@@ -739,7 +748,7 @@ int main(int argc, char *argv[])
 	 * Get and print all the version info
 	 */
 
-	if ((err = rmt->GetIdentity(ri)))
+	if ((err = rmt->GetIdentity(ri, hid_info)))
 		goto cleanup;
 
 	if ((err = print_version_info(ri, hid_info, options)))

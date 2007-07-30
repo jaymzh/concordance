@@ -80,7 +80,7 @@ int CRemote::Reset(uint8_t kind)
  *
  * Then populate our struct with all the relevant info.
  */
-int CRemote::GetIdentity(TRemoteInfo &ri)
+int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 {
 	int err = 0;
 

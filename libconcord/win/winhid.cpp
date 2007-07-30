@@ -134,7 +134,8 @@ int FindRemote(THIDINFO &hid_info)
 				TRACE1("           Product ID: %04X\n",attr.ProductID);
 				TRACE1("       Version Number: %04X\n",attr.VersionNumber);
 
-				if(attr.VendorID==0x046D || (attr.VendorID==0x0400 && attr.ProductID==0xC359)) {
+				if((attr.VendorID==0x046D && attr.ProductID>=0xC110 && attr.ProductID<=0xC14F) ||
+						(attr.VendorID==0x0400 && attr.ProductID==0xC359)) {
 					WCHAR s[127];
 					char ts[128];
 
