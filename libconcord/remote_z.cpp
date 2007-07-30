@@ -285,10 +285,11 @@ int CRemoteZ_TCP::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 		pl.p[n++] = data+i;
 #if 1
 		printf("%3i:",param_len);
-		for(unsigned int n=0; n<param_len; ++n)
-			printf(" %02X",data[i++]);
+		for(unsigned int j=0; j<param_len; ++j)
+			printf(" %02X",data[i+j]);
 		printf("\n");
 #endif
+		i += param_len;
 	}
 
 	//data[3];	// Number of parameters
