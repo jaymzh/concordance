@@ -38,7 +38,7 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 
 const char * const VERSION = "0.10";
 
-static const enum {
+enum {
 	MODE_UNSET,
 	MODE_CONNECTIVITY,
 	MODE_DUMP_CONFIG,
