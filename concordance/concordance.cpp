@@ -24,6 +24,7 @@
 #include "remote.h"
 #include "web.h"
 #include "protocol.h"
+#include "time.h"
 #include <iostream>
 
 #ifdef WIN32
@@ -48,7 +49,9 @@ enum {
 	MODE_DUMP_SAFEMODE,
 	MODE_HELP,
 	MODE_LEARN_IR,
-	MODE_RESET
+	MODE_RESET,
+	MODE_GET_TIME,
+	MODE_SET_TIME
 };
 
 static CRemoteBase *rmt = NULL;
@@ -79,10 +82,12 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 		{"dump-firmware", optional_argument, 0, 'f'},
 		{"write-firmware", required_argument, 0, 'F'},
 		{"help", no_argument, 0, 'h'},
-		{"learn-ir", required_argument, 0, 'l'},
+		{"learn-ir", optional_argument, 0, 'l'},
 		{"reset", no_argument, 0, 'r'},
 		{"dump-safemode", optional_argument, 0, 's'},
 		{"connectivity-test", required_argument, 0, 't'},
+		{"get-time", no_argument, 0, 'k' },
+		{"set-time", no_argument, 0, 'K' },
 		{"verbose", no_argument, 0, 'v'},
 		{"no-web", no_argument, 0, 'w'},
 		{0,0,0,0} // terminating null entry
@@ -96,7 +101,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 
 	int tmpint = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl:rs::t:vw",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl::rs::t:kKvw",
 				long_options, NULL)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -139,7 +144,6 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 				file_name = optarg;
 			}
 			set_mode(mode, MODE_LEARN_IR);
-			file_name = optarg;
 			break;
 		case 'r':
 			set_mode(mode, MODE_RESET);
@@ -156,6 +160,12 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			}
 			set_mode(mode, MODE_CONNECTIVITY);
 			file_name = optarg;
+			break;
+		case 'k':
+			set_mode(mode, MODE_GET_TIME);
+			break;
+		case 'K':
+			set_mode(mode, MODE_SET_TIME);
 			break;
 		case 'v':
 			options.verbose = true;
@@ -246,6 +256,10 @@ void help()
 		<< "\tPrint this help message and exit.\n\n";
 	cout << "   -l, --learn-ir <filename>\n"
 		<< "\t Learn IR from other remotes. Use <filename>.\n\n";
+	cout << "   -k, --get-time\n"
+		<< "\t Get time from the remote\n";
+	cout << "   -K, --set-time\n"
+		<< "\t Set the remote's time clock\n\n";
 
 	cout << "NOTE: If using the short options (e.g. -c), then *optional*"
 		<< " arguements\nmust be adjacent: -c/path/to/file."
@@ -648,9 +662,39 @@ void print_harmony_time(const THarmonyTime &ht)
 	printf("Timezone    %s\n",ht.timezone.c_str());
 #endif
 
-	printf("\n%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
+	printf("%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
 		ht.year,ht.month,ht.day,dow[ht.dow&7],
 		ht.hour,ht.minute,ht.second,ht.utc_offset,ht.timezone.c_str());
+}
+
+int get_time(TRemoteInfo &ri)
+{
+	THarmonyTime ht;
+	int err;
+	if ((err = rmt->GetTime(ri,ht))) return err;
+	printf("The remote's time is currently ");
+	print_harmony_time(ht);
+	return 0;
+}
+
+int set_time(TRemoteInfo &ri)
+{
+	const time_t t = time(NULL);
+	struct tm *lt = localtime(&t);
+	THarmonyTime ht;
+	ht.second = lt->tm_sec;
+	ht.minute = lt->tm_min;
+	ht.hour = lt->tm_hour;
+	ht.day = lt->tm_mday;
+	ht.dow = lt->tm_wday;
+	ht.month = lt->tm_mon + 1;
+	ht.year = lt->tm_year + 1900;
+	ht.utc_offset = 0;
+	ht.timezone = "";
+
+	printf("The remote's time has been set to ");
+	print_harmony_time(ht);
+	return rmt->SetTime(ri,ht);
 }
 
 
@@ -750,13 +794,6 @@ int main(int argc, char *argv[])
 	if ((err = print_version_info(ri, hid_info, options)))
 		goto cleanup;
 
-	// NOTE: Experimental
-	if (options.verbose) {
-		THarmonyTime ht;
-		rmt->GetTime(ri,ht);
-		print_harmony_time(ht);
-	}
-
 	/*
 	 * Now do whatever we've been asked to do
 	 */
@@ -793,6 +830,14 @@ int main(int argc, char *argv[])
 
 		case MODE_LEARN_IR:
 			err = learn_ir_commands(ri, file_name, options);
+			break;
+
+		case MODE_GET_TIME:
+			err = get_time(ri);
+			break;
+
+		case MODE_SET_TIME:
+			err = set_time(ri);
 			break;
 /*
 		default:

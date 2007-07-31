@@ -457,15 +457,15 @@ int CRemote::ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t 
 
 int CRemote::ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *rd)
 {
-	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 0x03, kind, 0, 0 };
+	uint8_t rmw[] = { 0, COMMAND_READ_MISC | 0x03, kind, 0, 0 };
 
 	while (len--) {
-		rmb[3] = addr>>8;
-		rmb[4] = addr&0xFF;
+		rmw[3] = addr>>8;
+		rmw[4] = addr&0xFF;
 		++addr;
 
 		int err;
-		if ((err=HID_WriteReport(rmb))) return err;
+		if ((err=HID_WriteReport(rmw))) return err;
 
 		uint8_t rsp[68];
 		if ((err=HID_ReadReport(rsp))) return err;
@@ -482,20 +482,57 @@ int CRemote::ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_
 
 int CRemote::WriteMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t *wr)
 {
-	/// todo
+	uint8_t wmb[8];
+	wmb[0] = 0;
+	wmb[1] = COMMAND_WRITE_MISC | 0x03;
+	wmb[2] = kind;
+
+	while (len--) {
+		wmb[3] = addr++;
+		wmb[4] = *wr++;
+
+		int err;
+		if ((err=HID_WriteReport(wmb))) return err;
+
+		uint8_t rsp[68];
+		if ((err=HID_ReadReport(rsp))) return err;
+		if(rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
+			rsp[2] != COMMAND_WRITE_MISC)
+			return 1;
+	}
 	return 0;
 }
 
 int CRemote::WriteMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_t *wr)
 {
-	/// todo
+	uint8_t wmw[8];
+	wmw[0] = 0;
+	wmw[1] = COMMAND_WRITE_MISC | 0x05;
+	wmw[2] = kind;
+
+	while (len--) {
+		wmw[3] = addr>>8;
+		wmw[4] = addr&0xFF;
+		++addr;
+		wmw[5] = *wr>>8;
+		wmw[6] = *wr&0xFF;
+		++wr;
+
+		int err;
+		if ((err=HID_WriteReport(wmw))) return err;
+
+		uint8_t rsp[68];
+		if ((err=HID_ReadReport(rsp))) return err;
+		if(rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
+			rsp[2] != COMMAND_WRITE_MISC)
+			return 1;
+	}
 	return 0;
 }
 
 
 int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 {
-	// NOTE: This is experimental
 	int err=0;
 
 	if(ri.architecture < 8) {
@@ -528,30 +565,37 @@ int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 
 int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 {
-	// NOTE: This is experimental
 	int err=0;
 
-	if(ri.architecture < 8) {
+	if (ri.architecture < 8) {
 		uint8_t tsv[8];
-		tsv[0] = ht.second;
+		tsv[0] = 0;
 		tsv[1] = ht.minute;
 		tsv[2] = ht.hour;
 		tsv[3] = ht.day-1;
 		tsv[4] = ht.month-1;
 		tsv[5] = ht.year-2000;
-		err = WriteMiscByte(0,6,COMMAND_MISC_STATE,tsv);
+		if ((err = WriteMiscByte(0,6,COMMAND_MISC_STATE,tsv))) return err;
+		tsv[0] = ht.second;
+		err = WriteMiscByte(0,1,COMMAND_MISC_STATE,tsv);
 	} else {
 		uint16_t tsv[8];
-		tsv[0] = ht.second;
+		tsv[0] = 0;
 		tsv[1] = ht.minute;
 		tsv[2] = ht.hour;
 		tsv[3] = ht.day-1;
 		tsv[4] = ht.dow;
 		tsv[5] = ht.month-1;
 		tsv[6] = ht.year-2000;
-		err = WriteMiscWord(0,7,COMMAND_MISC_STATE,tsv);
+		if ((err = WriteMiscWord(0,7,COMMAND_MISC_STATE,tsv))) return err;
+		tsv[0] = ht.second;
+		if ((err = WriteMiscWord(0,1,COMMAND_MISC_STATE,tsv))) return err;
 
-		// todo: Send Recalc Clock command for 880 (not 360/520/550)
+		// Send Recalc Clock command for 880 only (not 360/520/550)
+		if (ri.architecture == 8) {
+			static const uint8_t rcc[] = { 0, COMMAND_WRITE_MISC | 0x01, COMMAND_MISC_CLOCK_RECALCULATE };
+			err = HID_WriteReport(rcc);
+		}
 	}
 
 	return err;

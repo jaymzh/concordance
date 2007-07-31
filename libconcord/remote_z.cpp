@@ -21,16 +21,15 @@
 #include "remote.h"
 #include "usblan.h"
 
+static const uint8_t SERVICE_FAMILY_CLIENT = 2;	// 1000 only
+static const uint8_t SERVICE_FAMILY_TEST = 12;	// 1000 only
+
+static const uint8_t TYPE_REQUEST = 0;			// Literal for 890 only
+static const uint8_t TYPE_RESPONSE = 1;			// Literal for 890 only
 /*
 static const boolean TYPE_REQUEST = true;		// 1000 only
 static const boolean TYPE_RESPONSE = false;		// 1000 only
 */
-static const uint8_t SERVICE_FAMILY_CLIENT = 2;	// 1000 only
-static const uint8_t SERVICE_FAMILY_TEST = 12;	// 1000 only
-
-
-static const uint8_t TYPE_REQUEST = 0;
-static const uint8_t TYPE_RESPONSE = 1;
 
 static const uint8_t COMMAND_INVALID = 0x00;
 static const uint8_t COMMAND_EXECUTE_ACTION = 0x01;
@@ -60,14 +59,14 @@ static const uint8_t COMMAND_FINISH_UPDATE = 0x46;
 static const uint8_t COMMAND_READ_REGION = 0x47;
 static const uint8_t COMMAND_READ_REGION_DATA = 0x48;
 static const uint8_t COMMAND_READ_REGION_DONE = 0x49;
-static const uint8_t COMMAND_START_RAW_IR_TCP_CHANNEL = 0x50;
-static const uint8_t COMMAND_CACHE_RAW_IR_HEADER = 0x51;
-static const uint8_t COMMAND_CACHE_RAW_IR_DATA = 0x52;
-static const uint8_t COMMAND_CACHE_RAW_IR_DONE = 0x53;
-static const uint8_t COMMAND_EXECUTE_RAW_IR = 0x54;
-static const uint8_t COMMAND_START_RAW_IR = 0x55;
-static const uint8_t COMMAND_CONTINUE_RAW_IR = 0x56;
-static const uint8_t COMMAND_FINISH_RAW_IR = 0x57;
+static const uint8_t COMMAND_START_RAW_IR_TCP_CHANNEL = 0x50;	// 890 only
+static const uint8_t COMMAND_CACHE_RAW_IR_HEADER = 0x51;		// 890 only
+static const uint8_t COMMAND_CACHE_RAW_IR_DATA = 0x52;			// 890 only
+static const uint8_t COMMAND_CACHE_RAW_IR_DONE = 0x53;			// 890 only
+static const uint8_t COMMAND_EXECUTE_RAW_IR = 0x54;				// 890 only
+static const uint8_t COMMAND_START_RAW_IR = 0x55;				// 890 only
+static const uint8_t COMMAND_CONTINUE_RAW_IR = 0x56;			// 890 only
+static const uint8_t COMMAND_FINISH_RAW_IR = 0x57;				// 890 only
 static const uint8_t COMMAND_INITIATE_SYSTEM_TCP_CHANNEL = 0x60;
 static const uint8_t COMMAND_GET_SYSTEM_INFO = 0x61;
 static const uint8_t COMMAND_GET_INTERFACE_LIST = 0x62;
@@ -78,6 +77,8 @@ static const uint8_t COMMAND_GET_NAME = 0x6A;
 static const uint8_t COMMAND_SET_NAME = 0x6B;
 static const uint8_t COMMAND_GET_LOCATION = 0x6C;
 static const uint8_t COMMAND_SET_LOCATION = 0x6D;
+static const uint8_t COMMAND_GET_REGION_IDS = 0x6E;				// 1000 only
+static const uint8_t COMMAND_GET_REGION_VERSION = 0x6F;			// 1000 only
 static const uint8_t COMMAND_GET_CURRENT_TIME = 0x70;
 static const uint8_t COMMAND_UPDATE_TIME = 0x71;
 static const uint8_t COMMAND_INITIATE_ZWAVE_TCP_CHANNEL = 0x80;
@@ -99,7 +100,8 @@ static const uint8_t COMMAND_LEARNIR_HEADER = 0xA2;
 static const uint8_t COMMAND_LEARNIR_DATA = 0xA3;
 static const uint8_t COMMAND_LEARNIR_DONE = 0xA4;
 static const uint8_t COMMAND_LEARNIR_STOP = 0xA5;
-//static const uint8_t COMMAND_RESET_TEST_FLAG = 242;// 1000 only
+static const uint8_t COMMAND_RESET_TEST_FLAG = 0xF2;			// 1000 only
+
 static const uint8_t STATUS_NULL = 0x00;
 static const uint8_t STATUS_OK = 0x01;
 static const uint8_t STATUS_BUSY = 0x02;
@@ -112,28 +114,13 @@ static const uint8_t STATUS_INVALID_ADDRESS = 0x08;
 static const uint8_t STATUS_INVALID_TCP_COMMAND = 0x09;
 static const uint8_t STATUS_BAD_DATA_LENGTH = 0x0A;
 static const uint8_t STATUS_BAD_REGION = 0x0B;
-static const uint8_t STATUS_INVALID_ARGUMENT = 0x0C;
-static const uint8_t STATUS_DEVICE_NOT_READY = 0x0D;
-static const uint8_t STATUS_INVALID_RESPONSE = 0x0E;
-/*
-// 1000
-static const uint8_t STATUS_NULL = 0;
-static const uint8_t STATUS_OK = 1;
-static const uint8_t STATUS_BUSY = 2;
-static const uint8_t STATUS_BAD_VERSION = 3;
-static const uint8_t STATUS_UNKNOWN_HANDLE = 4;
-static const uint8_t STATUS_UNKNOWN_ACTION = 5;
-static const uint8_t STATUS_ALREADY_ABORTED = 6;
-static const uint8_t STATUS_NO_MORE_DATA = 7;
-static const uint8_t STATUS_INVALID_ADDRESS = 8;
-static const uint8_t STATUS_INVALID_TCP_COMMAND = 9;
-static const uint8_t STATUS_BAD_DATA_LENGTH = 10;
-static const uint8_t STATUS_BAD_REGION = 11;
-static const uint8_t STATUS_BAD_PACKET = 12;
-static const uint8_t STATUS_PAUSE = 13;
-static const uint8_t STATUS_FAILED = 14;
-static const uint8_t STATUS_BAD_CHECKSUM = 127;
-*/
+static const uint8_t STATUS_INVALID_ARGUMENT = 0x0C;			// 890 only
+static const uint8_t STATUS_BAD_PACKET = 0x0C;					// 1000 only
+static const uint8_t STATUS_DEVICE_NOT_READY = 0x0D;			// 890 only
+static const uint8_t STATUS_PAUSE = 0x0D;						// 1000 only
+static const uint8_t STATUS_INVALID_RESPONSE = 0x0E;			// 890 only
+static const uint8_t STATUS_FAILED = 0x0E;						// 1000 only
+static const uint8_t STATUS_BAD_CHECKSUM = 0x7F;				// 1000 only
 
 
 int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len/*=0*/, uint8_t *data/*=NULL*/)
@@ -225,7 +212,7 @@ int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, unsigned int len/*=0*/, uint8_
 {
 	if (len > 60) return 1;
 
-	static const uint8_t service_type = 2; // SERVICE_FAMILY_CLIENT 
+	static const uint8_t service_type = SERVICE_FAMILY_CLIENT;
 	const bool request = typ==TYPE_REQUEST;
 	const uint8_t status = STATUS_OK;
 
@@ -360,6 +347,27 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 	ri.config_bytes_used=0;
 	ri.max_config_size=1;
 
+#if 0	// Get region info - 1000 only!
+	uint8_t rr[] = { 1, 1, 1 }; // AddByteParam(1);
+	Write(TYPE_REQUEST, COMMAND_GET_REGION_IDS, 3, rr);
+	uint8_t rgn[64];
+	Read(status,len,rgn);
+	ParseParams(len,rgn,pl);
+	if (pl.count==1) {
+		const unsigned int rc = *(pl.p[0]-1) & 0x3F;
+		for(unsigned int r = 0; r<rc; ++r) {
+			const uint8_t rn = *(pl.p[0]+r);
+			printf("Region %i\n",rn);
+			uint8_t rv[] = { 1, 1, rn }; // AddByteParam(rn);
+			Write(TYPE_REQUEST, COMMAND_GET_REGION_VERSION, 3, rv);
+			uint8_t rgv[64];
+			Read(status,len,rgv);
+			CRemoteZ_Base::TParamList rp;
+			ParseParams(len,rgv,rp);
+		}
+	}
+#endif
+
 	return 0;
 }
 
@@ -411,7 +419,8 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 
 int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 {
-	return 0;
+	printf("Set time is not currently supported for this mode remote\n");
+	return 1;
 }
 
 int CRemoteZ_Base::LearnIR(string *learn_string/*=NULL*/)
