@@ -110,7 +110,7 @@ class CRemoteBase			// Base class for all remotes
 {
 public:
 	CRemoteBase() {};
-	~CRemoteBase() {};
+	virtual ~CRemoteBase() {};
 	virtual int Reset(uint8_t kind)=0;
 	virtual int GetIdentity(TRemoteInfo &ri, THIDINFO &hid)=0;
 
@@ -135,7 +135,7 @@ private:
 
 public:
 	CRemote() {};
-	~CRemote() {};
+	virtual ~CRemote() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid);
 
@@ -164,7 +164,7 @@ protected:
 
 public:
 	CRemoteZ_Base() {};
-	~CRemoteZ_Base() {};
+	virtual ~CRemoteZ_Base() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid);
 
@@ -197,7 +197,7 @@ protected:
 
 public:
 	CRemoteZ_HID() {};
-	~CRemoteZ_HID() {};
+	virtual ~CRemoteZ_HID() {};
 };
 
 class CRemoteZ_TCP : public CRemoteZ_Base	// 1000, 1000i
@@ -210,5 +210,5 @@ protected:
 
 public:
 	CRemoteZ_TCP() {};
-	~CRemoteZ_TCP() {};
+	virtual ~CRemoteZ_TCP() {};
 };

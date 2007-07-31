@@ -51,7 +51,7 @@ enum {
 	MODE_RESET
 };
 
-static CRemoteBase *rmt = reinterpret_cast<CRemoteBase*>(NULL);
+static CRemoteBase *rmt = NULL;
 
 void set_mode(int &mode, int val)
 {
