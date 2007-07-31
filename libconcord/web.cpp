@@ -66,7 +66,8 @@ static void UrlEncode(const char *in, string &out)
 	}
 }
 
-static int Zap(string &server, const char *s1, const char *s2)
+static int Zap(string &server, const char *s1, const char *s2,
+	struct options_t &options)
 {
 	int error;
 
@@ -74,7 +75,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 	hostent* addr=gethostbyname(server.c_str());
 	if(!addr) {
 #ifdef WIN32
-		error=WSAGetLastError();
+		error = WSAGetLastError();
 		printf("gethostbyname() Error: %i\n",error);
 		return error;
 #else
@@ -85,52 +86,55 @@ static int Zap(string &server, const char *s1, const char *s2)
 	// Fill in the sockaddr structure
 	sockaddr_in sa;
 	memcpy(&(sa.sin_addr), addr->h_addr,addr->h_length);
-	sa.sin_family = AF_INET;								// Internet (TCP/IP) type
-	sa.sin_port = htons(80);								// Port 80 - htons() converts native byte order to network byte order
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(80);
 
 	// Create a socket
 	// SOCK_STREAM = Stream (TCP) socket
-	SOCKET sock=socket( sa.sin_family, SOCK_STREAM, 0 );
+	SOCKET sock = socket( sa.sin_family, SOCK_STREAM, 0 );
 
 	// Connect
-	if((error=connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+	if((error = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
 #ifdef WIN32
-		error=WSAGetLastError();
+		error = WSAGetLastError();
 		printf("Connect Error: %i\n",error);
 #endif
 		return error;
 	}
 
-	printf("\nConnected!\n\n");
+	if (options.verbose)
+		printf("Connected!\n");
 
-	error=send(sock,s1,strlen(s1),0);
-	if(error==SOCKET_ERROR) {
+	error = send(sock,s1,strlen(s1),0);
+	if(error == SOCKET_ERROR) {
 #ifdef WIN32
-		error=WSAGetLastError();
+		error = WSAGetLastError();
 		printf("send() failed with error %i\n",error);
 #endif
 		return error;
 	}
-	printf("%i bytes sent\n",error);
+	if (options.verbose)
+		printf("%i bytes sent\n",error);
 
-	error=send(sock,s2,strlen(s2),0);
-	if(error==SOCKET_ERROR) {
+	error = send(sock,s2,strlen(s2),0);
+	if(error == SOCKET_ERROR) {
 #ifdef WIN32
-		error=WSAGetLastError();
+		error = WSAGetLastError();
 		printf("send() failed with error %i\n",error);
 #endif
 		return error;
 	}
-	printf("%i bytes sent\n",error);
+	if (options.verbose)
+		printf("%i bytes sent\n",error);
 
 	//Sleep(100);
 
 	char buf[1000];
 	error=recv(sock,buf,999,0);
 
-	if(error==SOCKET_ERROR) {
+	if(error == SOCKET_ERROR) {
 #ifdef WIN32
-		error=WSAGetLastError();
+		error = WSAGetLastError();
 		printf("recv() failed with error %i\n",error);
 #endif
 		return error;
@@ -138,16 +142,20 @@ static int Zap(string &server, const char *s1, const char *s2)
 
 	// Show the received received data
 	buf[error]=0;
+#if _DEBUG
 	printf("Received: %s\n",buf);
+#endif
 
 	// Close the socket
 	if((error=closesocket(sock))) {
 #ifdef WIN32
-		error=WSAGetLastError();
+		error = WSAGetLastError();
 		printf("Close Error: %i\n",error);
 #endif
 		return error;
 	}
+
+	printf(" done\n");
 	
 	return 0;
 }
@@ -174,20 +182,35 @@ int GetTag(const char *find, uint8_t*& pc, string *s=NULL)
 }
 
 int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
-	 string *learn_seq=NULL, string *learn_key=NULL)
+	struct options_t &options, string *learn_seq = NULL,
+	string *learn_key = NULL)
 {
-	uint8_t *x=xml;
+	if (options.noweb)
+		return  0;
+
+	uint8_t *x = xml;
 	int err;
-	if((err=GetTag(root,x))) return err;
+	if ((err = GetTag(root,x)))
+		return err;
+
 	string server,path,cookie,userid;
-	if((err=GetTag("SERVER",x,&server))) return err;;
-	printf("Server: %s\n",server.c_str());
-	if((err=GetTag("PATH",x,&path))) return err;
-	printf("Path: %s\n",path.c_str());
-	if((err=GetTag("VALUE",x,&cookie))) return err;
-	printf("Cookie: %s\n",cookie.c_str());
-	if((err=GetTag("VALUE",x,&userid))) return err;
-	printf("UserId: %s\n",userid.c_str());
+
+	if ((err = GetTag("SERVER",x,&server)))
+		return err;
+	if ((err = GetTag("PATH",x,&path)))
+		return err;
+	if ((err = GetTag("VALUE",x,&cookie)))
+		return err;
+	if ((err = GetTag("VALUE",x,&userid)))
+		return err;
+
+	printf("Connecting to %s:",server.c_str());
+
+	if (options.verbose) {
+		printf("\nPath: %s\n",path.c_str());
+		printf("Cookie: %s\n",cookie.c_str());
+		printf("UserId: %s\n",userid.c_str());
+	}
 
 	string post;
 	if(learn_seq==NULL) {
@@ -218,5 +241,5 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 	printf("\n%s\n",http_header);
 #endif
 
-	return Zap(server,http_header,post.c_str());
+	return Zap(server,http_header,post.c_str(),options);
 }

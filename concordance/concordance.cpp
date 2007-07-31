@@ -53,11 +53,6 @@ enum {
 
 static CRemoteBase *rmt = reinterpret_cast<CRemoteBase*>(NULL);
 
-struct options_t {
-	bool binary;
-	bool verbose;
-};
-
 void set_mode(int &mode, int val)
 {
 	if (mode == MODE_UNSET) {
@@ -89,17 +84,19 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 		{"dump-safemode", optional_argument, 0, 's'},
 		{"connectivity-test", required_argument, 0, 't'},
 		{"verbose", no_argument, 0, 'v'},
+		{"no-web", no_argument, 0, 'w'},
 		{0,0,0,0} // terminating null entry
 	};
 
 	options.verbose = false;
 	options.binary = false;
+	options.noweb = false;
 
 	mode = MODE_UNSET;
 
 	int tmpint = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl:rs::t:v",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl:rs::t:vw",
 				long_options, NULL)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -162,6 +159,9 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			break;
 		case 'v':
 			options.verbose = true;
+			break;
+		case 'w':
+			options.noweb = true;
 			break;
 		default:
 			exit(1);
@@ -303,26 +303,18 @@ int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 				ri.flash->size,ri.flash_mfg,ri.flash_id,
 				ri.flash->part);
 		}
-	}
 
-	if (options.verbose)
 		printf("     Architecture: %i\n",ri.architecture);
-
-	if (options.verbose)
 		printf("         Protocol: %i\n",ri.protocol);
 
-	if (options.verbose) {
-		printf("\n");
-		printf("     Manufacturer: %s\n",hid_info.mfg.c_str());
+		printf("\n     Manufacturer: %s\n",hid_info.mfg.c_str());
 		printf("          Product: %s\n",hid_info.prod.c_str());
 		printf("    IRL, ORL, FRL: %i, %i, %i\n",
 			hid_info.irl,hid_info.orl,hid_info.frl);
 		printf("          USB VID: %04X\n",hid_info.vid);
 		printf("          USB PID: %04X\n",hid_info.pid);
 		printf("          USB Ver: %04X\n",hid_info.ver);
-	}
 
-	if (options.verbose) {
 		printf("\n    Serial Number: %s\n",
 			ri.serial[0].c_str());
 		printf("                   %s\n",ri.serial[1].c_str());
@@ -339,13 +331,14 @@ int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 		return 1;
 	}
 
-	if (ri.valid_config)
-		printf("\nConfig Flash Used: %i%% (%i of %i KiB)\n",
+	if (ri.valid_config) {
+		printf("Config Flash Used: %i%% (%i of %i KiB)\n\n",
 			(ri.config_bytes_used*100+99) / ri.max_config_size,
 			(ri.config_bytes_used+1023)>>10,
 			(ri.max_config_size+1023)>>10);
-	else
+	} else {
 		printf("\nInvalid config!\n");
+	}
 
 	return 0;
 }
@@ -409,7 +402,7 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 /*
  * Do a connectivity test
  */
-int connect_test(TRemoteInfo &ri, char *file_name)
+int connect_test(TRemoteInfo &ri, char *file_name, struct options_t &options)
 {
 	/*
 	 * If we arrived, we can talk to the remote - so if it's
@@ -424,7 +417,7 @@ int connect_test(TRemoteInfo &ri, char *file_name)
 	// Prevent GetTag() from going off the deep end
 	buf[size]=0;
 
-	Post(buf,"POSTOPTIONS",ri);
+	Post(buf,"POSTOPTIONS",ri,options);
 
 	file.close();
 
@@ -463,15 +456,18 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 		string s;
 		GetTag("BINARYDATASIZE",t,&s);
 		uint32_t data_size = atoi(s.c_str());
-		printf("data size %i\n",data_size);
 		GetTag("CHECKSUM",t,&s);
 		const uint8_t checksum = atoi(s.c_str());
-		printf("checksum %i\n",checksum);
 
 		GetTag("/INFORMATION",y);
 		y += 2;
 		size -= (y-x);
-		printf("size %i\n",size);
+
+		if (options.verbose) {
+			printf("data size %i\n",data_size);
+			printf("checksum %i\n",checksum);
+			printf("size %i\n",size);
+		}
 
 		if (size != data_size)
 			printf("Data size mismatch %i %i\n",size,data_size);
@@ -484,15 +480,14 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 		if (chk != checksum)
 			printf("Bad checksum %02X %02X\n",chk, checksum);
 
-		if (file_name) Post(x,"POSTOPTIONS",ri);
+		if (file_name)
+			Post(x,"POSTOPTIONS",ri,options);
 	}
 
 	/*
 	 * We must invalidate flash before we erase and write so that
 	 * nothing will attempt to reference it while we're working.
 	 */
-	if (options.verbose)
-		printf("Invalidating flash... ");
 	if ((err = rmt->InvalidateFlash())) {
 		delete[] x;
 		printf("Failed to invalidate flash! Bailing out!\n");
@@ -508,7 +503,6 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 		return err;
 	}
 
-	printf("\nWrite Config ");
 	if ((err = rmt->WriteFlash(ri.arch->config_base,size,y,
 			ri.protocol))) {
 		delete[] x;
@@ -516,7 +510,7 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 		return err;
 	}
 
-	printf("\nVerify Config ");
+	printf("Verifying Config:   ");
 	if ((err = rmt->ReadFlash(ri.arch->config_base,size,y,
 			ri.protocol,true))) {
 		delete[] x;
@@ -525,7 +519,7 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	}
 
 	if (file_name && !options.binary)
-		Post(x,"COMPLETEPOSTOPTIONS",ri);
+		Post(x,"COMPLETEPOSTOPTIONS",ri,options);
 
 	delete[] x;
 
@@ -604,7 +598,8 @@ int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 	return 0;
 }
 
-int learn_ir_commands(TRemoteInfo &ri, char *file_name)
+int learn_ir_commands(TRemoteInfo &ri, char *file_name,
+	struct options_t &options)
 {
 	if (file_name) {
 		binaryinfile file;
@@ -628,7 +623,7 @@ int learn_ir_commands(TRemoteInfo &ri, char *file_name)
 		rmt->LearnIR(&ls);
 		//printf("%s\n",ls.c_str());
 
-		Post(x,"POSTOPTIONS",ri,&ls,&keyname);
+		Post(x,"POSTOPTIONS",ri,options,&ls,&keyname);
 	} else {
 		rmt->LearnIR();
 	}
@@ -668,7 +663,8 @@ int main(int argc, char *argv[])
 #endif
 
 	printf("Harmony Control %s\n", VERSION);
-	printf("Copyright 2007 Kevin Timmerman\n\n");
+	printf("Copyright 2007 Kevin Timmerman and Phil Dibowitz\n");
+	printf("This software is distributed under the GPLv3.\n\n");
 
 #ifdef WIN32
 	SetConsoleTextAttribute(con,
@@ -710,7 +706,7 @@ int main(int argc, char *argv[])
 		goto cleanup;
 	}
 
-	if ((err = FindRemote(hid_info))) {
+	if ((err = FindRemote(hid_info, options))) {
 		printf("Unable to find a HID remote (error %i)\n",err);
 		hid_info.pid=0;
 
@@ -767,7 +763,7 @@ int main(int argc, char *argv[])
 
 	switch (mode) {
 		case MODE_CONNECTIVITY:
-			err = connect_test(ri, file_name);
+			err = connect_test(ri, file_name, options);
 			break;
 
 		case MODE_DUMP_CONFIG:
@@ -796,7 +792,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_LEARN_IR:
-			err = learn_ir_commands(ri, file_name);
+			err = learn_ir_commands(ri, file_name, options);
 			break;
 /*
 		default:

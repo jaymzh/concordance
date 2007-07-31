@@ -18,4 +18,6 @@
  */
 
 int GetTag(const char *find, uint8_t*& pc, string *s=NULL);
-int Post(uint8_t *xml, const char *root, TRemoteInfo &ri, string *learn_seq=NULL, string *learn_key=NULL);
+int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
+	struct options_t &options, string *learn_seq=NULL,
+	string *learn_key=NULL);

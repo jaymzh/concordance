@@ -31,7 +31,7 @@ struct THIDINFO {
 int InitUSB(void);
 void ShutdownUSB(void);
 
-int FindRemote(THIDINFO &hid_info);
+int FindRemote(THIDINFO &hid_info, struct options_t &options);
 
 int HID_WriteReport(const uint8_t *data);
 int HID_ReadReport(uint8_t *data, unsigned int timeout=500);

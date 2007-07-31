@@ -60,7 +60,7 @@ void ShutdownUSB(void)
 	ol.hEvent=NULL;
 }
 
-int FindRemote(THIDINFO &hid_info)
+int FindRemote(THIDINFO &hid_info, struct options_t &options)
 {
 	if(h_hid) { CloseHandle(h_hid); h_hid=NULL; }
 

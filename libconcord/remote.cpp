@@ -70,6 +70,7 @@ void make_serial(uint8_t *ser, TRemoteInfo &ri)
 
 int CRemote::Reset(uint8_t kind)
 {
+	printf("Reseting...\n");
 	uint8_t reset_cmd[]={ 0, COMMAND_RESET, kind };
 
 	return HID_WriteReport(reset_cmd);
@@ -86,7 +87,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 
 	const uint8_t qid[]={ 0x00, COMMAND_GET_VERSION };
 
-	printf("Requesting Identity...\n");
+	printf("Requesting Identity: ");
 
 	if ((err = HID_WriteReport(qid))) {
 		cerr << "Failed to talk to remote\n";
@@ -121,7 +122,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 
 	setup_ri_pointers(ri);
 
-	printf("\nReading Flash... ");
+	//printf("Reading Flash... ");
 	uint8_t rd[1024];
 	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol))) {
 		printf("Failed to read flash\n");
@@ -160,7 +161,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 
 	make_serial(rsp,ri);
 
-	printf("\n");
+	printf("done\n");
 
 	return 0;
 }
@@ -265,8 +266,8 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned 
 		}
 	} while (err == 0 && addr < end);
 	if (len > 2048)
-		printf("\n");
-	
+		printf("       done\n");
+
 	return err;
 }
 
@@ -275,6 +276,8 @@ int CRemote::InvalidateFlash(void)
 	const uint8_t ivf[]={ 0x00, COMMAND_WRITE_MISC | 0x01, 
 				COMMAND_MISC_INVALIDATE_FLASH };
 	int err;
+
+	printf("Invalidating flash: ");
 	if ((err=HID_WriteReport(ivf))) return err;
 
 	uint8_t rsp[68];
@@ -285,6 +288,8 @@ int CRemote::InvalidateFlash(void)
 		return 1;
 	}
 
+	printf("                     done\n");
+
 	return 0;
 }
 
@@ -294,7 +299,8 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 	const unsigned int *sectors=ri.flash->sectors;
 	const unsigned int flash_base=ri.arch->flash_base;
 
-	printf("\nErasing... ");
+	printf("Erasing flash:      ");
+	fflush(stdout);
 
 	const uint32_t end=addr+len;
 
@@ -327,6 +333,7 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 
 #ifndef _DEBUG
 			printf("*");
+			fflush(stdout);
 #else
 			//printf("%02X %02X\n",rsp[1],rsp[2]);
 			printf("\nerase sector %2i: %06X - %06X",n,sector_begin,
@@ -340,13 +347,16 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 		sector_end=sectors[++n];
 	} while (sector_end);
 
-	printf("\n");
+	printf("          done\n");
 
 	return err;
 }
 
 int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol)
 {
+
+	printf("Writing config:     ");
+
 #ifdef WIN32
 	GetConsoleScreenBufferInfo(con,&sbi);
 #else
@@ -418,7 +428,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, un
 #endif
 	} while (addr < end);
 
-	printf("\n");
+	printf("       done\n");
 	
 	return err;
 }

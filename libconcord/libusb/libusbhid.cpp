@@ -59,10 +59,12 @@ void ShutdownUSB(void)
 	}
 }
 
-void check_ep(usb_endpoint_descriptor &ued)
+void check_ep(usb_endpoint_descriptor &ued, struct options_t &options)
 {
-	printf("address %02X attrib %02X max_length %i\n", ued.bEndpointAddress,
-		ued.bmAttributes, ued.wMaxPacketSize);
+	if (options.verbose)
+		printf("address %02X attrib %02X max_length %i\n",
+			ued.bEndpointAddress, ued.bmAttributes,
+			ued.wMaxPacketSize);
 	if ((ued.bmAttributes & USB_ENDPOINT_TYPE_MASK) ==
 	    USB_ENDPOINT_TYPE_INTERRUPT) {
 		if (ued.bEndpointAddress & USB_ENDPOINT_DIR_MASK) {
@@ -100,7 +102,7 @@ bool is_harmony(struct usb_device *h_dev)
  * Find a HID device with VendorID == 0x046D ||
  *    (VendorID == 0x0400 && ProductID == 0xC359)
  */
-int FindRemote(THIDINFO &hid_info)
+int FindRemote(THIDINFO &hid_info, struct options_t &options)
 {
 
 	usb_find_busses();
@@ -159,10 +161,12 @@ int FindRemote(THIDINFO &hid_info)
 			unsigned char maxalt = ui.num_altsetting;
 			for (unsigned char l = 0; l < maxalt; ++l) {
 				usb_interface_descriptor &uid=ui.altsetting[l];
-				printf("bNumEndpoints %i\n",uid.bNumEndpoints);
+				if (options.verbose)
+					printf("bNumEndpoints %i\n",
+						uid.bNumEndpoints);
 				unsigned char maxep = uid.bNumEndpoints;
 				for (unsigned char n = 0; n < maxep; ++n) {
-					check_ep(uid.endpoint[n]);
+					check_ep(uid.endpoint[n], options);
 
 				}
 			}

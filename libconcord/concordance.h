@@ -43,4 +43,10 @@ using namespace std;
 
 #include <string>
 
+struct options_t {
+	bool binary;
+	bool verbose;
+	bool noweb;
+};
+
 #endif // ifndef harmony_h
