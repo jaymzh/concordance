@@ -271,15 +271,21 @@ void help()
 
 	cout << "  -b, --binary-only\n"
 		<< "\tWhen dumping a config or firmware, this specifies to dump"
-		<< "only the\n\tbinary portion. When use without a specific"
-		<< "filename, the default\n\tfilename's extension is changed to"
+		<< " only the\n\tbinary portion. When use without a specific"
+		<< " filename, the default\n\tfilename's extension is changed to"
 		<< " .bin.\n"
 		<< "\tWhen writing a config or firmware, this specifies the"
-		<< "filename\n\tpassed in has just the binary blob, not the"
-		<< "XML.\n\n";
+		<< " filename\n\tpassed in has just the binary blob, not the"
+		<< " XML.\n\n";
 
 	cout << "  -v, --verbose\n"
 		<< "\tEnable verbose output.\n\n";
+
+	cout << "  -w, --no-web\n"
+		<< "\tDo not attempt to talk to the website. This is useful"
+		<< " for\n\tre-programming the remote from a saved file, or for"
+		<< " debugging.\n\n";
+
 }
 
 
