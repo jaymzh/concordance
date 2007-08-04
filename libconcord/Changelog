@@ -1,0 +1,65 @@
+0.10
+Released:
+phil@ipom.com
+- Add --no-web option
+- Cleanup output, web-related in particular
+- refactor code so output its printed in the same general area of code
+- cleanup remote-discovery output
+- fix compiler error in linux from previous windows changes
+- Update Makefile for new 890/1000 support from Kevin
+- Add invalidation-of-flash before erase-of-flash. Required for consistent
+  results - idea from Kevin
+- Cleanup discovery code to only match devices we care about
+- Improve error reporting around USB discovery when using libusb
+- Improve error reporting around USB read/write when using libusb
+- Attempt to detach kernel driver, if in Linux
+- Add #ifndef's around harmony.h
+- Documentation updates
+
+sourceforge2007@pcmx.net:
+- Refactor classes in preperation for 890/1000 support
+- Limited 890/1000 support
+- Improve 360, 520, 500, and 745 support
+- Add -k and -K for get and set time
+- Fix virtual deconstructors to make g++ not warn
+
+
+0.9
+Released: 07/20/07
+phil@ipom.com:
+- More re-factoring
+- UI re-write
+- Much more verbose --help message
+
+sourceforge2007@pcmx.net:
+- Bugfix for not recording filenames passed in
+- Windows getopt compatibility
+- Added a small program called 'snoop' which takes SnoopyPro XML output
+  and converts it to a text file with interpreted Harmony commands
+
+
+0.8
+Released: 07/19/07
+phil@ipom.com:
+- Add TODO, ideas for UI redesign, and more
+- Finished factoring out harmony.cpp
+- Fixed up the help output
+- Added a few error messages
+- Cleaned up compiler warnings
+
+
+0.7
+Released: 07/18/07
+phil@ipom.com:
+- start to factor out the very large main loop
+- add a --help option
+- move to getopt
+- add some more documentation
+- Makefile fixes
+- general readability improvements
+
+
+0.6
+Released: 07/17/07
+- Original public version
+
