@@ -138,7 +138,7 @@
  *  You should have received a copy of the GNU General Public License along
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-/*
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3 of the License, or
@@ -253,7 +253,7 @@ void Decode(const uint8_t * const data)
 			else
 				printf("Read  %s %02X %02X\n",GetMisc(data[1]),data[2],data[3]);
 			break;
-		case COMMAND_READ_MISC_DATA & COMMAND_MASK:
+		case RESPONSE_READ_MISC_DATA & COMMAND_MASK:
 			/*
 			if(length==2)
 				printf("Read  %s Data %02X\n",GetMisc(data[1]),data[2]);

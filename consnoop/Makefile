@@ -25,29 +25,14 @@ MAN?=$(PREFIX)/share/man
 
 CXX?= g++
 CXXFLAGS?= -g -Wall -O2
-CXXFILES?= binaryfile.cpp harmony.cpp remote.cpp web.cpp libusb/libusbhid.cpp \
-	usblan.cpp remote_z.cpp
-LIBS?= -lusb
+CXXFILES?= snoop.cpp
+LIBS?=
 CPPFLAGS?=
 
-all: harmony
+all: snoop
 
-harmony: $(CXXFILES)
-	$(CXX) $(CXXFLAGS) $(CXXFILES) -o harmony $(LIBS) $(CPPFLAGS)
-	@touch harmony
-
-strip: harmony
-	$(STRIP) harmony
-	@touch strip
-
-install:
-	$(INSTALL) -D --mode=755 harmony $(BINDIR)/harmony
+snoop: $(CXXFILES)
+	$(CXX) $(CXXFLAGS) $(CXXFILES) -o snoop $(CPPFLAGS)
 
 clean:
-	/bin/rm -f harmony
-	/bin/rm -f strip
-	/bin/rm -f snoop/snoop
-
-uninstall:
-	/bin/rm -f $(BIN)/harmony
-
+	/bin/rm -f snoop

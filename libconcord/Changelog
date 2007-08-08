@@ -1,5 +1,5 @@
 0.10
-Released:
+Released: 08/07/07
 phil@ipom.com
 - Add --no-web option
 - Cleanup output, web-related in particular
@@ -15,6 +15,7 @@ phil@ipom.com
 - Attempt to detach kernel driver, if in Linux
 - Add #ifndef's around harmony.h
 - Documentation updates
+- Give snoop it's own Makefile
 
 sourceforge2007@pcmx.net:
 - Refactor classes in preperation for 890/1000 support

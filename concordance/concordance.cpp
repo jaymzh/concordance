@@ -82,7 +82,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 		{"dump-firmware", optional_argument, 0, 'f'},
 		{"write-firmware", required_argument, 0, 'F'},
 		{"help", no_argument, 0, 'h'},
-		{"learn-ir", optional_argument, 0, 'l'},
+		{"learn-ir", required_argument, 0, 'l'},
 		{"reset", no_argument, 0, 'r'},
 		{"dump-safemode", optional_argument, 0, 's'},
 		{"connectivity-test", required_argument, 0, 't'},
@@ -101,7 +101,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 
 	int tmpint = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl::rs::t:kKvw",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl:rs::t:kKvw",
 				long_options, NULL)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -140,10 +140,12 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			set_mode(mode, MODE_HELP);
 			break;
 		case 'l':
-			if (optarg != NULL) {
-				file_name = optarg;
+			if (optarg == NULL) {
+				cerr << "Missing config file to read from.\n";
+				exit(1);
 			}
 			set_mode(mode, MODE_LEARN_IR);
+			file_name = optarg;
 			break;
 		case 'r':
 			set_mode(mode, MODE_RESET);
@@ -760,11 +762,15 @@ int main(int argc, char *argv[])
 		printf("Unable to find a HID remote (error %i)\n",err);
 		hid_info.pid=0;
 
+#ifndef linux
 		if ((err = FindUsbLanRemote())) {
 			printf("Unable to find a TCP remote (error %i)\n",err);
 			goto cleanup;
 		}
 		rmt = new CRemoteZ_TCP;
+#else
+		goto cleanup;
+#endif
 	}
 
 	if(hid_info.pid == 0xC11F) {
