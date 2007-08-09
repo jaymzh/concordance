@@ -1,0 +1,67 @@
+."/*
+." *  This program is free software; you can redistribute it and/or modify
+." *  it under the terms of the GNU General Public License as published by
+." *  the Free Software Foundation; either version 3 of the License, or
+." *  (at your option) any later version.
+." *
+." *  This program is distributed in the hope that it will be useful,
+." *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+." *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+." *  GNU General Public License for more details.
+." *
+." *  You should have received a copy of the GNU General Public License along
+." *  with this program; if not, write to the Free Software Foundation, Inc.,
+." *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+." *
+." *  (C) Copyright Kevin Timmerman 2007
+." *  (C) Copyright Phil Dibowitz 2007
+." */
+.TH "harmony" 8
+.SH NAME
+harmony \- for programming your harmony remote
+.SH SYNOPSIS
+.B harmony
+.TP
+For command line mode:
+harmony <options>
+.TP
+For automatic mode:
+harmony <file>
+.SH DESCRIPTION
+This software supports programming Logitech Harmony remote controls.  This program needs to be run with root privileges.
+.SH OPTIONS
+.TP
+.B \-c, \-\-dump\-config [<filename>]
+Read the config from the remote and write it to a file.  If no filename is specified, config.EZHex is used.
+.TP
+.B \-C, \-\-write\-config <filename>
+Read a config from <filename> and write it to the remote.
+.TP
+.B \-f, \-\-dump\-firmware [<filename>]
+Read firmware from the remote and write it to a file.  If no filename is specified firmware.EZUp is used.
+.TP
+.B \-F, \-\-write\-firmware <filename>
+Read firmware from <filename> and write it to the remote
+.TP
+.B \-s, \-\-dump\-safemode [<filename>]
+Read the safemode firmware from the remote and write it to a file.  If no filename is specified, safe.bin is used.
+.TP
+.B \-t, \-\-connectivity\-test <filename>
+Do a connectivity test using <filename>
+.TP
+.B \-r, \-\-reset
+Reset (power-cycle) the remote control
+.TP
+.B \-h, \-\-help
+Print this help message and exit.
+.TP
+.B \-l, \-\-learn-ir <filename>
+Learn IR from other remotes. Use <filename>.
+.TP
+.B \-k, \-\-get\-time
+Get time from the remote
+.TP
+.B \-K, \-\-set\-time
+Set the time on the remote
+.SH BUGS
+None

@@ -248,7 +248,7 @@ void help()
 		<< " remote\n\n";
 	cout << "   -s, --dump-safemode [<filename>]\n"
 		<< "\tRead the safemode firmware from the remote and write it"
-		<< " to a file.\n\tIf no filename is psecified, safe.bin is"
+		<< " to a file.\n\tIf no filename is specified, safe.bin is"
 		<< " used.\n\n";
 	cout << "   -t, --connectivity-test <filename>\n"
 		<< "\tDo a connectivity test using <filename>\n\n";
