@@ -30,10 +30,10 @@ You can override the bin directory by passing a BIN variable to make:
 Because this software uses libusb, it does Direct IO. That means you must
 either be root to use it, or you must have the RAWIO capability.
 
-In addition, some Harmonies are recognized by the in-kernel HID driver,
-and if this happens, this software can't bind to it. Check dmesg, if the
-hid driver attached to your Harmony follow the instructions here to unbind
-it:
+In addition, harmony attempts to unbind any in-kernel drivers that may
+bind to your remote. However, if it can't, you'll need to unbind them manually.
+Check dmesg, if the hid driver attached to your Harmony follow the
+instructions here to unbind it:
    http://lwn.net/Articles/143397/
 
 

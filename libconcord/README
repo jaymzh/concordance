@@ -8,35 +8,40 @@ following ways:
 
   $ sudo harmony <filename>
 
-This will attempt to figure out what to do, and do it.
+This will attempt to figure out what to do, and do it. Note that harmony uses
+the *filename* to figure out what to do with it, so don't rename it. If you
+would prefer to rename it, tell harmony what you need done using one of it's
+many options...
 
 1. Backup the config
 
-  $ sudo harmony --config
+  $ sudo harmony --dump-config=/tmp/config.EZHex
 
-This will read the config off of your remote and write it to Update.EZHex.
+This will read the config off of your remote and write it to /tmp/config.EZHex.
 It's a good tool for development as well as backing up your config. This can
-however be created from the members.harmonyremote.com website.
+however be created from the members.harmonyremote.com website. The equals
+is needed if you pass in a filename since the filename is optional. If
+you don't specify, harmony will use 'config.EZHex' in the current directory.
 
 2. Write a config
 
 Once you have downloaded a file from members.harmony.com website to program
 your remote with, you can use it with:
 
-  $ sudo harmony --config --write Update.EZHex
+  $ sudo harmony --write-config Update.EZHex
 
 3. Backup the firmware
 
-  $ sudo harmony --firmware
+  $ sudo harmony --dump-firmware
 
-This will read teh firmware off of your remote and write it to fimrware.EZHex.
+This will read the firmware off of your remote and write it to fimrware.EZHex.
 See "1. Backup the config" for more information.
 
 4. Write firmware
 
 NOTE: THIS IS NOT YET SUPPORTED. However it would work like this:
 
-  $ sudo harmony --firmware --write Firmware.EZHex
+  $ sudo harmony --write-firmware Firmware.EZHex
 
 
 There are other options - check out the --help one!
