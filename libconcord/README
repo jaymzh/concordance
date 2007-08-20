@@ -9,7 +9,11 @@ following ways:
   $ sudo harmony <filename>
 
 This will attempt to figure out what to do, and do it. Note that harmony uses
-the *filename* to figure out what to do with it, so don't rename it. If you
+the *filename* to figure out what to do with it, so don't rename it. This
+option is designed for associating the .EZHex extension in your browser with
+the harmony software. Of course, this requires your desktop environment to
+support someway of getting harmony root access such as gksu or similar, but
+should allow the same seemless process the Logitech software does. If you
 would prefer to rename it, tell harmony what you need done using one of it's
 many options...
 
