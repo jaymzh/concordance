@@ -225,7 +225,7 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 		string post_data_encoded;
 		UrlEncode(post_data,post_data_encoded);
 
-		post = "Data=" + post_data_encoded + "&UserId=" +userid;
+		post = "Data=" + post_data_encoded + "&UserId=" + userid;
 	} else {
 		post = "IrSequence=" + *learn_seq + "&UserId=" + userid
 			+ "&KeyName=" + *learn_key;

@@ -26,7 +26,7 @@ MAN?=$(PREFIX)/share/man
 CXX?= g++
 CXXFLAGS?= -g -Wall -O2
 CXXFILES?= binaryfile.cpp harmony.cpp remote.cpp web.cpp libusb/libusbhid.cpp \
-	usblan.cpp remote_z.cpp
+	usblan.cpp remote_z.cpp xml_headers.h
 LIBS?= -lusb
 CPPFLAGS?=
 
