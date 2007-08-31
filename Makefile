@@ -42,6 +42,7 @@ strip: harmony
 
 install:
 	$(INSTALL) -D --mode=755 harmony $(BINDIR)/harmony
+	$(INSTALL) -D --mode=644 harmony.1 $(MAN)/man1/harmony.1
 
 clean:
 	/bin/rm -f harmony
@@ -50,4 +51,5 @@ clean:
 
 uninstall:
 	/bin/rm -f $(BIN)/harmony
+	/bin/rm -f $(MAN)/man1/harmony.1
 

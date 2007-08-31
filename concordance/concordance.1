@@ -22,13 +22,17 @@ harmony \- for programming your harmony remote
 .SH SYNOPSIS
 .B harmony
 .TP
-For command line mode:
-harmony <options>
-.TP
 For automatic mode:
 harmony <file>
+.TP
+For manual mode:
+harmony <options>
 .SH DESCRIPTION
-This software supports programming Logitech Harmony remote controls.  This program needs to be run with root privileges.
+This software supports programming Logitech Harmony remote controls.  This software uses libusb, which requires the RAWIO capability. That means you probably need root to use it.
+.TP
+This software can be run in one of two modes. If you run it in automatic mode, the software will use the filename to determine what to do with it. If the filename is not *exactly* as the website sends it, then harmony will not know what to do with it, and you should use the non-automatic mode.
+.TP
+In command-line mode, you specify what you want to do. For any command-line option that requires updating the remote, a filename is required.
 .SH OPTIONS
 .TP
 .B \-c, \-\-dump\-config [<filename>]
@@ -43,25 +47,33 @@ Read firmware from the remote and write it to a file.  If no filename is specifi
 .B \-F, \-\-write\-firmware <filename>
 Read firmware from <filename> and write it to the remote
 .TP
-.B \-s, \-\-dump\-safemode [<filename>]
-Read the safemode firmware from the remote and write it to a file.  If no filename is specified, safe.bin is used.
-.TP
-.B \-t, \-\-connectivity\-test <filename>
-Do a connectivity test using <filename>
-.TP
-.B \-r, \-\-reset
-Reset (power-cycle) the remote control
-.TP
 .B \-h, \-\-help
 Print this help message and exit.
-.TP
-.B \-l, \-\-learn-ir <filename>
-Learn IR from other remotes. Use <filename>.
 .TP
 .B \-k, \-\-get\-time
 Get time from the remote
 .TP
 .B \-K, \-\-set\-time
 Set the time on the remote
+.TP
+.B \-l, \-\-learn-ir <filename>
+Learn IR from other remotes. Use <filename>.
+.TP
+.B \-r, \-\-reset
+Reset (power-cycle) the remote control
+.TP
+.B \-s, \-\-dump\-safemode [<filename>]
+Read the safemode firmware from the remote and write it to a file.  If no filename is specified, safe.bin is used.
+.TP
+.B \-t, \-\-connectivity\-test <filename>
+Do a connectivity test using <filename>
 .SH BUGS
-None
+None known at time of release, but check the website.
+.SH BUG REPORTS
+Please file all bug reports in the bugs section of our SourceForge Project page.
+.SH NOTES
+This software is not supported, affiliated, or controlled by Logitech in any way.
+.SH AUTHOR
+\fBharmony\fP was written by Kevin Timmerman and Phil Dibowitz
+.br
+http://www.phildev.net/harmony/
