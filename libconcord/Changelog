@@ -1,9 +1,16 @@
 0.11
+Released: 08/31/07
 cseutter@sbcglobal.net
 - Add man page
 
 phil@ipom.com
 - Fix typo in help for -s (thanks cseutter@sbcglobal.net)
+- Fix formatting of version numbers we send to harmony website (fixes bug
+  #1769797 where the harmony website would give "Unable to load Memory
+  Model ..." errors after using our software
+- Significant documentation updates (README and INSTALL.Linux)
+- Convert xml_headers.h to unix newlines to match the rest of the source
+
 
 0.10
 Released: 08/07/07
