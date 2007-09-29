@@ -21,6 +21,7 @@
 #ifdef WIN32
 #include <winsock.h>
 #else
+#include <errno.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #define closesocket close
@@ -48,6 +49,8 @@ int ShutdownUsbLan(void)
 #ifdef WIN32
 			err = WSAGetLastError();
 			printf("Close Error: %i\n",err);
+#else
+			printf("Close Error: %s\n",strerror(errno));
 #endif
 		}
 	}
@@ -67,6 +70,7 @@ int FindUsbLanRemote(void)
 		printf("gethostbyname() Error: %i\n",err);
 		return err;
 #else
+		printf("gethostbyname() Error: %s\n",strerror(errno));
 		return -1;
 #endif
 	}
@@ -83,6 +87,8 @@ int FindUsbLanRemote(void)
 #ifdef WIN32
 		err = WSAGetLastError();
 		printf("Connect Error: %i\n",err);
+#else
+		printf("Connect Error: %s\n",strerror(errno));
 #endif
 		return err;
 	}
@@ -100,6 +106,8 @@ int UsbLan_Write(unsigned int len, uint8_t *data)
 #ifdef WIN32
 		err = WSAGetLastError();
 		printf("send() failed with error %i\n",err);
+#else
+		printf("send() error: %s\n",strerror(errno));
 #endif
 		return err;
 	}
@@ -117,6 +125,8 @@ int UsbLan_Read(unsigned int &len, uint8_t *data)
 #ifdef WIN32
 		err = WSAGetLastError();
 		printf("recv() failed with error %i\n",err);
+#else
+		printf("recv() error: %s\n",strerror(errno));
 #endif
 		len = 0;
 	} else {
