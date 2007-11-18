@@ -2,6 +2,7 @@
 Released:
 phil@ipom.com
 - Man update updates, and add manpage to Makefile
+- Match filenames regardless of directory when in "auto" mode
 
 
 0.11
