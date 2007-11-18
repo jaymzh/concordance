@@ -26,6 +26,7 @@
 #include "protocol.h"
 #include "time.h"
 #include <iostream>
+#include <string.h>
 
 #ifdef WIN32
 #include "win/getopt/getopt.h"
@@ -193,27 +194,34 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			}
 
 			file_name = argv[optind];
+
 			/*
-			 * If no filename is set, and we have a filename,
-			 * we're being expected to figure it out on our own!
+ 			 * FIXME: We'll attempt to figure out what to
+ 			 *        do based on filename. This is fragile
+ 			 *        and should be done based on some
+ 			 *        metadata int he file... but this will
+ 			 *        do for now.
+ 			 */
+
+			/*
+			 * Dup our string since POSIX basename()
+			 * may modify it.
 			 */
-			if (!stricmp(file_name,"connectivity.ezhex")) {
+			char *file_name_copy = strdup(file_name);
+			char *file = basename(file_name_copy);
+			if (!stricmp(file,"connectivity.ezhex")) {
 				mode = MODE_CONNECTIVITY;
-			} else if (!stricmp(file_name,"update.ezhex")) {
+			} else if (!stricmp(file,"update.ezhex")) {
 				mode = MODE_WRITE_CONFIG;
-			} else if (!stricmp(file_name,"learnir.eztut")) {
+			} else if (!stricmp(file,"learnir.eztut")) {
 				mode = MODE_LEARN_IR;
 			} else {
 				cerr << "Don't know what to do with"
 					<< file_name << endl;
 				exit(1);
 			}
-			/*
-		} else {
-			cerr << "No file specified, and no mode specified..."
-				<< " nothing to do.\n";
-			exit(0);
-			*/
+			free(file);
+			free(file_name_copy);
 		}
 	}
 }
