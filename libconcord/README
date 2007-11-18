@@ -1,8 +1,19 @@
-This software is still in beta. That means it's UI isn't the easiest to use
-yet and will be changing.
+This software allows you to program your Logitech Harmony remote using a
+configuration object retreived from the harmony website:
+  http://members.harmonyremote.com/
 
-However, in the meantime, you generally use the software in one of the
-following ways:
+The website is required. The website is required in Logitech's software as
+well, it's just that their software wraps the website. Their website has
+all the logic on what codes work with what remotes and what hardware, etc.
+The software just takes the binary blobs that the website makes and writes
+it to the remote control. This is true for both Logitech's software and
+this software.
+
+However, this software has some extra functionality such as being able to
+dump (backup) your existing config, being cross-platform, and giving you
+extra visibility into what's actually happening with your remote.
+
+Here is how you use this software:
 
 0. I got a file from the website, do something useful with it.
 
@@ -50,4 +61,9 @@ NOTE: THIS IS NOT YET SUPPORTED. However it would work like this:
 
 There are other options - check out the --help one!
 
+
+THIS SOFTWARE IS NOT SUPPORTED BY OR IN ANY WAY RELATED TO LOGITECH!
+
+
 - Phil Dibowitz
+
