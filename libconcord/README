@@ -40,8 +40,8 @@ you don't specify, harmony will use 'config.EZHex' in the current directory.
 
 2. Write a config
 
-Once you have downloaded a file from members.harmony.com website to program
-your remote with, you can use it with:
+Once you have downloaded a file from members.harmonyremote.com website to
+program your remote with, you can use it with:
 
   $ sudo harmony --write-config Update.EZHex
 
