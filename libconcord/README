@@ -38,21 +38,28 @@ however be created from the members.harmonyremote.com website. The equals
 is needed if you pass in a filename since the filename is optional. If
 you don't specify, harmony will use 'config.EZHex' in the current directory.
 
-2. Write a config
+2. Connectivity test
+
+  $ sudo harmony --connectivity-test Connectivity.EZHex
+
+The site will always do a connectivity test before trying to send a config,
+so be prepared to do this before next step.
+
+3. Write a config
 
 Once you have downloaded a file from members.harmonyremote.com website to
 program your remote with, you can use it with:
 
   $ sudo harmony --write-config Update.EZHex
 
-3. Backup the firmware
+4. Backup the firmware
 
   $ sudo harmony --dump-firmware
 
 This will read the firmware off of your remote and write it to fimrware.EZHex.
 See "1. Backup the config" for more information.
 
-4. Write firmware
+5. Write firmware
 
 NOTE: THIS IS NOT YET SUPPORTED. However it would work like this:
 
