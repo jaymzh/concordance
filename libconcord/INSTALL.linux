@@ -3,7 +3,10 @@
 0. INSTALL REQUIRED SOFTWARE
 
 You *MUST* install libusb. This library is in most distributions, so
-apt-get/yum/up2date/etc. it.
+apt-get/yum/up2date/urpmi/etc. it.
+
+If you're compiling from source, you'll also need the libusb development
+package - usually libusb-dev or libusb-devel, depending on your distribution.
 
 1. BUILD THE SOFTARE
 
