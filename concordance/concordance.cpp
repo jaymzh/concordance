@@ -38,7 +38,7 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 #include <getopt.h>
 #endif
 
-const char * const VERSION = "0.12-dev";
+const char * const VERSION = "0.12";
 
 enum {
 	MODE_UNSET,

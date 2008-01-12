@@ -1,8 +1,11 @@
 0.12
-Released:
+Released: 01/11/08
 phil@ipom.com
 - Man update updates, and add manpage to Makefile
 - Match filenames regardless of directory when in "auto" mode
+- README updates based on feedback from Ian Hall
+- INSTALL.Linux clarifications (thanks to Brett Presnell)
+- Improve error reporting 
 
 
 0.11
