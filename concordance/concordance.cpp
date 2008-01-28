@@ -220,8 +220,12 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 					<< file_name << endl;
 				exit(1);
 			}
-			free(file);
 			free(file_name_copy);
+			/*
+			 * Since basename returns a pointer to
+			 * file_name_copy, if we free(file), we get
+			 * a double-free bug.
+			 */
 		}
 	}
 }
@@ -267,7 +271,7 @@ void help()
 	cout << "   -l, --learn-ir <filename>\n"
 		<< "\t Learn IR from other remotes. Use <filename>.\n\n";
 	cout << "   -k, --get-time\n"
-		<< "\t Get time from the remote\n";
+		<< "\t Get time from the remote\n\n";
 	cout << "   -K, --set-time\n"
 		<< "\t Set the remote's time clock\n\n";
 
