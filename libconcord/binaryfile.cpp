@@ -49,8 +49,9 @@ int binaryfile::close(void)
 		const int i=fclose(m_f);
 		m_f=NULL;
 		return i;
-	} else
+	} else {
 		return 0;
+	}
 }
 
 
@@ -62,7 +63,7 @@ binaryoutfile::binaryoutfile()
 int binaryoutfile::open(const char *path)
 {
 	m_f=fopen(path,"wb");
-	return m_f?0:1;
+	return m_f ? 0 : 1;
 }
 
 size_t binaryoutfile::write(const uint8_t *b, uint32_t len)

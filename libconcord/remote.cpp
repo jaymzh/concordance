@@ -161,7 +161,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 
 	make_serial(rsp,ri);
 
-	printf("done\n");
+	printf(" done\n");
 
 	return 0;
 }

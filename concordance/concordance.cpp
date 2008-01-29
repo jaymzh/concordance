@@ -38,6 +38,12 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 #include <getopt.h>
 #endif
 
+#define DEFAULT_CONFIG_FILENAME "Update.EZHex"
+#define DEFAULT_CONFIG_FILENAME_BIN "update.bin"
+#define DEFAULT_FW_FILENAME "firmware.EZUp"
+#define DEFAULT_FW_FILENAME_BIN "firmware.bin"
+#define DEFAULT_SAFE_FILENAME "safe.bin"
+
 const char * const VERSION = "0.12";
 
 enum {
@@ -310,49 +316,49 @@ int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 					   struct options_t &options)
 {
 	if (ri.model->code_name) {
-		printf("            Model: %s %s (%s)\n",ri.model->mfg,
+		printf("              Model: %s %s (%s)\n",ri.model->mfg,
 			ri.model->model,ri.model->code_name);
 	} else {
-		printf("            Model: %s %s\n",ri.model->mfg,
+		printf("              Model: %s %s\n",ri.model->mfg,
 			ri.model->model);
 	}
 
 	if (options.verbose)
-		printf("             Skin: %i\n",ri.skin);
+		printf("               Skin: %i\n",ri.skin);
 
-	printf(" Firmware Version: %i.%i\n",ri.fw_ver_major, ri.fw_ver_minor);
+	printf("   Firmware Version: %i.%i\n",ri.fw_ver_major, ri.fw_ver_minor);
 
 	if (options.verbose)
-		printf("    Firmware Type: %i\n",ri.fw_type);
+		printf("      Firmware Type: %i\n",ri.fw_type);
 
-	printf(" Hardware Version: %i.%i\n",ri.hw_ver_major, ri.hw_ver_minor);
+	printf("   Hardware Version: %i.%i\n",ri.hw_ver_major, ri.hw_ver_minor);
 
 	if (options.verbose) {
 		if ((ri.flash->size&0x03FF) == 0 && (ri.flash->size>>10)!=0) {
-			printf("   External Flash: %i MiB - %02X:%02X %s\n",
+			printf("     External Flash: %i MiB - %02X:%02X %s\n",
 				ri.flash->size>>10,ri.flash_mfg,
 				ri.flash_id,ri.flash->part);
 		} else {
-			printf("   External Flash: %i KiB - %02X:%02X %s\n",
+			printf("     External Flash: %i KiB - %02X:%02X %s\n",
 				ri.flash->size,ri.flash_mfg,ri.flash_id,
 				ri.flash->part);
 		}
 
-		printf("     Architecture: %i\n",ri.architecture);
-		printf("         Protocol: %i\n",ri.protocol);
+		printf("       Architecture: %i\n",ri.architecture);
+		printf("           Protocol: %i\n\n",ri.protocol);
 
-		printf("\n     Manufacturer: %s\n",hid_info.mfg.c_str());
-		printf("          Product: %s\n",hid_info.prod.c_str());
-		printf("    IRL, ORL, FRL: %i, %i, %i\n",
+		printf("       Manufacturer: %s\n",hid_info.mfg.c_str());
+		printf("            Product: %s\n",hid_info.prod.c_str());
+		printf("      IRL, ORL, FRL: %i, %i, %i\n",
 			hid_info.irl,hid_info.orl,hid_info.frl);
-		printf("          USB VID: %04X\n",hid_info.vid);
-		printf("          USB PID: %04X\n",hid_info.pid);
-		printf("          USB Ver: %04X\n",hid_info.ver);
+		printf("            USB VID: %04X\n",hid_info.vid);
+		printf("            USB PID: %04X\n",hid_info.pid);
+		printf("            USB Ver: %04X\n\n",hid_info.ver);
 
-		printf("\n    Serial Number: %s\n",
+		printf("      Serial Number: %s\n",
 			ri.serial[0].c_str());
-		printf("                   %s\n",ri.serial[1].c_str());
-		printf("                   %s\n",ri.serial[2].c_str());
+		printf("                     %s\n",ri.serial[1].c_str());
+		printf("                     %s\n",ri.serial[2].c_str());
 	}
 
 	if (ri.flash->size == 0) {
@@ -366,7 +372,7 @@ int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 	}
 
 	if (ri.valid_config) {
-		printf("Config Flash Used: %i%% (%i of %i KiB)\n\n",
+		printf("  Config Flash Used: %i%% (%i of %i KiB)\n\n",
 			(ri.config_bytes_used*100+99) / ri.max_config_size,
 			(ri.config_bytes_used+1023)>>10,
 			(ri.max_config_size+1023)>>10);
@@ -399,8 +405,13 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 	}
 
 	binaryoutfile of;
+	
+	if (of.open(file_name) != 0) {
+		printf("Failed to open %s\n", file_name);
+		return 1;
+	}
+
 	if (options.binary) {
-		of.open((file_name) ? file_name : "config.bin");
 		of.write(config,ri.config_bytes_used);
 	} else {
 		uint32_t u = ri.config_bytes_used;
@@ -421,12 +432,15 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 			ri.hw_ver_major,ri.hw_ver_minor,
 			ri.fw_type,
 			ri.config_bytes_used,chk);
-		of.open(file_name ? file_name : "config.EZHex");
 		of.write(reinterpret_cast<uint8_t*>(ch),
 			chlen);
 		of.write(config,ri.config_bytes_used);
 	}
-	of.close();
+	
+	if (of.close() != 0) {
+		printf("Failed to close %s\n", file_name);
+		return 1;
+	}
 
 	delete[] config;
 
@@ -443,7 +457,10 @@ int connect_test(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	 * just a connectivity test, tell the site we succeeded
 	 */
 	binaryinfile file;
-	file.open(file_name);
+	if (file.open(file_name) != 0) {
+		printf("Failed to open %s\n", file_name);
+		return 1;
+	}
 
 	const unsigned int size = file.getlength();
 	uint8_t * const buf = new uint8_t[size+1];
@@ -453,7 +470,10 @@ int connect_test(TRemoteInfo &ri, char *file_name, struct options_t &options)
 
 	Post(buf,"POSTOPTIONS",ri,options);
 
-	file.close();
+	if (file.close() != 0) {
+		printf("Failed to close %s\n", file_name);
+		return 1;
+	}
 
 	return 0;
 }
@@ -466,15 +486,18 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	int err = 0;
 	binaryinfile file;
 
-	if (options.binary) {
-		file.open(file_name?file_name:"config.bin");
-	} else {
-		file.open(file_name?file_name:"Config.EZHex");
+	if (file.open(file_name) != 0) {
+		printf("Failed to open %s\n", file_name);
+		return 1;
 	}
 	uint32_t size = file.getlength();
 	uint8_t * const x = new uint8_t[size+1];
 	file.read(x,size);
-	file.close();
+
+	if (file.close() != 0) {
+		printf("Failed to close %s\n", file_name);
+		return 1;
+	}
 	// Prevent GetTag() from going off the deep end
 	x[size] = 0;
 
@@ -574,9 +597,15 @@ int dump_safemode(TRemoteInfo &ri, char *file_name)
 		return 1;
 	}
 
-	of.open((file_name) ? file_name : "safe.bin");
+	if (of.open(file_name) != 0) {
+		printf("Failed to open %s\n", file_name);
+		return 1;
+	}
 	of.write(safe,64*1024);
-	of.close();
+	if (of.close() != 0) {
+		printf("Failed to close %s\n", file_name);
+		return 1;
+	}
 
 	delete[] safe;
 
@@ -596,8 +625,12 @@ int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 		return 1;
 	}
 
+	if (of.open(file_name) != 0) {
+		printf("Failed to open %s\n", file_name);
+		return 1;
+	}
+
 	if (options.binary) {
-		of.open((file_name) ? file_name : "firmware.bin");
 		of.write(firmware,64*1024);
 	} else {
 		/// todo: file header
@@ -609,8 +642,6 @@ int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 		//TRACE1("Checksum: %04X\n",wc);
 
 		firmware[0] = firmware[1] = firmware[2] = firmware[3] = 0xFF;
-
-		of.open((file_name) ? file_name : "firmware.EZUp");
 
 		uint8_t *pf = firmware;
 		const uint8_t *fwend = firmware+64*1024;
@@ -626,7 +657,11 @@ int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 		} while (pf < fwend);
 	}
 
-	of.close();
+	if (of.close() != 0) {
+		printf("Failed to close %s\n", file_name);
+		return 1;
+	}
+
 	delete[] firmware;
 
 	return 0;
@@ -637,11 +672,20 @@ int learn_ir_commands(TRemoteInfo &ri, char *file_name,
 {
 	if (file_name) {
 		binaryinfile file;
-		file.open(file_name);
+		if (file.open(file_name) != 0) {
+			printf("Failed to open %s\n", file_name);
+			return 1;
+		}
+
 		uint32_t size=file.getlength();
 		uint8_t * const x=new uint8_t[size+1];
 		file.read(x,size);
-		file.close();
+
+		if (file.close() != 0) {
+			printf("Failed to close %s\n", file_name);
+			return 1;
+		}
+
 		// Prevent GetTag() from going off the deep end
 		x[size]=0;
 
@@ -717,6 +761,31 @@ int set_time(TRemoteInfo &ri)
 	return rmt->SetTime(ri,ht);
 }
 
+void populate_default_filename(int mode, struct options_t &options,
+	char *&file_name)
+{
+	switch (mode) {
+		case MODE_DUMP_CONFIG:
+			if (options.binary) {
+				file_name = strdup(DEFAULT_CONFIG_FILENAME_BIN);
+			} else {
+				file_name = strdup(DEFAULT_CONFIG_FILENAME);
+			}
+			break;
+
+		case MODE_DUMP_FIRMWARE:
+			if (options.binary) {
+				file_name = strdup(DEFAULT_FW_FILENAME_BIN);
+			} else {
+				file_name = strdup(DEFAULT_FW_FILENAME);
+			}
+			break;
+
+		case MODE_DUMP_SAFEMODE:
+			file_name = strdup(DEFAULT_SAFE_FILENAME);
+			break;
+	}
+}
 
 int main(int argc, char *argv[])
 {
@@ -747,10 +816,6 @@ int main(int argc, char *argv[])
 	char *file_name = NULL;
 	int mode = MODE_UNSET;
 	parse_options(options, mode, file_name, argc, argv);
-/*
-	printf("filename is %s\n",file_name);
-	exit(1);
-*/
 
 	/*
 	 * If we're in "help" mode, do that and exit before we set too much up.
@@ -758,6 +823,14 @@ int main(int argc, char *argv[])
 	if (mode == MODE_HELP) {
 		help();
 		exit(0);
+	}
+
+	/*
+ 	 * In a few special cases, we populate a default filename. NEVER
+ 	 * if we're are writing to the device, however.
+ 	 */
+	if (!file_name) {
+		populate_default_filename(mode, options, file_name);
 	}
 
 	int err=0;
@@ -875,7 +948,9 @@ cleanup:
 
 	delete rmt;
 
-	if (err) printf("Failed with error %i\n",err);
+	if (err) {
+		printf("Failed with error %i\n", err);
+	}
 		
 #ifdef WIN32
 	// Shutdown WinSock
