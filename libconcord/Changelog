@@ -1,3 +1,13 @@
+0.13
+Released:
+phil@ipom.com
+- Add new --print-remote-info mode, and don't print remote info otherwise
+- Man page updates for new --print-remote-info mode
+- Significant output cleanup for ease-of-use
+- Fix double-free bug (bug#1880923)
+- Fix various segfaults through better error checking (bug#1875154)
+
+
 0.12
 Released: 01/11/08
 phil@ipom.com
