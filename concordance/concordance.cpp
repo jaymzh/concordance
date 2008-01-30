@@ -243,8 +243,6 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 
 void help()
 {
-
-	//cout << "Harmony Control " << VERSION << endl;
 	cout << "There are two ways to invoke this software. You can specify"
 		<< " what you want\nto do:\n";
 	cout << "\tharmony <options>\n\n";
@@ -252,8 +250,8 @@ void help()
 		<< " do for you:\n";
 	cout << "\tharmony <file>\n\n";
 
-	cout << "In automatic mode, just pass in the file, and the software\n"
-		<< " will use the filename to figure out the proper mode.\n\n";
+	cout << "In automatic mode, just pass in the file, and the software"
+		<< " will use the\nfilename to figure out the proper mode.\n\n";
 
 	cout << "When specifying options, you must first choose a mode:\n\n";
 
@@ -269,7 +267,7 @@ void help()
 	cout << "   -F, --write-firmware <filename>\n"
 		<< "\tRead firmware from <filename> and write it to the"
 		<< " remote\n\n";
-	cout << "  -i, --print-remote-info\n"
+	cout << "   -i, --print-remote-info\n"
 		<< "\tPrint information about the remote. Additional"
 		<< " information will\n\tbe printed if -v is also used.\n\n";
 	cout << "   -s, --dump-safemode [<filename>]\n"
@@ -295,7 +293,7 @@ void help()
 		<< " be specified -C /path/to/file or -C/path/to/file.\n\n";
 
 	cout << "Additionally, you can specify options to adjust the behavior"
-		<< "of the software:\n\n";
+		<< " of the software:\n\n";
 
 	cout << "  -b, --binary-only\n"
 		<< "\tWhen dumping a config or firmware, this specifies to dump"
