@@ -114,7 +114,7 @@ public:
 	virtual int Reset(uint8_t kind)=0;
 	virtual int GetIdentity(TRemoteInfo &ri, THIDINFO &hid)=0;
 
-	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false)=0;
+	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false, bool quiet=false)=0;
 	virtual int InvalidateFlash(void)=0;
 	virtual int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri)=0;
 	virtual int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol)=0;
@@ -139,7 +139,7 @@ public:
 	int Reset(uint8_t kind);
 	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid);
 
-	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
+	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false, bool quiet=false);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol);
@@ -168,7 +168,7 @@ public:
 	int Reset(uint8_t kind);
 	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid);
 
-	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false);
+	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify=false, bool quiet=false);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol);

@@ -371,7 +371,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 	return 0;
 }
 
-int CRemoteZ_Base::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify/*=false*/)
+int CRemoteZ_Base::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify/*=false*/, bool quiet)
 {
 	return 0;
 }

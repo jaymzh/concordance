@@ -122,7 +122,6 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 
 	setup_ri_pointers(ri);
 
-	//printf("Reading Flash... ");
 	uint8_t rd[1024];
 	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol))) {
 		printf("Failed to read flash\n");
@@ -154,24 +153,25 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 		// The old 745 stores the serial number in EEPROM
 		ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,rsp) :
 		// All newer models store it in Flash
-		ReadFlash(0x000110,48,rsp,ri.protocol))) {
+		ReadFlash(0x000110,48,rsp,ri.protocol,false,true))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
 
 	make_serial(rsp,ri);
 
-	printf(" done\n");
+	printf("       done\n");
 
 	return 0;
 }
 
-int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify)
+int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify, bool quiet)
 {
 #ifdef WIN32
 	GetConsoleScreenBufferInfo(con,&sbi);
 #else
-	if (len>2048) printf("              ");
+	if (!quiet)
+		printf("              ");
 #endif
 
 	const unsigned int max_chunk_len = 
@@ -243,7 +243,6 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned 
 					addr+=rxlen;
 					bytes_read+=rxlen;
 				}
-				if (len<=2048) printf("*");
 			} else if (r==RESPONSE_DONE) {
 				break;
 			} else {
@@ -252,7 +251,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned 
 			}
 		} while (err == 0);
 
-		if (len > 2048 && err == 0) {
+		if (!quiet && err == 0) {
 #ifdef WIN32
 			SetConsoleCursorPosition(con,sbi.dwCursorPosition);
 			printf("%3i%%  %4i KiB",
@@ -261,12 +260,9 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned 
 			printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3i%%  %4i KiB",
 				bytes_read*100/len,bytes_read>>10);
 			fflush(stdout);
-			//printf("*");
 #endif
 		}
 	} while (err == 0 && addr < end);
-	if (len > 2048)
-		printf("       done\n");
 
 	return err;
 }
@@ -278,17 +274,19 @@ int CRemote::InvalidateFlash(void)
 	int err;
 
 	printf("Invalidating flash: ");
-	if ((err=HID_WriteReport(ivf))) return err;
+	if ((err=HID_WriteReport(ivf)))
+		return err;
 
 	uint8_t rsp[68];
-	if ((err=HID_ReadReport(rsp))) return err;
+	if ((err=HID_ReadReport(rsp)))
+		return err;
 
 	if (rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
 		rsp[2]&COMMAND_MASK != COMMAND_MISC_INVALIDATE_FLASH) {
 		return 1;
 	}
 
-	printf("                     done\n");
+	printf("                      done\n");
 
 	return 0;
 }
@@ -299,7 +297,7 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 	const unsigned int *sectors=ri.flash->sectors;
 	const unsigned int flash_base=ri.arch->flash_base;
 
-	printf("Erasing flash:      ");
+	printf("Erasing flash:       ");
 	fflush(stdout);
 
 	const uint32_t end=addr+len;
@@ -355,7 +353,7 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
 int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol)
 {
 
-	printf("Writing config:     ");
+	printf("Writing config:      ");
 
 #ifdef WIN32
 	GetConsoleScreenBufferInfo(con,&sbi);

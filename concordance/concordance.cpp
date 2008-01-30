@@ -44,7 +44,7 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.12";
+const char * const VERSION = "0.12+CVS";
 
 enum {
 	MODE_UNSET,
@@ -58,7 +58,8 @@ enum {
 	MODE_LEARN_IR,
 	MODE_RESET,
 	MODE_GET_TIME,
-	MODE_SET_TIME
+	MODE_SET_TIME,
+	MODE_PRINT_INFO
 };
 
 static CRemoteBase *rmt = NULL;
@@ -89,6 +90,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 		{"dump-firmware", optional_argument, 0, 'f'},
 		{"write-firmware", required_argument, 0, 'F'},
 		{"help", no_argument, 0, 'h'},
+		{"print-remote-info", no_argument, 0, 'i'},
 		{"learn-ir", required_argument, 0, 'l'},
 		{"reset", no_argument, 0, 'r'},
 		{"dump-safemode", optional_argument, 0, 's'},
@@ -108,7 +110,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 
 	int tmpint = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hl:rs::t:kKvw",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hil:rs::t:kKvw",
 				long_options, NULL)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -145,6 +147,9 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			break;
 		case 'h':
 			set_mode(mode, MODE_HELP);
+			break;
+		case 'i':
+			set_mode(mode, MODE_PRINT_INFO);
 			break;
 		case 'l':
 			if (optarg == NULL) {
@@ -264,6 +269,9 @@ void help()
 	cout << "   -F, --write-firmware <filename>\n"
 		<< "\tRead firmware from <filename> and write it to the"
 		<< " remote\n\n";
+	cout << "  -i, --print-remote-info\n"
+		<< "\tPrint information about the remote. Additional"
+		<< " information will\n\tbe printed if -v is also used.\n\n";
 	cout << "   -s, --dump-safemode [<filename>]\n"
 		<< "\tRead the safemode firmware from the remote and write it"
 		<< " to a file.\n\tIf no filename is specified, safe.bin is"
@@ -315,69 +323,69 @@ void help()
 int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
 					   struct options_t &options)
 {
+	printf("Device Info:\n");
 	if (ri.model->code_name) {
-		printf("              Model: %s %s (%s)\n",ri.model->mfg,
+		printf("  Model: %s %s (%s)\n",ri.model->mfg,
 			ri.model->model,ri.model->code_name);
 	} else {
-		printf("              Model: %s %s\n",ri.model->mfg,
+		printf("  Model: %s %s\n",ri.model->mfg,
 			ri.model->model);
 	}
 
 	if (options.verbose)
-		printf("               Skin: %i\n",ri.skin);
+		printf("  Skin: %i\n",ri.skin);
 
-	printf("   Firmware Version: %i.%i\n",ri.fw_ver_major, ri.fw_ver_minor);
+	printf("  Firmware Version: %i.%i\n",ri.fw_ver_major, ri.fw_ver_minor);
 
 	if (options.verbose)
-		printf("      Firmware Type: %i\n",ri.fw_type);
+		printf("  Firmware Type: %i\n",ri.fw_type);
 
-	printf("   Hardware Version: %i.%i\n",ri.hw_ver_major, ri.hw_ver_minor);
+	printf("  Hardware Version: %i.%i\n",ri.hw_ver_major, ri.hw_ver_minor);
 
 	if (options.verbose) {
 		if ((ri.flash->size&0x03FF) == 0 && (ri.flash->size>>10)!=0) {
-			printf("     External Flash: %i MiB - %02X:%02X %s\n",
+			printf("  External Flash: %i MiB - %02X:%02X %s\n",
 				ri.flash->size>>10,ri.flash_mfg,
 				ri.flash_id,ri.flash->part);
 		} else {
-			printf("     External Flash: %i KiB - %02X:%02X %s\n",
+			printf("  External Flash: %i KiB - %02X:%02X %s\n",
 				ri.flash->size,ri.flash_mfg,ri.flash_id,
 				ri.flash->part);
 		}
 
-		printf("       Architecture: %i\n",ri.architecture);
-		printf("           Protocol: %i\n\n",ri.protocol);
+		printf("  Architecture: %i\n",ri.architecture);
+		printf("  Protocol: %i\n",ri.protocol);
 
-		printf("       Manufacturer: %s\n",hid_info.mfg.c_str());
-		printf("            Product: %s\n",hid_info.prod.c_str());
-		printf("      IRL, ORL, FRL: %i, %i, %i\n",
+		printf("  Manufacturer: %s\n",hid_info.mfg.c_str());
+		printf("  Product: %s\n",hid_info.prod.c_str());
+		printf("  IRL, ORL, FRL: %i, %i, %i\n",
 			hid_info.irl,hid_info.orl,hid_info.frl);
-		printf("            USB VID: %04X\n",hid_info.vid);
-		printf("            USB PID: %04X\n",hid_info.pid);
-		printf("            USB Ver: %04X\n\n",hid_info.ver);
+		printf("  USB VID: %04X\n",hid_info.vid);
+		printf("  USB PID: %04X\n",hid_info.pid);
+		printf("  USB Ver: %04X\n",hid_info.ver);
 
-		printf("      Serial Number: %s\n",
-			ri.serial[0].c_str());
-		printf("                     %s\n",ri.serial[1].c_str());
-		printf("                     %s\n",ri.serial[2].c_str());
+		printf("  Serial Number: %s\n\t%s\n\t%s\n",
+			ri.serial[0].c_str(),ri.serial[1].c_str(),
+			ri.serial[2].c_str());
 	}
 
 	if (ri.flash->size == 0) {
-		printf("Unsupported flash type\n");
+		printf("  Unsupported flash type\n");
 		return 1;
 	}
 
 	if (ri.arch == NULL || ri.arch->cookie==0) {
-		printf("Unsupported architecure\n");
+		printf("  Unsupported architecure\n");
 		return 1;
 	}
 
 	if (ri.valid_config) {
-		printf("  Config Flash Used: %i%% (%i of %i KiB)\n\n",
+		printf("  Config Flash Used: %i%% (%i of %i KiB)\n",
 			(ri.config_bytes_used*100+99) / ri.max_config_size,
 			(ri.config_bytes_used+1023)>>10,
 			(ri.max_config_size+1023)>>10);
 	} else {
-		printf("\nInvalid config!\n");
+		printf("  Invalid config!\n");
 	}
 
 	return 0;
@@ -391,11 +399,11 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 	int err = 0;
 
 	if (!ri.valid_config) {
-		printf("\nInvalid config - can not read\n");
+		printf("Invalid config - can not read\n");
 		return 1;
 	}
 
-	printf("\nReading Config ");
+	printf("Reading Config:      ");
 
 	uint8_t *config = new uint8_t[ri.config_bytes_used];
 	if ((err = rmt->ReadFlash(ri.arch->config_base, ri.config_bytes_used,
@@ -403,6 +411,7 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 		printf("Failed to read flash\n");
 		return 1;
 	}
+        printf("       done\n");
 
 	binaryoutfile of;
 	
@@ -567,13 +576,14 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 		return err;
 	}
 
-	printf("Verifying Config:   ");
+	printf("Verifying Config:    ");
 	if ((err = rmt->ReadFlash(ri.arch->config_base,size,y,
 			ri.protocol,true))) {
 		delete[] x;
 		printf("Failed to read flash! Bailing out!\n");
 		return err;
 	}
+        printf("       done\n");
 
 	if (file_name && !options.binary)
 		Post(x,"COMPLETEPOSTOPTIONS",ri,options);
@@ -817,6 +827,11 @@ int main(int argc, char *argv[])
 	int mode = MODE_UNSET;
 	parse_options(options, mode, file_name, argc, argv);
 
+	if (mode == MODE_UNSET) {
+		printf("No mode requested. No work to do.\n");
+		exit(1);
+	}
+
 	/*
 	 * If we're in "help" mode, do that and exit before we set too much up.
 	 */
@@ -888,14 +903,15 @@ int main(int argc, char *argv[])
 	if ((err = rmt->GetIdentity(ri, hid_info)))
 		goto cleanup;
 
-	if ((err = print_version_info(ri, hid_info, options)))
-		goto cleanup;
-
 	/*
 	 * Now do whatever we've been asked to do
 	 */
 
 	switch (mode) {
+		case MODE_PRINT_INFO:
+			err = print_version_info(ri, hid_info, options);
+			break;
+
 		case MODE_CONNECTIVITY:
 			err = connect_test(ri, file_name, options);
 			break;
@@ -950,6 +966,8 @@ cleanup:
 
 	if (err) {
 		printf("Failed with error %i\n", err);
+	} else {
+		printf("Success!\n");
 	}
 		
 #ifdef WIN32
