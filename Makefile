@@ -25,14 +25,17 @@ MAN?=$(PREFIX)/share/man
 
 CXX?= g++
 CXXFLAGS?= -g -Wall -O2
-CXXFILES?= binaryfile.cpp harmony.cpp harmony.h remote.cpp \
-	web.cpp libusb/libusbhid.cpp usblan.cpp remote_z.cpp xml_headers.h
+CXXFILES?= harmony.cpp remote.cpp remote_z.cpp \
+	binaryfile.cpp web.cpp \
+	libusb/libusbhid.cpp usblan.cpp
+HFILES?= binaryfile.h hid.h protocol_z.h remote_info.h web.h\
+	harmony.h protocol.h remote.h usblan.h xml_headers.h
 LIBS?= -lusb
 CPPFLAGS?=
 
 all: harmony
 
-harmony: $(CXXFILES)
+harmony: $(CXXFILES) $(HFILES)
 	$(CXX) $(CXXFLAGS) $(CXXFILES) -o harmony $(LIBS) $(CPPFLAGS)
 	@touch harmony
 

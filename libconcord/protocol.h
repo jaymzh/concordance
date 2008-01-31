@@ -32,6 +32,9 @@
  * defined with that value.
  */
 
+#ifndef PROTOCOL_H
+#define PROTOCOL_H
+
 /*
  * Masks for command nibble and length nibble
  */
@@ -100,3 +103,6 @@
 #define RESPONSE_READ_FLASH_DATA 0x60
 #define RESPONSE_READ_MISC_DATA 0xC0
 #define RESPONSE_DONE 0xF0
+
+#endif
+
