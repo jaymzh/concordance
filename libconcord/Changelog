@@ -6,6 +6,14 @@ phil@ipom.com
 - Significant output cleanup for ease-of-use
 - Fix double-free bug (bug#1880923)
 - Fix various segfaults through better error checking (bug#1875154)
+- Update range of PIDs we recognize as z-wave HID remotes (bug#1883295)
+  Thanks to Greg Vogel for the report)
+- dos2unix a few stragler files left with DOS newlines
+- Significant restructure of how output works revolving mostly around
+  a new callback system in the CRemote class for reporting progress to the
+  caller. This includes more consistent and accurate progress output for all
+  stages.
+- More efficient and cleaner support for erasing flash
 
 
 0.12
