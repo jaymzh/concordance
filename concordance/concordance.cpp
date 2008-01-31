@@ -44,6 +44,9 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
+#define ZWAVE_HID_PID_MIN 0xC112
+#define ZWAVE_HID_PID_MAX 0xC115
+
 const char * const VERSION = "0.12+CVS";
 
 enum {
@@ -874,23 +877,22 @@ int main(int argc, char *argv[])
 		populate_default_filename(mode, options, file_name);
 	}
 
-	int err=0;
+	int err = 0;
 	TRemoteInfo ri;
 	THIDINFO hid_info;
 
 	if (InitUSB()) {
 		printf("Unable to initialize USB\n");
-		err=-1;
+		err = -1;
 		goto cleanup;
 	}
 
 	if ((err = FindRemote(hid_info, options))) {
-		printf("Unable to find a HID remote (error %i)\n",err);
+		printf("Unable to find a HID remote (error %i)\n", err);
 		hid_info.pid=0;
-
 #ifndef linux
 		if ((err = FindUsbLanRemote())) {
-			printf("Unable to find a TCP remote (error %i)\n",err);
+			printf("Unable to find a TCP remote (error %i)\n", err);
 			goto cleanup;
 		}
 		rmt = new CRemoteZ_TCP;
@@ -899,16 +901,24 @@ int main(int argc, char *argv[])
 #endif
 	}
 
-	if(hid_info.pid == 0xC11F) {
+	/*
+	 * If hid_info is defined AND pid is 0XC11F, we found something
+	 * via HID that's a 1000... that REALLY shouldn't even be possible
+	 * but this'll catch that.
+	 */
+	if (hid_info.pid == 0xC11F) {
 		printf("Harmony 1000 requires Belcarra USB LAN driver\n");
 		goto cleanup;
 	}
 
 	if (!rmt) {
-		if (hid_info.pid == 0xC112)	// 890
+		if (hid_info.pid >= ZWAVE_HID_PID_MIN &&
+		    hid_info.pid <= ZWAVE_HID_PID_MAX) {
+			// 890, Monstor, etc.
 			rmt = new CRemoteZ_HID;
-		else
+		} else {
 			rmt = new CRemote;
+		}
 	}
 
 	/*
