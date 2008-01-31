@@ -25,14 +25,6 @@
 
 #include <iostream>
 
-#ifdef WIN32
-#include <conio.h>
-#include <winsock.h>
-extern HANDLE con;
-extern CONSOLE_SCREEN_BUFFER_INFO sbi;
-#endif
-
-
 void setup_ri_pointers(TRemoteInfo &ri)
 {
 	unsigned int u;
@@ -70,7 +62,6 @@ void make_serial(uint8_t *ser, TRemoteInfo &ri)
 
 int CRemote::Reset(uint8_t kind)
 {
-	printf("Reseting...\n");
 	uint8_t reset_cmd[]={ 0, COMMAND_RESET, kind };
 
 	return HID_WriteReport(reset_cmd);
@@ -81,13 +72,13 @@ int CRemote::Reset(uint8_t kind)
  *
  * Then populate our struct with all the relevant info.
  */
-int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
+int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
+	void (*cb)(int,int,int,void*), void *arg)
 {
 	int err = 0;
+	int cb_count = 0;
 
 	const uint8_t qid[]={ 0x00, COMMAND_GET_VERSION };
-
-	printf("Requesting Identity: ");
 
 	if ((err = HID_WriteReport(qid))) {
 		cerr << "Failed to talk to remote\n";
@@ -123,9 +114,12 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 	setup_ri_pointers(ri);
 
 	uint8_t rd[1024];
-	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol))) {
+	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol,false))) {
 		printf("Failed to read flash\n");
 		return 1;
+	}
+	if (cb) {
+		cb(cb_count++,1,2,arg);
 	}
 
 	// Calculate cookie
@@ -153,27 +147,25 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid)
 		// The old 745 stores the serial number in EEPROM
 		ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,rsp) :
 		// All newer models store it in Flash
-		ReadFlash(0x000110,48,rsp,ri.protocol,false,true))) {
+		ReadFlash(0x000110,48,rsp,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
+	}
+	if (cb) {
+		cb(cb_count++,2,2,arg);
 	}
 
 	make_serial(rsp,ri);
 
-	printf("       done\n");
-
 	return 0;
 }
 
-int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned int protocol, bool verify, bool quiet)
+int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
+	unsigned int protocol, bool verify, void (*cb)(int,int,int,void*),
+	void *arg)
 {
-#ifdef WIN32
-	GetConsoleScreenBufferInfo(con,&sbi);
-#else
-	if (!quiet)
-		printf("              ");
-#endif
 
+	int cb_count = 0;
 	const unsigned int max_chunk_len = 
 		protocol == 0 ? 700 : 1022;
 
@@ -251,16 +243,8 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd, unsigned 
 			}
 		} while (err == 0);
 
-		if (!quiet && err == 0) {
-#ifdef WIN32
-			SetConsoleCursorPosition(con,sbi.dwCursorPosition);
-			printf("%3i%%  %4i KiB",
-				bytes_read*100/len,bytes_read>>10);
-#else
-			printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3i%%  %4i KiB",
-				bytes_read*100/len,bytes_read>>10);
-			fflush(stdout);
-#endif
+		if (cb) {
+			cb(cb_count++, bytes_read, len, arg);
 		}
 	} while (err == 0 && addr < end);
 
@@ -273,7 +257,6 @@ int CRemote::InvalidateFlash(void)
 				COMMAND_MISC_INVALIDATE_FLASH };
 	int err;
 
-	printf("Invalidating flash: ");
 	if ((err=HID_WriteReport(ivf)))
 		return err;
 
@@ -286,80 +269,74 @@ int CRemote::InvalidateFlash(void)
 		return 1;
 	}
 
-	printf("                      done\n");
-
 	return 0;
 }
 
 
-int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri)
+int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
+	void (*cb)(int,int,int,void*), void *arg)
 {
 	const unsigned int *sectors=ri.flash->sectors;
 	const unsigned int flash_base=ri.arch->flash_base;
 
-	printf("Erasing flash:       ");
-	fflush(stdout);
-
 	const uint32_t end=addr+len;
 
-#ifdef _DEBUG
-	printf("%06X - %06X",addr,end);
-#endif
-
 	int err = 0;
+	int num_sectors = 0;
 
-	unsigned int n=0;
-	uint32_t sector_begin=flash_base;
-	uint32_t sector_end=sectors[n];
+	unsigned int n = 0;
 
-	do {
-		sector_end += flash_base;
-		if (sector_begin<end && sector_end>addr) {
-			static uint8_t erase_cmd[8];
-			erase_cmd[0] = 0;
-			erase_cmd[1] = COMMAND_ERASE_FLASH;
-			erase_cmd[2] = (sector_begin>>16)&0xFF;
-			erase_cmd[3] = (sector_begin>>8)&0xFF;
-			erase_cmd[4] = sector_begin&0xFF;
+	/* skip to where we need to start writing */
+	while (sectors[n] + flash_base < addr) {
+		n++;
+	}
+	// start on the NEXT one
+	n++;
 
-			if ((err = HID_WriteReport(erase_cmd)))
-				break;
+	/* calculate the total number of sectors we need to erase */
+	num_sectors = n;
+	while (sectors[num_sectors] < end) {
+		num_sectors++;
+	}
+	num_sectors -= n - 1;
 
-			uint8_t rsp[68];
-			if ((err = HID_ReadReport(rsp,5000)))
-				break;
+	uint32_t sector_begin = sectors[n-1] + flash_base;
+	uint32_t sector_end = sectors[n] + flash_base;;
 
-#ifndef _DEBUG
-			printf("*");
-			fflush(stdout);
-#else
-			//printf("%02X %02X\n",rsp[1],rsp[2]);
-			printf("\nerase sector %2i: %06X - %06X",n,sector_begin,
-				sector_end);
-		} else {
-			printf("\n skip sector %2i: %06X - %06X",n,sector_begin,
-				sector_end);
-#endif
+	for (int i = 0; i < num_sectors; i++) {
+		static uint8_t erase_cmd[8];
+		erase_cmd[0] = 0;
+		erase_cmd[1] = COMMAND_ERASE_FLASH;
+		erase_cmd[2] = (sector_begin>>16)&0xFF;
+		erase_cmd[3] = (sector_begin>>8)&0xFF;
+		erase_cmd[4] = sector_begin&0xFF;
+
+		if ((err = HID_WriteReport(erase_cmd)))
+			break;
+
+		uint8_t rsp[68];
+		if ((err = HID_ReadReport(rsp,5000)))
+			break;
+
+		if (cb) {
+			cb(i, i+1, num_sectors, arg);
 		}
+#ifdef _DEBUG
+		printf("erase sector %2i: %06X - %06X\n",n,sector_begin,
+			sector_end);
+#endif
 		sector_begin=sector_end;
-		sector_end=sectors[++n];
-	} while (sector_end);
-
-	printf("          done\n");
+		sector_end=sectors[++n] + flash_base;
+	}
 
 	return err;
 }
 
-int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, unsigned int protocol)
+int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
+	unsigned int protocol, void (*cb)(int,int,int,void*), void *arg)
 {
 
-	printf("Writing config:      ");
-
-#ifdef WIN32
-	GetConsoleScreenBufferInfo(con,&sbi);
-#else
-	printf("              ");
-#endif
+	int cb_count = 0;
 
 	const unsigned int max_chunk_len = 
 		protocol == 0 ? 749 : 1023;
@@ -414,20 +391,11 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr, un
 		uint8_t rsp[68];
 		if ((err = HID_ReadReport(rsp,5000))) break;
 
-#ifdef WIN32
-		SetConsoleCursorPosition(con,sbi.dwCursorPosition);
-		printf("%3i%%  %4i KiB",bytes_written*100/len,
-			bytes_written>>10);
-#else
-		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3i%%  %4i KiB",
-			bytes_written*100/len,bytes_written>>10);
-		fflush(stdout);
-		//printf("*");
-#endif
+		if (cb) {
+			cb(cb_count++, bytes_written, len, arg);
+		}
 	} while (addr < end);
 
-	printf("       done\n");
-	
 	return err;
 }
 
@@ -601,8 +569,6 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 
 int CRemote::LearnIR(string *learn_string)
 {
-	printf("\nLearn IR - Waiting...\n\n");
-
 	int err = 0;
 
 	const static uint8_t start_ir_learn[] = { 0, COMMAND_START_IRCAP };
@@ -707,8 +673,6 @@ int CRemote::LearnIR(string *learn_string)
 
 	const static uint8_t stop_ir_learn[] = { 0x00, COMMAND_STOP_IRCAP };
 	HID_WriteReport(stop_ir_learn);
-
-	printf("\n");
 
 	if (err == 0 && learn_string != NULL) {
 		char s[32];

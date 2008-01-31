@@ -64,6 +64,29 @@ enum {
 
 static CRemoteBase *rmt = NULL;
 
+void cb_print_percent_status(int count, int curr, int total, void *arg)
+{
+#ifdef WIN32
+	GetConsoleScreenBufferInfo(con,&sbi);
+	SetConsoleCursorPosition(con,sbi.dwCursorPosition);
+#else                   
+	if (count != 0) {
+		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
+	}
+#endif          
+	bool is_bytes = false;
+	if (arg) {
+		is_bytes = static_cast<bool>(arg);
+	}
+
+	if (is_bytes) {
+		printf("%3i%%  %4i KiB", curr*100/total, curr>>10);
+	} else {
+		printf("%3i%%          ", curr*100/total);
+	}
+       	fflush(stdout);
+}
+
 void set_mode(int &mode, int val)
 {
 	if (mode == MODE_UNSET) {
@@ -405,7 +428,8 @@ int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
 
 	uint8_t *config = new uint8_t[ri.config_bytes_used];
 	if ((err = rmt->ReadFlash(ri.arch->config_base, ri.config_bytes_used,
-			config,ri.protocol))) {
+			config,ri.protocol,false,cb_print_percent_status,
+			(void *)true))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
@@ -552,31 +576,38 @@ int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
 	 * We must invalidate flash before we erase and write so that
 	 * nothing will attempt to reference it while we're working.
 	 */
+	printf("Invalidating flash:  ");
 	if ((err = rmt->InvalidateFlash())) {
 		delete[] x;
 		printf("Failed to invalidate flash! Bailing out!\n");
 		return err;
 	}
+	printf("                     done\n");
 	/*
 	 * Flash can be changed to 0, but not back to 1, so you must
 	 * erase the flash (to 1) in order to write the flash.
 	 */
-	if ((err = rmt->EraseFlash(ri.arch->config_base,size, ri))) {
+	printf("Erasing flash:       ");
+	if ((err = rmt->EraseFlash(ri.arch->config_base,size, ri,
+			cb_print_percent_status, (void*)false))) {
 		delete[] x;
 		printf("Failed to erase flash! Bailing out!\n");
 		return err;
 	}
+        printf("       done\n");
 
+	printf("Writing config:      ");
 	if ((err = rmt->WriteFlash(ri.arch->config_base,size,y,
-			ri.protocol))) {
+			ri.protocol,cb_print_percent_status,(void *)true))) {
 		delete[] x;
 		printf("Failed to write flash! Bailing out!\n");
 		return err;
 	}
+        printf("       done\n");
 
 	printf("Verifying Config:    ");
 	if ((err = rmt->ReadFlash(ri.arch->config_base,size,y,
-			ri.protocol,true))) {
+			ri.protocol,true,cb_print_percent_status,(void *)true))) {
 		delete[] x;
 		printf("Failed to read flash! Bailing out!\n");
 		return err;
@@ -599,7 +630,7 @@ int dump_safemode(TRemoteInfo &ri, char *file_name)
 
 	printf("\nReading Safe Mode Firmware ");
 	if ((err = rmt->ReadFlash(ri.arch->flash_base,64*1024,safe,
-							ri.protocol))) {
+			ri.protocol,false,cb_print_percent_status,(void *)true))) {
 		delete[] safe;
 		printf("Failed to read Safe Mode firmware.\n");
 		return 1;
@@ -628,7 +659,7 @@ int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 
 	printf("\nReading Firmware ");
 	if ((err = rmt->ReadFlash(ri.arch->firmware_base,64*1024,firmware,
-							ri.protocol))) {
+			ri.protocol, false, cb_print_percent_status,(void *)true))) {
 		printf("Failed to read firmware.\n");
 		return 1;
 	}
@@ -706,8 +737,10 @@ int learn_ir_commands(TRemoteInfo &ri, char *file_name,
 		printf("Key Name: %s\n",keyname.c_str());
 
 		string ls;
+
+		printf("Learn IR - Waiting...\n");
 		rmt->LearnIR(&ls);
-		//printf("%s\n",ls.c_str());
+		printf("                                          done\n");
 
 		Post(x,"POSTOPTIONS",ri,options,&ls,&keyname);
 	} else {
@@ -721,18 +754,6 @@ void print_harmony_time(const THarmonyTime &ht)
 {
 	static const char * const dow[8] =
 	{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "" };
-
-#if 0
-	printf("\nSecond      %i\n",ht.second);
-	printf("Minute      %i\n",ht.minute);
-	printf("Hour        %i\n",ht.hour);
-	printf("Day         %i\n",ht.day);
-	printf("DOW         %s\n",dow[ht.dow&7]);
-	printf("Month       %i\n",ht.month);
-	printf("Year        %i\n",ht.year);
-	printf("UTC offset +%i\n",ht.utc_offset);
-	printf("Timezone    %s\n",ht.timezone.c_str());
-#endif
 
 	printf("%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
 		ht.year,ht.month,ht.day,dow[ht.dow&7],
@@ -767,6 +788,13 @@ int set_time(TRemoteInfo &ri)
 	printf("The remote's time has been set to ");
 	print_harmony_time(ht);
 	return rmt->SetTime(ri,ht);
+}
+
+int reset_remote()
+{
+        printf("Reseting...\n");
+	int err = rmt->Reset(COMMAND_RESET_DEVICE);
+	return err;
 }
 
 void populate_default_filename(int mode, struct options_t &options,
@@ -890,7 +918,7 @@ int main(int argc, char *argv[])
 	 * near the beginning instead of the SWITCH below.
 	 */
 	if (mode == MODE_RESET) {
-		if ((err = rmt->Reset(COMMAND_RESET_DEVICE)))
+		if ((err = reset_remote()))
 			goto cleanup;
 	}
 
@@ -898,8 +926,13 @@ int main(int argc, char *argv[])
 	 * Get and print all the version info
 	 */
 
-	if ((err = rmt->GetIdentity(ri, hid_info)))
+        printf("Requesting Identity: ");
+	if ((err = rmt->GetIdentity(ri, hid_info, cb_print_percent_status,
+			(void *)false))) {
 		goto cleanup;
+	}
+        printf("       done\n");
+
 
 	/*
 	 * Now do whatever we've been asked to do
@@ -921,7 +954,7 @@ int main(int argc, char *argv[])
 		case MODE_WRITE_CONFIG:
 			if ((err = write_config(ri, file_name, options)))
 				break;
-			err = rmt->Reset(COMMAND_RESET_DEVICE);
+			err = reset_remote();
 			break;
 
 		case MODE_DUMP_FIRMWARE:

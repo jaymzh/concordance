@@ -186,7 +186,7 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 	string *learn_key = NULL)
 {
 	if (options.noweb)
-		return  0;
+		return 0;
 
 	uint8_t *x = xml;
 	int err;
