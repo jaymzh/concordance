@@ -27,6 +27,16 @@ The individual protocols are documented in the following files:
   protocol_z.txt - z-wave remote documentation
 
 
+TOOLS
+
+If you are attempting to develop new features, here are some tools you may be
+intersted in:
+
+  Open Source PIC Assember and Simulator
+  http://www.gnupic.org/
+
+  MPLAB Development Environment for MicroChips PIC and dsPIC chips:
+  http://www.microchip.com/stellent/idcplg?IdcService=SS_GET_PAGE&nodeId=1406&dDocName=en019469&part=SW007002
 
 
 
