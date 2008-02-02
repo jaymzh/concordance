@@ -14,6 +14,8 @@ phil@ipom.com
   caller. This includes more consistent and accurate progress output for all
   stages.
 - More efficient and cleaner support for erasing flash
+- Windows compile fixes (thanks to Marco Bleich)
+- Various code cleanups
 
 
 0.12
