@@ -103,26 +103,27 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 		return 1;
 	}
 
-	ri.fw_ver_major = rsp[2]>>4;
-	ri.fw_ver_minor = rsp[2]&0x0F;
-	ri.hw_ver_major = rsp[3]>>4;
-	ri.hw_ver_minor = rsp[3]&0x0F;
+	ri.fw_ver_major = rsp[2] >> 4;
+	ri.fw_ver_minor = rsp[2] & 0x0F;
+	ri.hw_ver_major = rsp[3] >> 4;
+	ri.hw_ver_minor = rsp[3] & 0x0F;
 	ri.flash_id = rsp[4];
 	ri.flash_mfg = rsp[5];
-	ri.architecture = rx_len<6?2:rsp[6]>>4;
-	ri.fw_type = rx_len<6?0:rsp[6]&0x0F;
-	ri.skin = rx_len<6?2:rsp[7];
-	ri.protocol = rx_len<7?0:rsp[8];
+	ri.architecture = (rx_len < 6) ? 2 : rsp[6] >> 4;
+	ri.fw_type = (rx_len < 6) ? 0 : rsp[6] & 0x0F;
+	ri.skin = (rx_len < 6) ? 2 : rsp[7];
+	ri.protocol = (rx_len < 7) ? 0 : rsp[8];
 
 	setup_ri_pointers(ri);
 
 	uint8_t rd[1024];
-	if ((err=ReadFlash(ri.arch->config_base,1024,rd,ri.protocol,false))) {
+	if ((err=ReadFlash(ri.arch->config_base, 1024, rd, ri.protocol,
+								false))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
 	if (cb) {
-		cb(cb_count++,1,2,arg);
+		cb(cb_count++, 1, 2, arg);
 	}
 
 	/*
@@ -130,38 +131,40 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	 *   see specs/protocol.txt for more info
 	 */
 	const uint32_t cookie = (ri.arch->cookie_size == 2)
-			? rd[0]|(rd[1]<<8)
-			: rd[0]|(rd[1]<<8)|(rd[2]<<16)|(rd[3]<<24);
+			? rd[0] | (rd[1] << 8)
+			: rd[0] | (rd[1] << 8) | (rd[2] << 16) | (rd[3] << 24);
 
 	ri.valid_config = (cookie == ri.arch->cookie);
 
-	if(ri.valid_config) {
-		ri.max_config_size = (ri.flash->size<<10)
+	if (ri.valid_config) {
+		ri.max_config_size = (ri.flash->size << 10)
 			- (ri.arch->config_base - ri.arch->flash_base);
 		const uint32_t end = rd[ri.arch->end_vector]
-				| (rd[ri.arch->end_vector+1]<<8)
-				| (rd[ri.arch->end_vector+2]<<16);
+				| (rd[ri.arch->end_vector + 1] << 8)
+				| (rd[ri.arch->end_vector + 2] << 16);
 		ri.config_bytes_used =
-			(end - (ri.arch->config_base - ri.arch->flash_base)) + 4;
+			(end - (ri.arch->config_base - ri.arch->flash_base))
+			+ 4;
 	} else {
-		ri.config_bytes_used=0;
-		ri.max_config_size=1;
+		ri.config_bytes_used = 0;
+		ri.max_config_size = 1;
 	}
 		
 	// read serial (see specs/protocol.h for details)
-	if ((err = ri.architecture==2 ?
+	if ((err = (ri.architecture == 2)
 		// The old 745 stores the serial number in EEPROM
-		ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,rsp) :
+		? ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,rsp)
 		// All newer models store it in Flash
-		ReadFlash(FLASH_SERIAL_ADDR,48,rsp,ri.protocol))) {
+		: ReadFlash(FLASH_SERIAL_ADDR,48,rsp,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
+
 	if (cb) {
-		cb(cb_count++,2,2,arg);
+		cb(cb_count++, 2, 2, arg);
 	}
 
-	make_serial(rsp,ri);
+	make_serial(rsp, ri);
 
 	return 0;
 }
@@ -198,14 +201,14 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		static uint8_t cmd[8];
 		cmd[0] = 0;
 		cmd[1] = COMMAND_READ_FLASH | 0x05;
-		cmd[2] = (addr>>16)&0xFF;
-		cmd[3] = (addr>>8)&0xFF;
-		cmd[4] = addr&0xFF;
+		cmd[2] = (addr >> 16) & 0xFF;
+		cmd[3] = (addr >> 8) & 0xFF;
+		cmd[4] = addr & 0xFF;
 		unsigned int chunk_len = end-addr;
 		if (chunk_len > max_chunk_len) 
 			chunk_len=max_chunk_len;
-		cmd[5] = (chunk_len>>8)&0xFF;
-		cmd[6] = chunk_len&0xFF;
+		cmd[5] = (chunk_len >> 8) & 0xFF;
+		cmd[6] = chunk_len & 0xFF;
 
 		if ((err = HID_WriteReport(cmd)))
 			break;
@@ -219,15 +222,16 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 			const uint8_t r=rsp[1]&COMMAND_MASK;
 
-			if (r==RESPONSE_READ_FLASH_DATA) {
-				if (seq!=rsp[2]) {
+			if (r == RESPONSE_READ_FLASH_DATA) {
+				if (seq != rsp[2]) {
 					err = 1;
 					printf("\nInvalid sequence %02X %02x\n",
 						seq,rsp[2]);
 					break;
 				}
 				seq+=0x11;
-				const unsigned int rxlen=rxlenmap[rsp[1]&LENGTH_MASK];
+				const unsigned int rxlen = 
+					rxlenmap[rsp[1]&LENGTH_MASK];
 				if (rxlen) {
 					if (verify) {
 						if (memcmp(pr,rsp+3,rxlen)) {
@@ -238,14 +242,14 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 					} else {
 						memcpy(pr,rsp+3,rxlen);
 					}
-					pr+=rxlen;
-					addr+=rxlen;
-					bytes_read+=rxlen;
+					pr += rxlen;
+					addr += rxlen;
+					bytes_read += rxlen;
 				}
-			} else if (r==RESPONSE_DONE) {
+			} else if (r == RESPONSE_DONE) {
 				break;
 			} else {
-				printf("\nInvalid response [%02X]\n",rsp[1]);
+				printf("\nInvalid response [%02X]\n", rsp[1]);
 				err = 1;
 			}
 		} while (err == 0);
@@ -264,11 +268,11 @@ int CRemote::InvalidateFlash(void)
 				COMMAND_MISC_INVALIDATE_FLASH };
 	int err;
 
-	if ((err=HID_WriteReport(ivf)))
+	if ((err = HID_WriteReport(ivf)))
 		return err;
 
 	uint8_t rsp[68];
-	if ((err=HID_ReadReport(rsp)))
+	if ((err = HID_ReadReport(rsp)))
 		return err;
 
 	if (rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
@@ -283,10 +287,10 @@ int CRemote::InvalidateFlash(void)
 int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 	void (*cb)(int,int,int,void*), void *arg)
 {
-	const unsigned int *sectors=ri.flash->sectors;
-	const unsigned int flash_base=ri.arch->flash_base;
+	const unsigned int *sectors = ri.flash->sectors;
+	const unsigned int flash_base = ri.arch->flash_base;
 
-	const uint32_t end=addr+len;
+	const uint32_t end = addr+len;
 
 	int err = 0;
 	int num_sectors = 0;
@@ -314,9 +318,9 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 		static uint8_t erase_cmd[8];
 		erase_cmd[0] = 0;
 		erase_cmd[1] = COMMAND_ERASE_FLASH;
-		erase_cmd[2] = (sector_begin>>16)&0xFF;
-		erase_cmd[3] = (sector_begin>>8)&0xFF;
-		erase_cmd[4] = sector_begin&0xFF;
+		erase_cmd[2] = (sector_begin>>16) & 0xFF;
+		erase_cmd[3] = (sector_begin>>8) & 0xFF;
+		erase_cmd[4] = sector_begin & 0xFF;
 
 		if ((err = HID_WriteReport(erase_cmd)))
 			break;
@@ -329,11 +333,11 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 			cb(i, i+1, num_sectors, arg);
 		}
 #ifdef _DEBUG
-		printf("erase sector %2i: %06X - %06X\n",n,sector_begin,
+		printf("erase sector %2i: %06X - %06X\n", n, sector_begin,
 			sector_end);
 #endif
-		sector_begin=sector_end;
-		sector_end=sectors[++n] + flash_base;
+		sector_begin = sector_end;
+		sector_end = sectors[++n] + flash_base;
 	}
 
 	return err;
@@ -355,37 +359,39 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 		{ 0x0A, 63, 31, 15, 7, 6, 5, 4, 3, 2, 1 };
 	const unsigned int *txlenmap = protocol ? txlenmapx : txlenmap0;
 
-	const uint8_t *pw=wr;
-	const uint32_t end=addr+len;
-	unsigned int bytes_written=0;
+	const uint8_t *pw = wr;
+	const uint32_t end = addr+len;
+	unsigned int bytes_written = 0;
 	int err = 0;
 
 	do {
 		static uint8_t write_setup_cmd[8];
 		write_setup_cmd[0] = 0;
 		write_setup_cmd[1] = COMMAND_WRITE_FLASH | 0x05;
-		write_setup_cmd[2] = (addr>>16)&0xFF;
-		write_setup_cmd[3] = (addr>>8)&0xFF;
-		write_setup_cmd[4] = addr&0xFF;
-		uint32_t chunk_len=end-addr;
-		if (chunk_len>max_chunk_len)
-			chunk_len=max_chunk_len;
-		write_setup_cmd[5] = (chunk_len>>8)&0xFF;
-		write_setup_cmd[6] = chunk_len&0xFF;
+		write_setup_cmd[2] = (addr>>16) & 0xFF;
+		write_setup_cmd[3] = (addr>>8) & 0xFF;
+		write_setup_cmd[4] = addr & 0xFF;
+		uint32_t chunk_len = end-addr;
+		if (chunk_len > max_chunk_len)
+			chunk_len = max_chunk_len;
+		write_setup_cmd[5] = (chunk_len>>8) & 0xFF;
+		write_setup_cmd[6] = chunk_len & 0xFF;
 
 		if ((err = HID_WriteReport(write_setup_cmd)))
 			break;
 
 		while (chunk_len) {
-			unsigned int n=txlenmap[0];
-			unsigned int i=1;
-			while (chunk_len < txlenmap[i]) ++i, --n;
-			unsigned int block_len=txlenmap[i];
+			unsigned int n = txlenmap[0];
+			unsigned int i = 1;
+			while (chunk_len < txlenmap[i]) {
+				++i;
+				--n;
+			}
+			unsigned int block_len = txlenmap[i];
 			uint8_t wd[68];
 			wd[0] = 0;
 			wd[1] = COMMAND_WRITE_FLASH_DATA | n;
-			memcpy(wd+2,pw,block_len);
-			//printf("%06X %4i\n",addr,chunk_len);
+			memcpy(wd+2, pw, block_len);
 			HID_WriteReport(wd);
 			pw += block_len;
 			addr += block_len;
@@ -397,7 +403,8 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 		HID_WriteReport(end_cmd);
 
 		uint8_t rsp[68];
-		if ((err = HID_ReadReport(rsp,5000))) break;
+		if ((err = HID_ReadReport(rsp, 5000)))
+			break;
 
 		if (cb) {
 			cb(cb_count++, bytes_written, len, arg);
@@ -412,19 +419,22 @@ int CRemote::ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t 
 	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 0x02, kind, 0 };
 
 	while (len--) {
-		rmb[3]=addr++;
+		rmb[3] = addr++;
 
 		int err;
-		if ((err=HID_WriteReport(rmb))) return err;
+		if ((err = HID_WriteReport(rmb)))
+			return err;
 
 		uint8_t rsp[68];
-		if ((err=HID_ReadReport(rsp))) return err;
+		if ((err = HID_ReadReport(rsp)))
+			return err;
 
-		if(rsp[1] != (RESPONSE_READ_MISC_DATA | 0x02) ||
-			rsp[2] != kind)
+		if (rsp[1] != (RESPONSE_READ_MISC_DATA | 0x02)||
+			rsp[2] != kind) {
 			return 1;
+		}
 
-		*rd++=rsp[3];
+		*rd++ = rsp[3];
 	}
 	return 0;
 }
@@ -434,20 +444,23 @@ int CRemote::ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_
 	uint8_t rmw[] = { 0, COMMAND_READ_MISC | 0x03, kind, 0, 0 };
 
 	while (len--) {
-		rmw[3] = addr>>8;
-		rmw[4] = addr&0xFF;
+		rmw[3] = addr >> 8;
+		rmw[4] = addr & 0xFF;
 		++addr;
 
 		int err;
-		if ((err=HID_WriteReport(rmw))) return err;
+		if ((err = HID_WriteReport(rmw)))
+			return err;
 
 		uint8_t rsp[68];
-		if ((err=HID_ReadReport(rsp))) return err;
+		if ((err = HID_ReadReport(rsp)))
+			return err;
 
 		// WARNING: The 880 responds with C2 rather than C3
-		if(rsp[1]&COMMAND_MASK != RESPONSE_READ_MISC_DATA ||
-			rsp[2] != kind)
+		if((rsp[1] & COMMAND_MASK) != RESPONSE_READ_MISC_DATA ||
+			rsp[2] != kind) {
 			return 1;
+		}
 
 		*rd++ = rsp[3]<<8 | rsp[4];
 	}
@@ -485,21 +498,24 @@ int CRemote::WriteMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16
 	wmw[2] = kind;
 
 	while (len--) {
-		wmw[3] = addr>>8;
-		wmw[4] = addr&0xFF;
+		wmw[3] = addr >> 8;
+		wmw[4] = addr & 0xFF;
 		++addr;
-		wmw[5] = *wr>>8;
-		wmw[6] = *wr&0xFF;
+		wmw[5] = *wr >> 8;
+		wmw[6] = *wr & 0xFF;
 		++wr;
 
 		int err;
-		if ((err=HID_WriteReport(wmw))) return err;
+		if ((err = HID_WriteReport(wmw)))
+			return err;
 
 		uint8_t rsp[68];
-		if ((err=HID_ReadReport(rsp))) return err;
-		if(rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
-			rsp[2] != COMMAND_WRITE_MISC)
+		if ((err = HID_ReadReport(rsp)))
+			return err;
+		if((rsp[1] & COMMAND_MASK) != RESPONSE_DONE ||
+			rsp[2] != COMMAND_WRITE_MISC) {
 			return 1;
+		}
 	}
 	return 0;
 }
@@ -507,39 +523,39 @@ int CRemote::WriteMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16
 
 int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 {
-	int err=0;
+	int err = 0;
 
 	if(ri.architecture < 8) {
 		uint8_t tsv[8];
-		err = ReadMiscByte(0,6,COMMAND_MISC_STATE,tsv);
+		err = ReadMiscByte(0, 6, COMMAND_MISC_STATE, tsv);
 		ht.second = tsv[0];
 		ht.minute = tsv[1];
 		ht.hour = tsv[2];
 		ht.dow = 7;
-		ht.day = 1+tsv[3];
-		ht.month = 1+tsv[4];
-		ht.year = 2000+tsv[5];
+		ht.day = 1 + tsv[3];
+		ht.month = 1 + tsv[4];
+		ht.year = 2000 + tsv[5];
 	} else {
 		uint16_t tsv[8];
-		err = ReadMiscWord(0,7,COMMAND_MISC_STATE,tsv);
+		err = ReadMiscWord(0, 7, COMMAND_MISC_STATE, tsv);
 		ht.second = tsv[0];
 		ht.minute = tsv[1];
 		ht.hour = tsv[2];
-		ht.day = 1+tsv[3];
-		ht.dow = tsv[4]&7;
-		ht.month = 1+tsv[5];
-		ht.year = 2000+tsv[6];
+		ht.day = 1 + tsv[3];
+		ht.dow = tsv[4] & 7;
+		ht.month = 1 + tsv[5];
+		ht.year = 2000 + tsv[6];
 	}
 
-	ht.utc_offset=0;
-	ht.timezone="";
+	ht.utc_offset = 0;
+	ht.timezone = "";
 
 	return err;
 }
 
 int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 {
-	int err=0;
+	int err = 0;
 
 	if (ri.architecture < 8) {
 		uint8_t tsv[8];
@@ -549,9 +565,10 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 		tsv[3] = ht.day-1;
 		tsv[4] = ht.month-1;
 		tsv[5] = ht.year-2000;
-		if ((err = WriteMiscByte(0,6,COMMAND_MISC_STATE,tsv))) return err;
+		if ((err = WriteMiscByte(0, 6, COMMAND_MISC_STATE, tsv)))
+			return err;
 		tsv[0] = ht.second;
-		err = WriteMiscByte(0,1,COMMAND_MISC_STATE,tsv);
+		err = WriteMiscByte(0, 1, COMMAND_MISC_STATE, tsv);
 	} else {
 		uint16_t tsv[8];
 		tsv[0] = 0;
@@ -561,13 +578,17 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 		tsv[4] = ht.dow;
 		tsv[5] = ht.month-1;
 		tsv[6] = ht.year-2000;
-		if ((err = WriteMiscWord(0,7,COMMAND_MISC_STATE,tsv))) return err;
+		if ((err = WriteMiscWord(0, 7, COMMAND_MISC_STATE, tsv)))
+			return err;
 		tsv[0] = ht.second;
-		if ((err = WriteMiscWord(0,1,COMMAND_MISC_STATE,tsv))) return err;
+		if ((err = WriteMiscWord(0, 1, COMMAND_MISC_STATE, tsv)))
+			return err;
 
 		// Send Recalc Clock command for 880 only (not 360/520/550)
 		if (ri.architecture == 8) {
-			static const uint8_t rcc[] = { 0, COMMAND_WRITE_MISC | 0x01, COMMAND_MISC_CLOCK_RECALCULATE };
+			static const uint8_t rcc[] = { 0,
+				COMMAND_WRITE_MISC | 0x01,
+				COMMAND_MISC_CLOCK_RECALCULATE };
 			err = HID_WriteReport(rcc);
 		}
 	}
@@ -580,23 +601,24 @@ int CRemote::LearnIR(string *learn_string)
 	int err = 0;
 
 	const static uint8_t start_ir_learn[] = { 0, COMMAND_START_IRCAP };
-	if ((err = HID_WriteReport(start_ir_learn))) return err;
+	if ((err = HID_WriteReport(start_ir_learn)))
+		return err;
 
-	uint8_t seq=0;
-	unsigned int ir_word=0;
-	unsigned int t_on=0;
-	unsigned int t_off=0;
+	uint8_t seq = 0;
+	unsigned int ir_word = 0;
+	unsigned int t_on = 0;
+	unsigned int t_off = 0;
 
-	unsigned int freq=0;
-	const unsigned int max_pulse_count=1000;
-	unsigned int *pulses=new unsigned int[max_pulse_count];
-	unsigned int pulse_count=0;
+	unsigned int freq = 0;
+	const unsigned int max_pulse_count = 1000;
+	unsigned int *pulses = new unsigned int[max_pulse_count];
+	unsigned int pulse_count = 0;
 
 	do {
 		uint8_t rsp[68];
-		if ((err = HID_ReadReport(rsp,ir_word ? 500 : 4000)))
+		if ((err = HID_ReadReport(rsp, ir_word ? 500 : 4000)))
 			break;
-		const uint8_t r=rsp[1]&COMMAND_MASK;
+		const uint8_t r = rsp[1] & COMMAND_MASK;
 		if (r == RESPONSE_IRCAP_DATA) {
 			if (rsp[2] != seq) {
 				if (rsp[2] == 0x1F && seq == 0x10) {
@@ -607,21 +629,25 @@ int CRemote::LearnIR(string *learn_string)
 					 * Needs more testing
 					 */
 					printf("sequence glitch!\n");
-					seq+=0x0F;
+					seq += 0x0F;
 				} else {
 					err = 1;
 					printf("\nInvalid sequence %02X %02x\n",
-						seq,rsp[2]);
+						seq, rsp[2]);
 					break;
 				}
 			}
-			seq+=0x10;
-			const unsigned int len=rsp[64];
-			if ((len&1)==0) {
-				for (unsigned int u=2; u<len; u+=2) {
-					const unsigned int t=rsp[1+u]<<8 | rsp[2+u];
-					if (ir_word>2) {
-						if (ir_word&1) {
+			seq += 0x10;
+			/*
+			 * FIXME: Fugly depth!
+			 */
+			const unsigned int len = rsp[64];
+			if ((len & 1) == 0) {
+				for (unsigned int u = 2; u < len; u += 2) {
+					const unsigned int t=rsp[1+u] << 8 |
+						rsp[2+u];
+					if (ir_word > 2) {
+						if (ir_word & 1) {
 							// t == on + off time
 							if (t_on)
 								t_off = t-t_on;
@@ -629,31 +655,33 @@ int CRemote::LearnIR(string *learn_string)
 								t_off += t;
 						} else {
 							// t == on time
-							t_on=t;
+							t_on = t;
 							if (t_on) {
-								printf("-%i\n",t_off);
+								printf("-%i\n",
+									t_off);
 								if (pulse_count < max_pulse_count)
 									pulses[pulse_count++] = t_off;
-								printf("+%i\n",t_on);
+								printf("+%i\n",
+									t_on);
 								if (pulse_count < max_pulse_count)
 									pulses[pulse_count++] = t_on;
 							}
 						}
 					} else {
-						switch(ir_word) {
+						switch (ir_word) {
 							case 0:
 								// ???
 								break;
 							case 1:
 								// on time of
 								// first burst
-								t_on=t;
+								t_on = t;
 								break;
 							case 2:
 								// pulse count of
 								// first burst
 								if (t_on) {
-									freq=static_cast<unsigned int>(static_cast<uint64_t>(t)*1000000/t_on);
+									freq = static_cast<unsigned int>(static_cast<uint64_t>(t)*1000000/t_on);
 									printf("%i Hz\n",freq);
 									printf("+%i\n",t_on);
 									pulses[pulse_count++] = t_on;
@@ -671,26 +699,29 @@ int CRemote::LearnIR(string *learn_string)
 		} else if (r == RESPONSE_DONE) {
 			break;
 		} else {
-			printf("\nInvalid response [%02X]\n",rsp[1]);
+			printf("\nInvalid response [%02X]\n", rsp[1]);
 			err = 1;
 		}
 	} while (err == 0 && t_off < 500000);
 
-	if (t_off) printf("-%i\n",t_off);
-	if (pulse_count<max_pulse_count) pulses[pulse_count++] = t_off;
+	if (t_off)
+		printf("-%i\n",t_off);
+
+	if (pulse_count < max_pulse_count)
+		pulses[pulse_count++] = t_off;
 
 	const static uint8_t stop_ir_learn[] = { 0x00, COMMAND_STOP_IRCAP };
 	HID_WriteReport(stop_ir_learn);
 
 	if (err == 0 && learn_string != NULL) {
 		char s[32];
-		sprintf(s,"F%04X",freq);
-		*learn_string=s;
+		sprintf(s, "F%04X", freq);
+		*learn_string = s;
 		for (unsigned int n = 0; n < pulse_count; ) {
-			sprintf(s,"P%04X",pulses[n++]);
-			*learn_string+=s;
-			sprintf(s,"S%04X",pulses[n++]);
-			*learn_string+=s;
+			sprintf(s, "P%04X", pulses[n++]);
+			*learn_string += s;
+			sprintf(s, "S%04X", pulses[n++]);
+			*learn_string += s;
 		}
 	}
 	
