@@ -17,15 +17,14 @@
  */
 
 /*
- * The base command is always the first byte. This first byte is split into
- * two nibbles. The upper nibble determines the command. So commands can
- * always be thought of as 0x10, 0x20, 0x30, 0x40, etc. The other nibble is
- * an indicator of how many bytes will be sent. 
+ * These are all the commands and responses that can be sent to the remote.
  *
- * However, it's not a linear mapping, in fact, this second nibble changes
- * depending on the mode, so see ReadFlash(), but it's usually something
- * like 0=0, 1=0, 1-1, 2=2, 3=3, 4=4, 5=5, 6=6, 7=14, 8=30, 9=62, and a-f
- * aren't used. Again, this is non-linear.
+ * This lists all base commands (first nibble of first byte), and also the
+ * sub-command for those commands that have them.
+ *
+ * The second nibble of the *first* byte is a size mapping.
+ *
+ * For more details please see specs/protocol.h
  *
  * Below, where the second half of the byte may change, it's always defined
  * as a 0. However, where the command will always be a static size, it's
@@ -61,7 +60,6 @@
  */
 #define COMMAND_START_IRCAP 0x70
 #define COMMAND_STOP_IRCAP 0x80
-#define COMMAND_IRCAP_DATA 0x90
 #define COMMAND_WRITE_MISC 0xA0
 #define COMMAND_READ_MISC 0xB0
 /*
@@ -101,6 +99,7 @@
  */
 #define RESPONSE_VERSION_DATA 0x20
 #define RESPONSE_READ_FLASH_DATA 0x60
+#define RESPONSE_IRCAP_DATA 0x90
 #define RESPONSE_READ_MISC_DATA 0xC0
 #define RESPONSE_DONE 0xF0
 

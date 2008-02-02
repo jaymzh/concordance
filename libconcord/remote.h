@@ -18,6 +18,7 @@
  */
 
 
+#define FLASH_SERIAL_ADDR 0x000110
 
 /*
  * WARNING: Do not change this!

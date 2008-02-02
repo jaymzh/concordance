@@ -1,0 +1,36 @@
+
+
+This is our attempt to write specs down as we discover/understand them incase
+Logitech never releases specs.
+
+INTRO
+
+There are two general underlying protocols used... one by the non-z-wave
+remotes, and one by z-wave remotes.
+
+In addition, one of two transports is used: HID or LAN.
+
+Finally, all remotes use USB as their physical medium.
+
+These are coupled into a few combinations:
+
+  non-zwave -> HID -> USB
+  zwave     -> HID -> USB
+  zwave     -> LAN -> USB
+
+For 880 and below, they all use USB and the non-z-wave protocol. The 890 and
+the 890pro use z-wave over HID. The 1000 and later use z-wave over LAN.
+
+The individual protocols are documented in the following files:
+
+  protocol.txt - pre-z-wave remote (880 and earlier) documentation
+  protocol_z.txt - z-wave remote documentation
+
+
+
+
+
+
+
+# for vim to text-wrap
+vim:textwidth=78:

@@ -91,6 +91,9 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 		return 1;
 	}
 
+	/*
+ 	 * See specs/protocol.txt for format
+ 	 */
 	const unsigned int rx_len = rsp[1]&0x0F;
 
 	if ((rsp[1]&0xF0) != RESPONSE_VERSION_DATA ||
@@ -122,7 +125,10 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 		cb(cb_count++,1,2,arg);
 	}
 
-	// Calculate cookie
+	/*
+	 * Calculate cookie
+	 *   see specs/protocol.txt for more info
+	 */
 	const uint32_t cookie = (ri.arch->cookie_size == 2)
 			? rd[0]|(rd[1]<<8)
 			: rd[0]|(rd[1]<<8)|(rd[2]<<16)|(rd[3]<<24);
@@ -142,12 +148,12 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 		ri.max_config_size=1;
 	}
 		
-	// read serial
+	// read serial (see specs/protocol.h for details)
 	if ((err = ri.architecture==2 ?
 		// The old 745 stores the serial number in EEPROM
 		ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,rsp) :
 		// All newer models store it in Flash
-		ReadFlash(0x000110,48,rsp,ri.protocol))) {
+		ReadFlash(FLASH_SERIAL_ADDR,48,rsp,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
@@ -171,8 +177,9 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 	/*
 	 * This is a mapping of the lower-half of the first command byte to
-	 * the size of the total command to be sent. See protocol.h for more
-	 * info.
+	 * the size of the total command to be sent.
+	 *
+	 * See specs/protocol.txt for more * info.
 	 */
 	// Protocol 0 (745, safe mode)
 	static const unsigned int dl0[16] = { 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -341,6 +348,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 	const unsigned int max_chunk_len = 
 		protocol == 0 ? 749 : 1023;
 
+	/* mapping of lenghts - see specs/protocol.txt */
 	static const unsigned int txlenmap0[] =
 		{ 0x07, 7, 6, 5, 4, 3, 2, 1 };
 	static const unsigned int txlenmapx[] =
@@ -589,7 +597,7 @@ int CRemote::LearnIR(string *learn_string)
 		if ((err = HID_ReadReport(rsp,ir_word ? 500 : 4000)))
 			break;
 		const uint8_t r=rsp[1]&COMMAND_MASK;
-		if (r == COMMAND_IRCAP_DATA) {
+		if (r == RESPONSE_IRCAP_DATA) {
 			if (rsp[2] != seq) {
 				if (rsp[2] == 0x1F && seq == 0x10) {
 					/*
@@ -688,3 +696,4 @@ int CRemote::LearnIR(string *learn_string)
 	
 	return err;
 }
+

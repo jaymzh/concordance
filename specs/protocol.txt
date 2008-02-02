@@ -1,0 +1,283 @@
+
++++ TABLE OF CONTENTS
+
+   - COMMANDS
+   - OTHER REMOTE CONFIG DATA
+ 
++++ COMMANDS
+
+The base command is always the first byte. This first byte is split into
+two nibbles. The upper nibble determines the command. So commands can
+always be thought of as 0x10, 0x20, 0x30, 0x40, etc. The other nibble is
+an indicator of how many bytes will be sent. 
+
+However, it's not a linear mapping. In fact, this second nibble changes
+depending on the mode. There are two modes: 0 and 1. Well, there's actually
+lots of modes, but the mapping falls into mode 0's mapping, and all other
+mode's mapping. It's also different for reading and writing.
+
+Mode 0 is used for safe-mode (except on a 745 where it's also the standard
+mode), and has this mapping:
+  { 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }
+
+In other words if the byte is set to a 5, then there are 4 bytes following the
+first byte (since the 5th element in the above array is the value 4). And so
+on.
+
+All other mode's have this mapping:
+  { 0, 0, 1, 2, 3, 4, 5, 6, 14, 30, 62, 0, 0, 0, 0, 0 }
+
+For writing flash, the map for mode 0 is:
+  { 0x07, 7, 6, 5, 4, 3, 2, 1 }
+
+And for all other modes is:
+  { 0x0A, 63, 31, 15, 7, 6, 5, 4, 3, 2, 1 }
+
+
+COMMAND_INVALID 0x00
+
+I suspect this is actually RESPONSE_INVALID, we've yet to use it anywhere
+in our code.
+
+COMMAND_GET_VERSION 0x10
+
+Get version information. The response looks like this:
+
+  byte1: MSB = RESPONSE_VERSION_DATA
+         LSB = response length
+  byte2: MSB = Firmware major ver
+         LSB = Firmware minor ver
+  byte3: MSB = Hardware major ver
+         LSB = Hardware minor ver
+  byte4: Flash ID
+  byte5: Flash Manufacturer
+  
+  All further bytes are optional, depending on hardware
+  byte6: Firmware type
+  byte7: Skin
+  byte8: Protocol
+
+COMMAND_WRITE_FLASH 0x30
+
+Used to tell the remote we want to write to the flash. The next 3 bytes
+are the address to start at, and the following two bytes are the length.
+
+Is also used as an argument to COMMAND_DONE to denote we are done sending
+flash data.
+
+COMMAND_WRITE_FLASH_DATA 0x40
+
+This is actually data to write to flash. Everything after the first byte is
+actual data.
+
+COMMAND_READ_FLASH 0x50
+
+Used to tell the remote we want to read flash. The first 3 bytes after the
+command are the address and the 2 bytes after that are the length.
+
+The response will look liek this:
+
+  byte1: MSB = RESPONSE_READ_FLASH_DATA
+         LSB = response length
+  byte2: sequence number (starting at 1 and increasing by 0x11 each time)
+  
+  All bytes after this until length are the data requested. The data
+  will be followed by a RESPONSE_DONE.
+
+COMMAND_PROM_TYPE_MCU_FLASH 0x01
+COMMAND_PROM_TYPE_MCU_EEPROM 0x02
+COMMAND_PROM_TYPE_MCU_ID 0x03
+COMMAND_PROM_TYPE_EXT_FLASH 0x04
+
+   No idea...
+
+COMMAND_START_IRCAP 0x70
+
+Used to start IR capturing. Responses will look like:
+
+  byte1: MSB = RESPONSE_IRCAP_DATA
+  byte2: sequence number (starting a 0, increasing by 0x10)
+  ...
+  byte64: length (must be even?)
+
+  TODO: Write more about parsing this response
+
+  RESPONSE_DONE will be sent when the remote is doen
+
+COMMAND_STOP_IRCAP 0x80
+
+Used to tell the remote to stop capturing IR.
+
+COMMAND_WRITE_MISC 0xA0
+
+Used to send a handful of miscellaneous commands such as invalidating flash or
+updating state - many of these commands also include writing additional data
+which is passed in the same request. See COMMAND_MISC_* below for commands
+that can be sent.
+
+COMMAND_READ_MISC 0xB0
+
+Used to read miscellaneous data such as time. See COMMAND_MISC_* for commands
+that can be sent with COMMAND_READ_MISC.
+
+Responses will have the first byte set to RESPONSE_READ_MISC_DATA, with the
+LSB being the amount of data, and the bytes following that being the data to
+be read.
+
+  ** SECOND BYTE FOR COMMAND_WRITE_MISC OR COMMAND_READ_MISC **
+
+  COMMAND_MISC_EEPROM 0x00
+
+  To read data out of the EEPROM (afaik, other than the 745 storing the serial
+  number there, it's not really used for much else).
+
+  COMMAND_MISC_STATE 0x01
+
+  Get/Set state variables (such as time, state of devices, etc.). When writing
+  the args are:
+    byte3: address to write to
+    byte4: byte (or word) of data
+
+  When reading, there's just byte3 (address). The address is the byte/word to
+  write to. These are:
+    Byte/Word Value 
+    0         second
+    1         minute
+    2         hour
+    3         day (from 0)
+    4         month (from 0)
+    5         year (2-digit)
+
+  One some architectures, these are words instead of bytes and must be written
+  accordingly.
+
+  COMMAND_MISC_INVALIDATE_FLASH 0x02
+
+  Invalidate flash (tell the remote not to read from it... needed for updating
+  flash without crashing the remote). No args.
+
+  COMMAND_MISC_QUEUE_ACTION 0x03
+
+  ??
+
+  COMMAND_MISC_PROGRAM 0x04
+
+  ??
+
+  COMMAND_MISC_INTERRUPT 0x05
+
+  ??
+
+  COMMAND_MISC_RAM 0x06
+
+  ??
+
+  COMMAND_MISC_REGISTER 0x07
+
+  ??
+
+  COMMAND_MISC_CLOCK_RECALCULATE 0x08
+
+  On the 880, you must tell it to recalculate the clock after you set it with
+  the COMMAND_MISC_STATE command. No args.
+
+  COMMAND_MISC_QUEUE_EVENT 0x09
+
+  ??
+
+  COMMAND_MISC_RESTART_CONFIG 0x0A
+
+  ??
+
+COMMAND_ERASE_FLASH 0xD0
+
+Used to erase sectors of the flash.
+
+There are always 3 args: 3 bytes containing the
+address of the first sector of the flash (pulled from the sectors array from
+remote_info.h which is setup for you in the RemoteInfo object by
+setup_ri_pointers()).
+
+COMMAND_RESET 0xE0
+
+Use to ask the remote to reset something. See COMMAND_RESET_* below, which
+should be the second byte. There is always 1 arg.
+
+  ** SECOND BYTE FOR COMMAND_WRITE_MISC OR COMMAND_READ_MISC **
+
+  COMMAND_RESET_USB 0x01
+
+  Reset the USB connection.
+
+  COMMAND_RESET_DEVICE 0x02
+
+  Reboot the device. Necessary after updating the Flash (or the firmware).
+
+  COMMAND_RESET_DEVICE_DISCONNECT 0x03
+
+  ??
+
+  COMMAND_RESET_TEST_FINISH 0x04
+
+  Reset with test (?).
+
+COMMAND_DONE 0xF0
+
+Used to tell the remote your done with something. The second byte determines
+what you're done with - for example, to finish writing to the flash, you'd
+send COMMAND_DONE and COMMAND_WRITE_FLASH. There is always 1 arg.
+
+** These responses are mentioned in the section of their cooresponding
+** commands above. They are listed here only to document their hex ID.
+
+RESPONSE_VERSION_DATA 0x20
+RESPONSE_READ_FLASH_DATA 0x60
+RESPONSE_IRCAP_DATA 0x90
+RESPONSE_READ_MISC_DATA 0xC0
+RESPONSE_DONE 0xF0
+
+
++++ OTHER REMOTE CONFIG DATA
+
+Once you've done GET_IDENTITY you can get the config base address from
+remote_info.h (should be in ri.arch->config_base after calling
+setup_ri_pointers()). You can then read extra config data - read 1K starting
+at this address.
+
+COOKIE
+
+The first 2-4 bytes of the response is the cookie:
+
+  byte1: cookie MSB
+  byte2: cookie next-MSB
+  byte3: (optional) cookie 3rd byte
+  byte4: (optional) cookie 4th byte
+
+This "cookie" is a magic value to tell you if the config is valid - it's a
+special value hard-coded for each remote.
+
+USED FLASH
+
+The address of the end if "used data" can be read from the "end_vector" byte
+which is statically defined in the ArchInfo struct - the values are in the
+array of these called ArchList in remote_info.h. This can then be used to
+determine the % of flash used.
+
+Other data is in this first 1K, but not all of what's there is known.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# for vim
+vim:textwidth=78:
+

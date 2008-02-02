@@ -32,8 +32,6 @@ typedef unsigned __int64 uint64_t;
 
 #else // not Windows
 
-using namespace std;
-
 #define LIBUSB
 
 #define stricmp strcasecmp
@@ -42,6 +40,7 @@ using namespace std;
 #endif // end 'not Windows'
 
 #include <string>
+using namespace std;
 
 struct options_t {
 	bool binary;
