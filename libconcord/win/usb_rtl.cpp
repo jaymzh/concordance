@@ -42,11 +42,15 @@ THidP_GetCaps* HidP_GetCaps;
 THidD_GetFeature* HidD_GetFeature;
 THidD_SetFeature* HidD_SetFeature;
 
+/* see note in usb_rtl.h */
+#if _MSC_VER <= 1020
 TCancelIo* CancelIo;
-
+#endif
 
 int LinkUSB(void)
 {
+/* see note in usb_rtl.h */
+#if _MSC_VER <= 1020
 	hKernel32=GetModuleHandle("kernel32.dll");
 
 	if(hKernel32) {
@@ -56,6 +60,7 @@ int LinkUSB(void)
 
 	if(CancelIo==NULL)
 		return -6;
+#endif
 
 	hSetupapi=LoadLibrary("setupapi.dll");
 

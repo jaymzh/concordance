@@ -104,9 +104,14 @@ typedef NTSTATUS __stdcall THidP_GetCaps(IN PHIDP_PREPARSED_DATA  PreparsedData,
 typedef BOOLEAN __stdcall THidD_GetFeature(IN HANDLE  HidDeviceObject, OUT PVOID  ReportBuffer, IN ULONG  ReportBufferLength);
 typedef BOOLEAN __stdcall THidD_SetFeature(IN HANDLE  HidDeviceObject, IN PVOID  ReportBuffer, IN ULONG  ReportBufferLength);
 
-// winbase.h
+/*
+ * TCancelIo is provided in winbase.h which isn't availabe in *really*
+ * old versions of VisualStudio (like 4.2), so do some funky tricks to
+ * grab it. See the bits with the same #if in usb_rtl.cpp
+ */
+#if _MSC_VER <= 1020
 typedef WINBASEAPI BOOL WINAPI TCancelIo(IN HANDLE hFile);
-
+#endif
 
 extern TSetupDiDestroyDeviceInfoList* rtlSetupDiDestroyDeviceInfoList;		// 2x
 extern TSetupDiEnumDeviceInterfaces* rtlSetupDiEnumDeviceInterfaces;		// 1x
