@@ -69,15 +69,15 @@ void check_ep(usb_endpoint_descriptor &ued, struct options_t &options)
 	    USB_ENDPOINT_TYPE_INTERRUPT) {
 		if (ued.bEndpointAddress & USB_ENDPOINT_DIR_MASK) {
 			if (ep_read == -1) {
-				ep_read=ued.bEndpointAddress;
+				ep_read = ued.bEndpointAddress;
 				// hack! todo: get from HID report descriptor
-				irl=ued.wMaxPacketSize;
+				irl = ued.wMaxPacketSize;
 			}
 		} else {
 			if (ep_write == -1) {
-				ep_write=ued.bEndpointAddress;
+				ep_write = ued.bEndpointAddress;
 				// hack! todo: get from HID report descriptor
-				orl=ued.wMaxPacketSize;
+				orl = ued.wMaxPacketSize;
 			}
 		}
 	}
@@ -140,13 +140,13 @@ int FindRemote(THIDINFO &hid_info, struct options_t &options)
 #endif
 
 	int err;
-	if ((err = usb_set_configuration(h_hid,1))) {
+	if ((err = usb_set_configuration(h_hid, 1))) {
 		printf("Failed to set device configuration: %d (%s)\n", err,
 			usb_strerror());
 		return err;
 	}
 
-	if ((err=usb_claim_interface(h_hid,0))) {
+	if ((err=usb_claim_interface(h_hid, 0))) {
 		printf("Failed to claim interface: %d (%s)\n", err,
 			usb_strerror());
 		return err;
@@ -154,33 +154,35 @@ int FindRemote(THIDINFO &hid_info, struct options_t &options)
 
 	unsigned char maxconf = h_dev->descriptor.bNumConfigurations;
 	for (unsigned char j = 0; j < maxconf; ++j) {
-		usb_config_descriptor &uc=h_dev->config[j];
+		usb_config_descriptor &uc = h_dev->config[j];
 		unsigned char maxint = uc.bNumInterfaces;
 		for (unsigned char k = 0; k < maxint; ++k) {
-			usb_interface &ui=uc.interface[k];
+			usb_interface &ui = uc.interface[k];
 			unsigned char maxalt = ui.num_altsetting;
 			for (unsigned char l = 0; l < maxalt; ++l) {
-				usb_interface_descriptor &uid=ui.altsetting[l];
+				usb_interface_descriptor &uid =
+					ui.altsetting[l];
 				if (options.verbose)
 					printf("bNumEndpoints %i\n",
 						uid.bNumEndpoints);
 				unsigned char maxep = uid.bNumEndpoints;
 				for (unsigned char n = 0; n < maxep; ++n) {
 					check_ep(uid.endpoint[n], options);
-
 				}
 			}
 		}
 	}
 
-	if (ep_read == -1 || ep_write == -1) return 1;
+	if (ep_read == -1 || ep_write == -1)
+		return 1;
 
 	// Fill in hid_info
 
 	char s[128];
-	usb_get_string_simple(h_hid,h_dev->descriptor.iManufacturer,s,sizeof(s));
+	usb_get_string_simple(h_hid, h_dev->descriptor.iManufacturer, s,
+		sizeof(s));
 	hid_info.mfg = s;
-	usb_get_string_simple(h_hid,h_dev->descriptor.iProduct,s,sizeof(s));
+	usb_get_string_simple(h_hid, h_dev->descriptor.iProduct, s, sizeof(s));
 	hid_info.prod = s;
 
 	hid_info.vid = h_dev->descriptor.idVendor;

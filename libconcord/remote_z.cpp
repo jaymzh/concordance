@@ -22,16 +22,19 @@
 #include "usblan.h"
 #include "protocol_z.h"
 
-int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len/*=0*/, uint8_t *data/*=NULL*/)
+int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len,
+	uint8_t *data)
 {
-	if(len>60) return 1;
+	if (len > 60)
+		return 1;
 	uint8_t pkt[68];
-	pkt[0]=0;
-	pkt[1]=3+len;
-	pkt[2]=1; // UDP
-	pkt[3]=typ;
-	pkt[4]=cmd;
-	if(data && len) memcpy(pkt+5,data,len);
+	pkt[0] = 0;
+	pkt[1] = 3 + len;
+	pkt[2] = 1; // UDP
+	pkt[3] = typ;
+	pkt[4] = cmd;
+	if (data && len)
+		memcpy(pkt + 5, data, len);
 
 	return HID_WriteReport(pkt);
 }
@@ -40,26 +43,33 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data)
 {
 	uint8_t pkt[68];
 	int err;
-	if ((err=HID_ReadReport(pkt))) return err;
-	if(pkt[1]<4) return 1;
-	status=pkt[5];
-	len=pkt[1]-4;
-	//if(!len) return 0;
-	//memcpy(data,pkt+6,len);
-	memcpy(data,pkt+2,len+4);
+	if ((err = HID_ReadReport(pkt)))
+		return err;
+	if (pkt[1] < 4)
+		return 1;
+	status = pkt[5];
+	len = pkt[1] - 4;
+	//if (!len) return 0;
+	//memcpy(data, pkt + 6, len);
+	memcpy(data, pkt + 2, len + 4);
 	return 0;
 }
 
-int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len/*=0*/, uint8_t *data/*=NULL*/)
+// Should never be needed - psuedo-net over over HID only uses UDP
+int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len,
+	uint8_t *data)
 {
 	return 0;
 }
+
+// Should never be needed - psuedo-net over over HID only uses UDP
 int CRemoteZ_HID::TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data)
 {
 	return 0;
 }
 
-int CRemoteZ_HID::Write(uint8_t typ, uint8_t cmd, unsigned int len/*=0*/, uint8_t *data/*=NULL*/)
+int CRemoteZ_HID::Write(uint8_t typ, uint8_t cmd, unsigned int len,
+	uint8_t *data)
 {
 	return UDP_Write(typ, cmd, len, data);
 }
@@ -74,29 +84,29 @@ int CRemoteZ_HID::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 	switch (data[2]) {
 		case COMMAND_GET_SYSTEM_INFO:
 			pl.count = 8;
-			pl.p[0] = data+4;
-			pl.p[1] = data+6;
-			pl.p[2] = data+8;
-			pl.p[3] = data+10;
-			pl.p[4] = data+12;
-			pl.p[5] = data+14;
-			pl.p[6] = data+15;
-			pl.p[7] = data+17;
+			pl.p[0] = data + 4;
+			pl.p[1] = data + 6;
+			pl.p[2] = data + 8;
+			pl.p[3] = data + 10;
+			pl.p[4] = data + 12;
+			pl.p[5] = data + 14;
+			pl.p[6] = data + 15;
+			pl.p[7] = data + 17;
 			break;
 		case COMMAND_GET_CURRENT_TIME:
-			pl.count = len>16 ? 12 : 8;
-			pl.p[0] = data+4;
-			pl.p[1] = data+6;
-			pl.p[2] = data+7;
-			pl.p[3] = data+8;
-			pl.p[4] = data+9;
-			pl.p[5] = data+10;
-			pl.p[6] = data+11;
-			pl.p[7] = data+12;
-			pl.p[8] = data+14;
-			pl.p[9] = data+16;
-			pl.p[10] = data+18;
-			pl.p[11] = data+20;
+			pl.count = (len > 16) ? 12 : 8;
+			pl.p[0] = data + 4;
+			pl.p[1] = data + 6;
+			pl.p[2] = data + 7;
+			pl.p[3] = data + 8;
+			pl.p[4] = data + 9;
+			pl.p[5] = data + 10;
+			pl.p[6] = data + 11;
+			pl.p[7] = data +12;
+			pl.p[8] = data + 14;
+			pl.p[9] = data + 16;
+			pl.p[10] = data + 18;
+			pl.p[11] = data + 20;
 			break;
 		case COMMAND_GET_GUID:
 			pl.count = 1;
@@ -107,36 +117,39 @@ int CRemoteZ_HID::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 }
 
 
-int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, unsigned int len/*=0*/, uint8_t *data/*=NULL*/)
+int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, unsigned int len,
+	uint8_t *data)
 {
-	if (len > 60) return 1;
+	if (len > 60)
+		return 1;
 
 	static const uint8_t service_type = SERVICE_FAMILY_CLIENT;
-	const bool request = typ==TYPE_REQUEST;
+	const bool request = (typ == TYPE_REQUEST);
 	const uint8_t status = STATUS_OK;
 
 	uint8_t pkt[68];
-	pkt[0] = service_type<<4 | (cmd>>8)&0x0F;
-	pkt[1] = cmd&0xFF;
-	pkt[2] = request ? 0x80 : status&0x7F;
+	pkt[0] = service_type << 4 | (cmd >> 8) & 0x0F;
+	pkt[1] = cmd & 0xFF;
+	pkt[2] = request ? 0x80 : (status & 0x7F);
 
 	if (len && data) {
-		memcpy(pkt+3,data,len);
+		memcpy(pkt + 3, data, len);
 		len += 3;
 	} else {
 		pkt[3] = 0x00;	// Param count
 		len = 4;
 	}
 
-	return UsbLan_Write(len,pkt);
+	return UsbLan_Write(len, pkt);
 }
 
 int CRemoteZ_TCP::Read(uint8_t &status, unsigned int &len, uint8_t *data)
 {
 	uint8_t buf[1600];
-	len=sizeof(buf);
+	len = sizeof(buf);
 	int err;
-	if ((err = UsbLan_Read(len,buf))) return err;
+	if ((err = UsbLan_Read(len, buf)))
+		return err;
 
 #if 0
 	// Show the received received data
@@ -144,16 +157,16 @@ int CRemoteZ_TCP::Read(uint8_t &status, unsigned int &len, uint8_t *data)
 	printf("\n\n");
 #endif
 
-	memcpy(data,buf,len);
+	memcpy(data, buf, len);
 
 	return err;
 }
 
 int CRemoteZ_TCP::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 {
-	unsigned int n=0;
-	unsigned int i=4;
-	while(i<len) {
+	unsigned int n = 0;
+	unsigned int i = 4;
+	while (i < len) {
 		unsigned int param_len = data[i];
 		switch (param_len & 0xC0) {
 			case 0x00:
@@ -170,8 +183,8 @@ int CRemoteZ_TCP::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 		++i;
 		pl.p[n++] = data+i;
 #if 1
-		printf("%3i:",param_len);
-		for(unsigned int j=0; j<param_len; ++j)
+		printf("%3i:", param_len);
+		for(unsigned int j = 0; j < param_len; ++j)
 			printf(" %02X",data[i+j]);
 		printf("\n");
 #endif
@@ -187,13 +200,14 @@ int CRemoteZ_TCP::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 
 int CRemoteZ_Base::Reset(uint8_t kind)
 {
-	if (kind != 2) return 1;
+	if (kind != 2)
+		return 1;
 
 	Write(TYPE_REQUEST, COMMAND_RESET);
 	uint8_t rsp[60];
 	unsigned int len;
 	uint8_t status;
-	Read(status,len,rsp);
+	Read(status, len, rsp);
 	return 0;
 }
 
@@ -204,11 +218,11 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	uint8_t rsp[60];
 	unsigned int len;
 	uint8_t status;
-	Read(status,len,rsp);
+	Read(status, len, rsp);
 	CRemoteZ_Base::TParamList pl;
-	ParseParams(len,rsp,pl);
+	ParseParams(len, rsp, pl);
 
-	if (hid.pid==0) {		// 1000
+	if (hid.pid == 0) {		// 1000
 		hid.vid = GetWord(pl.p[0]);
 		hid.pid = GetWord(pl.p[1]);
 		hid.ver = 0;
@@ -229,23 +243,23 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	ri.fw_type = *pl.p[5];
 	ri.skin = GetWord(pl.p[6]);
 	const unsigned int hw = GetWord(pl.p[7]);
-	ri.hw_ver_major = hw>>8;		// ???
-	ri.hw_ver_minor = (hw>>4)&0x0F;	// ???
+	ri.hw_ver_major = hw >> 8;		// ???
+	ri.hw_ver_minor = (hw >> 4) & 0x0F;	// ???
 	// hw_ver_micro = hw & 0x0F		// ???
-	//ri.hw_ver_major = hw>>4;
-	//ri.hw_ver_minor = hw&0x0F;
+	//ri.hw_ver_major = hw >> 4;
+	//ri.hw_ver_minor = hw & 0x0F;
 	ri.protocol = 0;
 
 	setup_ri_pointers(ri);
 	
 	Write(TYPE_REQUEST, COMMAND_GET_GUID);
-	Read(status,len,rsp);
-	ParseParams(len,rsp,pl);
+	Read(status, len, rsp);
+	ParseParams(len, rsp, pl);
 
-	make_serial(pl.p[0],ri);
+	make_serial(pl.p[0], ri);
 
-	ri.config_bytes_used=0;
-	ri.max_config_size=1;
+	ri.config_bytes_used = 0;
+	ri.max_config_size = 1;
 
 #if 0	// Get region info - 1000 only!
 	uint8_t rr[] = { 1, 1, 1 }; // AddByteParam(1);
@@ -304,7 +318,7 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	uint8_t status;
 	Read(status,len,time);
 	CRemoteZ_Base::TParamList pl;
-	ParseParams(len,time,pl);
+	ParseParams(len, time, pl);
 
 	ht.year = GetWord(pl.p[0]);
 	ht.month = *pl.p[1];
@@ -313,11 +327,11 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	ht.minute = *pl.p[4];
 	ht.second = *pl.p[5];
 	ht.dow = *pl.p[6]&7;
-	ht.utc_offset=static_cast<int16_t>(GetWord(pl.p[7]));
-	if(pl.count>11)
-		ht.timezone=reinterpret_cast<char*>(pl.p[11]);
+	ht.utc_offset = static_cast<int16_t>(GetWord(pl.p[7]));
+	if(pl.count > 11)
+		ht.timezone = reinterpret_cast<char*>(pl.p[11]);
 	else
-		ht.timezone="";
+		ht.timezone = "";
 
 	return 0;
 }
@@ -328,7 +342,7 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 	return 1;
 }
 
-int CRemoteZ_Base::LearnIR(string *learn_string/*=NULL*/)
+int CRemoteZ_Base::LearnIR(string *learn_string)
 {
 	return 0;
 }

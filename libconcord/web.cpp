@@ -53,16 +53,16 @@ static const uint8_t urlencodemap[32]={
 
 static void UrlEncode(const char *in, string &out)
 {
-	out="";
-	const size_t len=strlen(in);
-	for(size_t i=0; i<len; ++i) {
-		const char c=in[i];
-		if(urlencodemap[c>>3]&(1<<(c&7))) {
+	out = "";
+	const size_t len = strlen(in);
+	for(size_t i = 0; i < len; ++i) {
+		const char c = in[i];
+		if(urlencodemap[c>>3] & (1 << (c&7))) {
 			char hex[4];
-			sprintf(hex,"%%%02X",c);
-			out+=hex;
+			sprintf(hex, "%%%02X", c);
+			out += hex;
 		} else
-			out+=c;
+			out += c;
 	}
 }
 
@@ -72,8 +72,8 @@ static int Zap(string &server, const char *s1, const char *s2,
 	int error;
 
 	// Get the numeric address of host
-	hostent* addr=gethostbyname(server.c_str());
-	if(!addr) {
+	hostent* addr = gethostbyname(server.c_str());
+	if (!addr) {
 #ifdef WIN32
 		error = WSAGetLastError();
 		printf("gethostbyname() Error: %i\n",error);
@@ -85,7 +85,7 @@ static int Zap(string &server, const char *s1, const char *s2,
 
 	// Fill in the sockaddr structure
 	sockaddr_in sa;
-	memcpy(&(sa.sin_addr), addr->h_addr,addr->h_length);
+	memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons(80);
 
@@ -94,10 +94,10 @@ static int Zap(string &server, const char *s1, const char *s2,
 	SOCKET sock = socket( sa.sin_family, SOCK_STREAM, 0 );
 
 	// Connect
-	if((error = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+	if((error = connect(sock,(struct sockaddr*) &sa, sizeof(sa)))) {
 #ifdef WIN32
 		error = WSAGetLastError();
-		printf("Connect Error: %i\n",error);
+		printf("Connect Error: %i\n", error);
 #endif
 		return error;
 	}
@@ -105,52 +105,52 @@ static int Zap(string &server, const char *s1, const char *s2,
 	if (options.verbose)
 		printf("Connected!\n");
 
-	error = send(sock,s1,strlen(s1),0);
+	error = send(sock, s1, strlen(s1), 0);
 	if(error == SOCKET_ERROR) {
 #ifdef WIN32
 		error = WSAGetLastError();
-		printf("send() failed with error %i\n",error);
+		printf("send() failed with error %i\n", error);
 #endif
 		return error;
 	}
 	if (options.verbose)
-		printf("%i bytes sent\n",error);
+		printf("%i bytes sent\n", error);
 
-	error = send(sock,s2,strlen(s2),0);
+	error = send(sock, s2, strlen(s2), 0);
 	if(error == SOCKET_ERROR) {
 #ifdef WIN32
 		error = WSAGetLastError();
-		printf("send() failed with error %i\n",error);
+		printf("send() failed with error %i\n", error);
 #endif
 		return error;
 	}
 	if (options.verbose)
-		printf("%i bytes sent\n",error);
+		printf("%i bytes sent\n", error);
 
 	//Sleep(100);
 
 	char buf[1000];
-	error=recv(sock,buf,999,0);
+	error = recv(sock, buf, 999, 0);
 
 	if(error == SOCKET_ERROR) {
 #ifdef WIN32
 		error = WSAGetLastError();
-		printf("recv() failed with error %i\n",error);
+		printf("recv() failed with error %i\n", error);
 #endif
 		return error;
 	}
 
 	// Show the received received data
-	buf[error]=0;
+	buf[error] = 0;
 #if _DEBUG
-	printf("Received: %s\n",buf);
+	printf("Received: %s\n", buf);
 #endif
 
 	// Close the socket
-	if((error=closesocket(sock))) {
+	if((error = closesocket(sock))) {
 #ifdef WIN32
 		error = WSAGetLastError();
-		printf("Close Error: %i\n",error);
+		printf("Close Error: %i\n", error);
 #endif
 		return error;
 	}
@@ -160,24 +160,28 @@ static int Zap(string &server, const char *s1, const char *s2,
 	return 0;
 }
 
-int GetTag(const char *find, uint8_t*& pc, string *s=NULL)
+int GetTag(const char *find, uint8_t *&pc, string *s = NULL)
 {
-	const size_t len=strlen(find);
+	const size_t len = strlen(find);
 	do {
-		while(*pc!='<' && *pc++);
-		if(!pc) return -1;
-		if(*++pc==*find && pc[len]=='>'
-		   && !strnicmp(find,reinterpret_cast<const char*>(pc),len)) {
-			pc+=strlen(find)+1;
-			if(s) {
-				const uint8_t *p=pc;
-				*s="";
-				while(*p!='<' && *p) *s+=*p, ++p;
+		while (*pc != '<' && *pc++);
+		if (!pc)
+			return -1;
+		if(*++pc == *find && pc[len] == '>'
+		   && !strnicmp(find, reinterpret_cast<const char*>(pc), len)) {
+			pc += strlen(find) + 1;
+			if (s) {
+				const uint8_t *p = pc;
+				*s = "";
+				while (*p != '<' && *p) {
+					*s+=*p;
+					++p;
+				}
 			}
 			return 0;
 		}
-		while(*pc!='>' && *pc++);
-	} while(*pc++);
+		while (*pc!='>' && *pc++);
+	} while (*pc++);
 	return -1;
 }
 
@@ -190,40 +194,40 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 
 	uint8_t *x = xml;
 	int err;
-	if ((err = GetTag(root,x)))
+	if ((err = GetTag(root, x)))
 		return err;
 
-	string server,path,cookie,userid;
+	string server, path, cookie, userid;
 
-	if ((err = GetTag("SERVER",x,&server)))
+	if ((err = GetTag("SERVER", x, &server)))
 		return err;
-	if ((err = GetTag("PATH",x,&path)))
+	if ((err = GetTag("PATH", x, &path)))
 		return err;
-	if ((err = GetTag("VALUE",x,&cookie)))
+	if ((err = GetTag("VALUE", x, &cookie)))
 		return err;
-	if ((err = GetTag("VALUE",x,&userid)))
+	if ((err = GetTag("VALUE", x, &userid)))
 		return err;
 
-	printf("Connecting to %s:",server.c_str());
+	printf("Connecting to %s:", server.c_str());
 
 	if (options.verbose) {
-		printf("\nPath: %s\n",path.c_str());
-		printf("Cookie: %s\n",cookie.c_str());
-		printf("UserId: %s\n",userid.c_str());
+		printf("\nPath: %s\n", path.c_str());
+		printf("Cookie: %s\n", cookie.c_str());
+		printf("UserId: %s\n", userid.c_str());
 	}
 
 	string post;
 	if(learn_seq==NULL) {
-		string serial=ri.serial[0]+ri.serial[1]+ri.serial[2];
+		string serial = ri.serial[0] + ri.serial[1] + ri.serial[2];
 		char post_data[2000];
-		sprintf(post_data,post_xml,
-			ri.fw_ver_major,ri.fw_ver_minor,ri.fw_type,serial.c_str(),
-			ri.hw_ver_major,ri.hw_ver_minor,ri.flash_mfg,ri.flash_id,
-			ri.protocol,ri.architecture,ri.skin);
+		sprintf(post_data, post_xml, ri.fw_ver_major, ri.fw_ver_minor,
+			ri.fw_type, serial.c_str(), ri.hw_ver_major,
+			ri.hw_ver_minor, ri.flash_mfg, ri.flash_id, ri.protocol,
+			ri.architecture, ri.skin);
 		//printf("\n%s\n",post_data);
 
 		string post_data_encoded;
-		UrlEncode(post_data,post_data_encoded);
+		UrlEncode(post_data, post_data_encoded);
 
 		post = "Data=" + post_data_encoded + "&UserId=" + userid;
 	} else {
@@ -231,15 +235,16 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 			+ "&KeyName=" + *learn_key;
 	}
 #ifdef _DEBUG
-	printf("\n%s\n",post.c_str());
+	printf("\n%s\n", post.c_str());
 #endif
 
 	char http_header[1000];
-	sprintf(http_header,post_header,path.c_str(),server.c_str(),
-		cookie.c_str(),post.length());
+	sprintf(http_header, post_header, path.c_str(), server.c_str(),
+		cookie.c_str(), post.length());
 #ifdef _DEBUG
-	printf("\n%s\n",http_header);
+	printf("\n%s\n", http_header);
 #endif
 
-	return Zap(server,http_header,post.c_str(),options);
+	return Zap(server, http_header, post.c_str(), options);
 }
+

@@ -64,54 +64,54 @@ int FindUsbLanRemote(void)
 
 	hostent* addr = gethostbyname(harmony_ip_address);
 
-	if(!addr) {
+	if (!addr) {
 #ifdef WIN32
-		err=WSAGetLastError();
-		printf("gethostbyname() Error: %i\n",err);
+		err = WSAGetLastError();
+		printf("gethostbyname() Error: %i\n", err);
 		return err;
 #else
-		printf("gethostbyname() Error: %s\n",strerror(errno));
+		printf("gethostbyname() Error: %s\n", strerror(errno));
 		return -1;
 #endif
 	}
 
 	sockaddr_in sa;
-	memcpy(&(sa.sin_addr), addr->h_addr,addr->h_length);
-	sa.sin_family = AF_INET;						// TCP/IP
-	sa.sin_port = htons(harmony_port);				// Port 3074
+	memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
+	sa.sin_family = AF_INET;		// TCP/IP
+	sa.sin_port = htons(harmony_port);	// Port 3074
 
-	sock=socket( sa.sin_family, SOCK_STREAM, 0 );	// TCP
+	sock = socket( sa.sin_family, SOCK_STREAM, 0 );	// TCP
 	//sock=socket( sa.sin_family, SOCK_DGRAM, 0 );	// UDP
 
-	if ((err=connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+	if ((err = connect(sock, (struct sockaddr*) &sa, sizeof(sa)))) {
 #ifdef WIN32
 		err = WSAGetLastError();
-		printf("Connect Error: %i\n",err);
+		printf("Connect Error: %i\n", err);
 #else
-		printf("Connect Error: %s\n",strerror(errno));
+		printf("Connect Error: %s\n", strerror(errno));
 #endif
 		return err;
 	}
 
-	printf("\nConnected to Belcarra USB LAN driver!\n\n");
+	printf("\nConnected to USB LAN driver!\n\n");
 
 	return err;
 }
 
 int UsbLan_Write(unsigned int len, uint8_t *data)
 {
-	int err = send(sock,reinterpret_cast<char*>(data),len,0);
+	int err = send(sock, reinterpret_cast<char*>(data), len, 0);
 
-	if (err==SOCKET_ERROR) {
+	if (err == SOCKET_ERROR) {
 #ifdef WIN32
 		err = WSAGetLastError();
-		printf("send() failed with error %i\n",err);
+		printf("send() failed with error %i\n", err);
 #else
-		printf("send() error: %s\n",strerror(errno));
+		printf("send() error: %s\n", strerror(errno));
 #endif
 		return err;
 	}
-	printf("%i bytes sent\n",err);
+	printf("%i bytes sent\n", err);
 
 	return err;
 }
@@ -119,21 +119,22 @@ int UsbLan_Write(unsigned int len, uint8_t *data)
 
 int UsbLan_Read(unsigned int &len, uint8_t *data)
 {
-	int err = recv(sock,reinterpret_cast<char*>(data),len,0);
+	int err = recv(sock, reinterpret_cast<char*>(data), len, 0);
 
-	if (err==SOCKET_ERROR) {
+	if (err == SOCKET_ERROR) {
 #ifdef WIN32
 		err = WSAGetLastError();
-		printf("recv() failed with error %i\n",err);
+		printf("recv() failed with error %i\n", err);
 #else
-		printf("recv() error: %s\n",strerror(errno));
+		printf("recv() error: %s\n", strerror(errno));
 #endif
 		len = 0;
 	} else {
 		len = static_cast<unsigned int>(err);
-		printf("%i bytes received\n",len);
+		printf("%i bytes received\n", len);
 		err = 0;
 	}
 
 	return err;
 }
+
