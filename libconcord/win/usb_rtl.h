@@ -130,8 +130,9 @@ extern THidP_GetCaps* HidP_GetCaps;
 extern THidD_GetFeature* HidD_GetFeature;
 extern THidD_SetFeature* HidD_SetFeature;
 
+#if _MSC_VER <= 1020
 extern TCancelIo* CancelIo;
-
+#endif
 
 int LinkUSB(void);
 void UnlinkUSB(void);
