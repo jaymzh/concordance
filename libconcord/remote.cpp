@@ -25,6 +25,8 @@
 
 #include <iostream>
 
+#define MAX_PULSE_COUNT 1000
+
 void setup_ri_pointers(TRemoteInfo &ri)
 {
 	unsigned int u;
@@ -47,16 +49,16 @@ void make_guid(const uint8_t * const in, string& out)
 	char x[48];
 	sprintf(x,
 	"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
-		in[3],in[2],in[1],in[0],in[5],in[4],in[7],in[6],
-		in[8],in[9],in[10],in[11],in[12],in[13],in[14],in[15]);
+		in[3], in[2], in[1], in[0], in[5], in[4], in[7], in[6],
+		in[8], in[9], in[10], in[11], in[12], in[13], in[14], in[15]);
 	out=x;
 }
 
 void make_serial(uint8_t *ser, TRemoteInfo &ri)
 {
-	make_guid(ser   ,ri.serial[0]);
-	make_guid(ser+16,ri.serial[1]);
-	make_guid(ser+32,ri.serial[2]);
+	make_guid(ser   , ri.serial[0]);
+	make_guid(ser+16, ri.serial[1]);
+	make_guid(ser+32, ri.serial[2]);
 }
 
 
@@ -94,11 +96,11 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	/*
  	 * See specs/protocol.txt for format
  	 */
-	const unsigned int rx_len = rsp[1]&0x0F;
+	const unsigned int rx_len = rsp[1] & 0x0F;
 
-	if ((rsp[1]&0xF0) != RESPONSE_VERSION_DATA ||
+	if ((rsp[1] & 0xF0) != RESPONSE_VERSION_DATA ||
 	    (rx_len != 7 && rx_len != 5)) {
-		printf("Bogus ident response: %02X\n",rsp[1]);
+		printf("Bogus ident response: %02X\n", rsp[1]);
 		err=-3;
 		return 1;
 	}
@@ -153,9 +155,10 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	// read serial (see specs/protocol.h for details)
 	if ((err = (ri.architecture == 2)
 		// The old 745 stores the serial number in EEPROM
-		? ReadMiscByte(0x10,48,COMMAND_MISC_EEPROM,rsp)
+		? ReadMiscByte(FLASH_EEPROM_ADDR, FLASH_SIZE,
+			COMMAND_MISC_EEPROM, rsp)
 		// All newer models store it in Flash
-		: ReadFlash(FLASH_SERIAL_ADDR,48,rsp,ri.protocol))) {
+		: ReadFlash(FLASH_SERIAL_ADDR, FLASH_SIZE, rsp,ri.protocol))) {
 		printf("Failed to read flash\n");
 		return 1;
 	}
@@ -185,11 +188,11 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	 * See specs/protocol.txt for more * info.
 	 */
 	// Protocol 0 (745, safe mode)
-	static const unsigned int dl0[16] = { 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-		11, 12, 13, 14 };
+	static const unsigned int dl0[16] =
+		{ 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
 	// All other protocols
-	static const unsigned int dlx[16] = { 0, 0, 1, 2, 3, 4, 5, 6, 14, 30, 62,
-		0, 0, 0, 0, 0 };
+	static const unsigned int dlx[16] =
+		{ 0, 0, 1, 2, 3, 4, 5, 6, 14, 30, 62, 0, 0, 0, 0, 0 };
 	const unsigned int *rxlenmap = protocol ? dlx : dl0;
 
 	uint8_t *pr=rd;
@@ -275,8 +278,8 @@ int CRemote::InvalidateFlash(void)
 	if ((err = HID_ReadReport(rsp)))
 		return err;
 
-	if (rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
-		rsp[2]&COMMAND_MASK != COMMAND_MISC_INVALIDATE_FLASH) {
+	if (rsp[1] & COMMAND_MASK != RESPONSE_DONE ||
+		rsp[2] & COMMAND_MASK != COMMAND_MISC_INVALIDATE_FLASH) {
 		return 1;
 	}
 
@@ -326,7 +329,7 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 			break;
 
 		uint8_t rsp[68];
-		if ((err = HID_ReadReport(rsp,5000)))
+		if ((err = HID_ReadReport(rsp, 5000)))
 			break;
 
 		if (cb) {
@@ -462,7 +465,7 @@ int CRemote::ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind, uint16_
 			return 1;
 		}
 
-		*rd++ = rsp[3]<<8 | rsp[4];
+		*rd++ = (rsp[3] << 8) | rsp[4];
 	}
 	return 0;
 }
@@ -479,13 +482,16 @@ int CRemote::WriteMiscByte(uint8_t addr, unsigned int len, uint8_t kind, uint8_t
 		wmb[4] = *wr++;
 
 		int err;
-		if ((err=HID_WriteReport(wmb))) return err;
+		if ((err=HID_WriteReport(wmb)))
+			return err;
 
 		uint8_t rsp[68];
-		if ((err=HID_ReadReport(rsp))) return err;
+		if ((err=HID_ReadReport(rsp)))
+			return err;
 		if(rsp[1]&COMMAND_MASK != RESPONSE_DONE ||
-			rsp[2] != COMMAND_WRITE_MISC)
+			rsp[2] != COMMAND_WRITE_MISC) {
 			return 1;
+		}
 	}
 	return 0;
 }
@@ -596,6 +602,92 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 	return err;
 }
 
+bool check_seq(int received_seq, uint8_t &expected_seq)
+{
+	if (received_seq == expected_seq) {
+		return true;
+	}
+
+	if (received_seq == 0x1f && expected_seq == 0x10) {
+		/*
+		 * Handle 880 SNAFU
+		 *
+		 * Does this indicate a bad learn???
+		 * Needs more testing
+		 */
+		printf("sequence glitch!\n");
+		expected_seq += 0x0F;
+		return true;
+	} else {
+		printf("\nInvalid sequence %02X %02x\n",
+			expected_seq, received_seq);
+		return false;
+	}
+}
+
+int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
+	unsigned int &t_on, unsigned int &t_off, unsigned int &pulse_count,
+	unsigned int *&pulses, unsigned int &freq)
+{
+	const unsigned int len = rsp[64];
+	if ((len & 1) == 0) {
+		for (unsigned int u = 2; u < len; u += 2) {
+			const unsigned int t = rsp[1+u] << 8 | rsp[2+u];
+			if (ir_word > 2) {
+				if (ir_word & 1) {
+					// t == on + off time
+					if (t_on)
+						t_off = t-t_on;
+					else
+						t_off += t;
+				} else {
+					// t == on time
+					t_on = t;
+					if (t_on) {
+						printf("-%i\n", t_off);
+						if (pulse_count <
+								MAX_PULSE_COUNT)
+							pulses[pulse_count++] =
+								t_off;
+						printf("+%i\n", t_on);
+						if (pulse_count <
+								MAX_PULSE_COUNT)
+							pulses[pulse_count++] =
+								t_on;
+					}
+				}
+			} else {
+				switch (ir_word) {
+					case 0:
+						// ???
+						break;
+					case 1:
+						// on time of
+						// first burst
+						t_on = t;
+						break;
+					case 2:
+						// pulse count of
+						// first burst
+						if (t_on) {
+							freq = static_cast<unsigned int>(static_cast<uint64_t>(t)*1000000/t_on);
+							printf("%i Hz\n",freq);
+							printf("+%i\n",t_on);
+							pulses[pulse_count++] =
+								t_on;
+						}
+						break;
+				}
+			}
+			++ir_word;
+		}
+	} else {
+		// Invalid length
+		return 3;
+	}
+	return 0;
+}
+
 int CRemote::LearnIR(string *learn_string)
 {
 	int err = 0;
@@ -610,8 +702,7 @@ int CRemote::LearnIR(string *learn_string)
 	unsigned int t_off = 0;
 
 	unsigned int freq = 0;
-	const unsigned int max_pulse_count = 1000;
-	unsigned int *pulses = new unsigned int[max_pulse_count];
+	unsigned int *pulses = new unsigned int[MAX_PULSE_COUNT];
 	unsigned int pulse_count = 0;
 
 	do {
@@ -620,80 +711,14 @@ int CRemote::LearnIR(string *learn_string)
 			break;
 		const uint8_t r = rsp[1] & COMMAND_MASK;
 		if (r == RESPONSE_IRCAP_DATA) {
-			if (rsp[2] != seq) {
-				if (rsp[2] == 0x1F && seq == 0x10) {
-					/*
-					 * Handle 880 SNAFU
-					 *
-					 * Does this indicate a bad learn???
-					 * Needs more testing
-					 */
-					printf("sequence glitch!\n");
-					seq += 0x0F;
-				} else {
-					err = 1;
-					printf("\nInvalid sequence %02X %02x\n",
-						seq, rsp[2]);
-					break;
-				}
+			if (!check_seq(rsp[2], seq)) {
+				err = 1;
+				break;
 			}
 			seq += 0x10;
-			/*
-			 * FIXME: Fugly depth!
-			 */
-			const unsigned int len = rsp[64];
-			if ((len & 1) == 0) {
-				for (unsigned int u = 2; u < len; u += 2) {
-					const unsigned int t=rsp[1+u] << 8 |
-						rsp[2+u];
-					if (ir_word > 2) {
-						if (ir_word & 1) {
-							// t == on + off time
-							if (t_on)
-								t_off = t-t_on;
-							else
-								t_off += t;
-						} else {
-							// t == on time
-							t_on = t;
-							if (t_on) {
-								printf("-%i\n",
-									t_off);
-								if (pulse_count < max_pulse_count)
-									pulses[pulse_count++] = t_off;
-								printf("+%i\n",
-									t_on);
-								if (pulse_count < max_pulse_count)
-									pulses[pulse_count++] = t_on;
-							}
-						}
-					} else {
-						switch (ir_word) {
-							case 0:
-								// ???
-								break;
-							case 1:
-								// on time of
-								// first burst
-								t_on = t;
-								break;
-							case 2:
-								// pulse count of
-								// first burst
-								if (t_on) {
-									freq = static_cast<unsigned int>(static_cast<uint64_t>(t)*1000000/t_on);
-									printf("%i Hz\n",freq);
-									printf("+%i\n",t_on);
-									pulses[pulse_count++] = t_on;
-								}
-								break;
-						}
-					}
-					++ir_word;
-				}
-			} else {
-				// Invalid length
-				err = 3;
+			err = handle_ir_response(rsp, ir_word, t_on, t_off,
+				pulse_count, pulses, freq);
+			if (err != 0) {
 				break;
 			}
 		} else if (r == RESPONSE_DONE) {
@@ -707,7 +732,7 @@ int CRemote::LearnIR(string *learn_string)
 	if (t_off)
 		printf("-%i\n",t_off);
 
-	if (pulse_count < max_pulse_count)
+	if (pulse_count < MAX_PULSE_COUNT)
 		pulses[pulse_count++] = t_off;
 
 	const static uint8_t stop_ir_learn[] = { 0x00, COMMAND_STOP_IRCAP };

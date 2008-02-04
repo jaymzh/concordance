@@ -17,8 +17,9 @@
  *  (C) Copyright Phil Dibowitz 2008
  */
 
-
+#define FLASH_EEPROM_ADDR 0x10
 #define FLASH_SERIAL_ADDR 0x000110
+#define FLASH_SIZE 48
 
 /*
  * WARNING: Do not change this!
