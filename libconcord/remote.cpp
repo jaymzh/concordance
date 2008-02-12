@@ -278,8 +278,8 @@ int CRemote::InvalidateFlash(void)
 	if ((err = HID_ReadReport(rsp)))
 		return err;
 
-	if (rsp[1] & COMMAND_MASK != RESPONSE_DONE ||
-		rsp[2] & COMMAND_MASK != COMMAND_MISC_INVALIDATE_FLASH) {
+	if ((rsp[1] & COMMAND_MASK) != RESPONSE_DONE ||
+		(rsp[2] & COMMAND_MASK) != COMMAND_WRITE_MISC) {
 		return 1;
 	}
 
