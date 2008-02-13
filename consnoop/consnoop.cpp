@@ -108,7 +108,7 @@ void Decode(const uint8_t * const data)
 		case COMMAND_STOP_IRCAP & COMMAND_MASK:
 			printf("Stop  IR capture\n");
 			break;
-		case COMMAND_IRCAP_DATA & COMMAND_MASK:
+		case RESPONSE_IRCAP_DATA & COMMAND_MASK:
 			//printf("IR Capture Data\n");
 			break;
 		case COMMAND_WRITE_MISC & COMMAND_MASK:
