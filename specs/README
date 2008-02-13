@@ -18,8 +18,12 @@ These are coupled into a few combinations:
   zwave PIC -> faux UDP-over-HID -> USB
   zwave ARM -> TCP               -> USB
 
-For 880 and below, they all use USB and the non-z-wave protocol. The 890 and
-the 890pro use z-wave over HID. The 1000 and later use z-wave over LAN.
+For 880 and below (plus the Monster AV-100), they all use USB and the
+non-z-wave protocol.
+
+The 890, 890pro, 895, and Monster AVL-300 all use z-wave over HID.
+
+The 1000, 1000i and later use z-wave over LAN.
 
 The individual protocols are documented in the following files:
 
