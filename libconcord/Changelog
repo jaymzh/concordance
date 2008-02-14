@@ -16,6 +16,10 @@ phil@ipom.com
 - More efficient and cleaner support for erasing flash
 - Windows compile fixes (thanks to Marco Bleich)
 - Various code cleanups
+- Fix bug where return from remote was checked properly
+
+marco_bleich@gmx.de:
+- Add a suitable basename() replacement for Windows users
 
 
 0.12
