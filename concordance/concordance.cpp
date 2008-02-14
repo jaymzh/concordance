@@ -34,7 +34,18 @@
 #include <winsock.h>
 HANDLE con;
 CONSOLE_SCREEN_BUFFER_INFO sbi;
-#else
+/*
+ * Windows, in it's infinite awesomeness doesn't include POSIX things
+ * like basename. This little hack will work for non-unicode filenames.
+ * Thanks to Marco Bleich.
+ */
+char* basename(char* file_name)
+{
+	char* _basename = strrchr(file_name, '\\');
+
+	return _basename ? _basename+1 : file_name;
+}
+#else //non-windows
 #include <getopt.h>
 #endif
 
