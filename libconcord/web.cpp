@@ -164,15 +164,32 @@ int GetTag(const char *find, uint8_t *&pc, string *s = NULL)
 {
 	const size_t len = strlen(find);
 	do {
+		/*
+		 * Advance pointer until beginning of a tag, and then
+		 * one more.
+		 */
 		while (*pc != '<' && *pc++);
+
+		// Make sure we still have a valid pointer
 		if (!pc)
 			return -1;
-		if(*++pc == *find && pc[len] == '>'
+
+		// Check to see if this is the tag we want
+		if (*++pc == *find && pc[len] == '>'
 		   && !strnicmp(find, reinterpret_cast<const char*>(pc), len)) {
 			pc += strlen(find) + 1;
+
+			/*
+			 * If a string pointer was passed in, then add the
+			 * contents of this entire tag to the string
+			 */
 			if (s) {
 				const uint8_t *p = pc;
 				*s = "";
+				/*
+				 * Here we keep adding chars until the next tag
+				 * which, in theory, should be the end-tag.
+				 */
 				while (*p != '<' && *p) {
 					*s+=*p;
 					++p;
@@ -180,8 +197,18 @@ int GetTag(const char *find, uint8_t *&pc, string *s = NULL)
 			}
 			return 0;
 		}
+		/*
+		 * Advance until we get to the closing bracket of the end-tag
+		 * we just found, and advance on more.
+		 */
 		while (*pc!='>' && *pc++);
+	/*
+	 * If we found it, we'd have returned above, so keep looping until
+	 * we do.
+	 */
 	} while (*pc++);
+
+	// GACK! We didn't find it.
 	return -1;
 }
 
