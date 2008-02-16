@@ -20,6 +20,8 @@ phil@ipom.com
 
 marco_bleich@gmx.de:
 - Add a suitable basename() replacement for Windows users
+- Windows VC++/VS project files
+- Windows install docs
 
 
 0.12
