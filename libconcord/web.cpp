@@ -155,7 +155,7 @@ static int Zap(string &server, const char *s1, const char *s2,
 		return error;
 	}
 
-	printf(" done\n");
+	printf("  done\n");
 	
 	return 0;
 }

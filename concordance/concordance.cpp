@@ -642,13 +642,14 @@ int dump_safemode(TRemoteInfo &ri, char *file_name)
 	uint8_t * const safe = new uint8_t[64*1024];
 	int err = 0;
 
-	printf("\nReading Safe Mode Firmware ");
+	printf("Reading Safemode FW: ");
 	if ((err = rmt->ReadFlash(ri.arch->flash_base,64*1024,safe,
 			ri.protocol,false,cb_print_percent_status,(void *)true))) {
 		delete[] safe;
 		printf("Failed to read Safe Mode firmware.\n");
 		return 1;
 	}
+        printf("       done\n");
 
 	if (of.open(file_name) != 0) {
 		printf("Failed to open %s\n", file_name);
@@ -671,12 +672,13 @@ int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
 	int err = 0;
 	uint8_t * const firmware = new uint8_t[64*1024];
 
-	printf("\nReading Firmware ");
+	printf("Reading Firmware:    ");
 	if ((err = rmt->ReadFlash(ri.arch->firmware_base,64*1024,firmware,
 			ri.protocol, false, cb_print_percent_status,(void *)true))) {
 		printf("Failed to read firmware.\n");
 		return 1;
 	}
+        printf("       done\n");
 
 	if (of.open(file_name) != 0) {
 		printf("Failed to open %s\n", file_name);
