@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual C++ Express 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony_libusb", "harmony_libusb\harmony_libusb.vcproj", "{F9D0E092-8061-427D-85D2-5CAF9A9C0A83}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony_libusb", "harmony_libusb.vcproj", "{F9D0E092-8061-427D-85D2-5CAF9A9C0A83}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony_winhid", "harmony_winhid\harmony_winhid.vcproj", "{D9A5C896-A24C-476A-AF0F-42014602A560}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony_winhid", "harmony_winhid.vcproj", "{D9A5C896-A24C-476A-AF0F-42014602A560}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snoop", "snoop\snoop.vcproj", "{E25AAF3D-78ED-4AAF-A424-1A50BB99AC03}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snoop", "snoop.vcproj", "{E25AAF3D-78ED-4AAF-A424-1A50BB99AC03}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

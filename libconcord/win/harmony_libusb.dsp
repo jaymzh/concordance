@@ -90,11 +90,11 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\getopt\getopt.c
+SOURCE=getopt\getopt.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\getopt\getopt1.c
+SOURCE=getopt\getopt1.c
 # End Source File
 # End Group
 # Begin Group "libusb"
@@ -102,36 +102,36 @@ SOURCE=..\getopt\getopt1.c
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\..\libusb\win\libusb_dyn.c
+SOURCE=..\libusb\win\libusb_dyn.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\libusb\libusbhid.cpp
+SOURCE=..\libusb\libusbhid.cpp
 # End Source File
 # End Group
 # Begin Source File
 
-SOURCE=..\..\binaryfile.cpp
+SOURCE=..\binaryfile.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\harmony.cpp
+SOURCE=..\harmony.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\remote.cpp
+SOURCE=..\remote.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\remote_z.cpp
+SOURCE=..\remote_z.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\usblan.cpp
+SOURCE=..\usblan.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\web.cpp
+SOURCE=..\web.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -139,51 +139,51 @@ SOURCE=..\..\web.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\..\binaryfile.h
+SOURCE=..\binaryfile.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\getopt\getopt.h
+SOURCE=getopt\getopt.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\getopt\getopt_int.h
+SOURCE=getopt\getopt_int.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\harmony.h
+SOURCE=..\harmony.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\hid.h
+SOURCE=..\hid.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\protocol_z.h
+SOURCE=..\protocol_z.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\remote.h
+SOURCE=..\remote.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\remote_info.h
+SOURCE=..\remote_info.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\libusb\win\usb.h
+SOURCE=..\libusb\win\usb.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\usblan.h
+SOURCE=..\usblan.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\web.h
+SOURCE=..\web.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\xml_headers.h
+SOURCE=..\xml_headers.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"

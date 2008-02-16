@@ -202,7 +202,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\..\binaryfile.cpp"
+				RelativePath="..\binaryfile.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -222,7 +222,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\harmony.cpp"
+				RelativePath="..\harmony.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -242,7 +242,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\remote.cpp"
+				RelativePath="..\remote.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -262,7 +262,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\remote_z.cpp"
+				RelativePath="..\remote_z.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -282,7 +282,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\usblan.cpp"
+				RelativePath="..\usblan.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -302,7 +302,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\web.cpp"
+				RelativePath="..\web.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -326,7 +326,7 @@
 				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 				>
 				<File
-					RelativePath="..\getopt\getopt.c"
+					RelativePath="getopt\getopt.c"
 					>
 					<FileConfiguration
 						Name="Release|Win32"
@@ -346,7 +346,7 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\getopt\getopt1.c"
+					RelativePath="getopt\getopt1.c"
 					>
 					<FileConfiguration
 						Name="Release|Win32"
@@ -371,7 +371,7 @@
 				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 				>
 				<File
-					RelativePath="..\..\libusb\win\libusb_dyn.c"
+					RelativePath="..\libusb\win\libusb_dyn.c"
 					>
 					<FileConfiguration
 						Name="Release|Win32"
@@ -391,7 +391,7 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\libusb\libusbhid.cpp"
+					RelativePath="..\libusb\libusbhid.cpp"
 					>
 					<FileConfiguration
 						Name="Release|Win32"
@@ -417,51 +417,51 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\..\binaryfile.h"
+				RelativePath="..\binaryfile.h"
 				>
 			</File>
 			<File
-				RelativePath="..\getopt\getopt.h"
+				RelativePath="getopt\getopt.h"
 				>
 			</File>
 			<File
-				RelativePath="..\getopt\getopt_int.h"
+				RelativePath="getopt\getopt_int.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\harmony.h"
+				RelativePath="..\harmony.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\hid.h"
+				RelativePath="..\hid.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\protocol_z.h"
+				RelativePath="..\protocol_z.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\remote.h"
+				RelativePath="..\remote.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\remote_info.h"
+				RelativePath="..\remote_info.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libusb\win\usb.h"
+				RelativePath="..\libusb\win\usb.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\usblan.h"
+				RelativePath="..\usblan.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\web.h"
+				RelativePath="..\web.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\xml_headers.h"
+				RelativePath="..\xml_headers.h"
 				>
 			</File>
 		</Filter>
