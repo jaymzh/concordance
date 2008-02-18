@@ -170,7 +170,8 @@ int main(int argc, char *argv[])
 	for(int a=1; a<argc; ++a) {
 		if(argv[a][0]!='-' && file_name==NULL) file_name=argv[a];
 	}
-	if(file_name==NULL) file_name="Log.xml";
+	if (file_name==NULL)
+		file_name = (char *)"Log.xml";
 
 	ifstream infile;
 	infile.open(file_name);
