@@ -941,8 +941,8 @@ int main(int argc, char *argv[])
 	 * near the beginning instead of the SWITCH below.
 	 */
 	if (mode == MODE_RESET) {
-		if ((err = reset_remote()))
-			goto cleanup;
+		err = reset_remote();
+		goto cleanup;
 	}
 
 	/*
