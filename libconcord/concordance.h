@@ -28,7 +28,13 @@ typedef signed short int16_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef unsigned __int64 uint64_t;
-//typedef bool int;
+
+/*
+ * FIXME: We need to fix the code that is generating these warnings!!
+ */
+#if _MSC_VER >= 1400
+#pragma warning( disable : 4996 )
+#endif
 
 #else // not Windows
 
