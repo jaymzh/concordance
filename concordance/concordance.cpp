@@ -58,7 +58,7 @@ char* basename(char* file_name)
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
 
-const char * const VERSION = "0.12+CVS";
+const char * const VERSION = "0.13";
 
 enum {
 	MODE_UNSET,

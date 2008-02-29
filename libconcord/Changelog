@@ -1,5 +1,5 @@
 0.13
-Released:
+Released: 02/29/08
 phil@ipom.com
 - Add new --print-remote-info mode, and don't print remote info otherwise
 - Man page updates for new --print-remote-info mode
@@ -17,9 +17,14 @@ phil@ipom.com
 - Windows compile fixes (thanks to Marco Bleich)
 - Various code cleanups
 - Fix bug where return from remote was checked properly
+- Don't try to get identity after a reset in -r (bug#1897605)
+- Disable certain deprecated warnings in Windows (will be fixed
+  properly in future releases). Thanks to marco_bleich@gmx.de. (bug#1898552)
+- Makefile: Don't try to compile header files
+- Better handling of default filenames
 
 marco_bleich@gmx.de:
-- Add a suitable basename() replacement for Windows users
+- Add a suitable basename() replacement for Windows users (bug#1884258)
 - Windows VC++/VS project files
 - Windows install docs
 
