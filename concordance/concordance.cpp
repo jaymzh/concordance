@@ -64,7 +64,7 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.12+PHIL";
+const char * const VERSION = "0.13+CVS";
 
 struct options_t {
 	bool binary;
