@@ -1,6 +1,7 @@
 ==== BASIC INSTALLATION ====
 
 0. INSTALL REQUIRED SOFTWARE
+
 You need one these Development Platforms:
 
 a) Microsoft Visual C++ 6.0 with Service Pack 6 (SP6)
@@ -12,20 +13,22 @@ c) Micosoft Visual Studio 2008 (9.0) - Express Edition
 Open the Project tree in your Development-System, by (letters here correspond
 to development environment above - pick one):
 
-a) Open the Workspace-File for Visual C++ 6.0 '.\win\harmonycontrol.dsw' or
-b) Open the Solution file for Visual Studio 2005 '.\win\harmonycontrol.sln'.
-c) Open the Solution file for Visual Studio 2008 '.\win\harmonycontrol.sln'
-   (the 2005 sln-file format will be converted to the new (2008) format
-    automatically the first time you open the project tree.)
+a) Open the Workspace-File '.\win\harmonycontrol.dsw' or
+b) Open the Workspace-File and convert it to the VS2005 format
+(its done automatically by the conversion wizard)
+or
+c) Open the Solution file '.\win\harmonycontrol.sln'.
 
-Now you should see three Projects in your Workspace/Solution-Tree
+Now you should see five Projects in your Workspace/Solution-Tree
 
-- harmony_libusb: harmony CLI using libusb (see note 1)
-- harmony_winhid: harmony CLI using WinHID
+- libharmony_libusb: a static link library using the libusb package (see note 1)
+- libharmony_winhid: a static link library using native win-usb support
+
+- harmony: a cli that utilizes the library
+
 - snoop: A debugging program for harmony developers
-
-If you don't know which one to choose, take the WinHID CLI version first. Have fun!
 
 ==== NOTES ====
 1) If you want to use this version of the library, you'll also need the libusb
 development package (http://sourceforge.net/projects/libusb-win32/)
+

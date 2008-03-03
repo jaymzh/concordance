@@ -1,3 +1,21 @@
+CVS
+Released:
+phil@ipom.com
+- split harmony into library and CLI
+- formalize API
+- document API
+- convert to autoconf/automake/libtool
+- add firmware update to library and cli
+- cleanup output throughout libharmony code
+- compilation fixes for Mac
+- kext for Mac
+
+s-t-harmony@wwwdotorg.org:
+- remove usage of ** where * is sufficient
+- typedef our callback type
+- Project files, def file for DLL
+- API/type cleanups
+
 0.13
 Released: 02/29/08
 phil@ipom.com

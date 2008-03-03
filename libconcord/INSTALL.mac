@@ -1,0 +1,59 @@
+==== BASIC INSTALLATION ====
+
+0. INSTALL REQUIRED SOFTWARE
+
+You'll need the Xcode tools installed before you can do anything.
+
+You *MUST* install libusb. It's fairly straight forward to install, it should
+be:
+   ./configure --prefix=/usr
+   make
+   sudo make install
+
+If you get errors about -System while building libusb, upgrade your version of
+Xcode.
+
+1. BUILD THE SOFTARE
+
+   As a normal user...
+     A. ***IF**** You are building from CVS, run "autoreconf --install"
+     B. Run "./configure"
+     C. Run "make"
+
+Various options, such as '--prefix' are available to the configure script to
+help you choose where software gets installed and how it is built.
+
+2. INSTALL THE SOFTWARE
+
+As root, simply run "make install"
+
+3. SETUP THE KEXT
+
+(In future versions this will be done for you by step 2 above)
+
+You need to install the kext. To do this:
+   cd mac
+   sudo cp -R libusbshieldharmony.kext /System/Library/Extensions
+   sudo chown -R root:wheel /System/Library/Extensions/libusbshieldharmony.kext
+
+You will now need to reboot for this to take effect (kextload'ing the extension
+does not appear to work).
+
+
+==== EXTRA INSTALL NOTES ====
+By default this software installs in /usr/bin. You can override the PREFIX
+(/usr) by passing a PREFIX variable to make:
+
+  make PREFIX=/usr/local
+
+You can override the bin directory by passing a BIN variable to make:
+
+  make BIN=sbin
+
+
+==== RUNNING THE SOFTWARE IN MAC ====
+
+Unlike other libusb platforms, you do not have to have root access to use
+libusb - you can run harmony as an ordinary user.
+
+

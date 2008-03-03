@@ -16,6 +16,8 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+#ifndef XML_HEADERS_H
+#define XML_HEADERS_H
 
 const char *config_header="\
 <?xml version=\"1.0\"?>\r\n\
@@ -154,3 +156,4 @@ const char *post_xml="\
 </VERSIONINFORMATION>\
 </EASYZAPPERDATA>\r\n";
 
+#endif

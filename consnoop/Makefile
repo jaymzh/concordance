@@ -36,3 +36,4 @@ snoop: $(CXXFILES)
 
 clean:
 	/bin/rm -f snoop
+

@@ -47,6 +47,7 @@ THidD_SetFeature* HidD_SetFeature;
 TCancelIo* CancelIo;
 #endif
 
+
 int LinkUSB(void)
 {
 /* see note in usb_rtl.h */
@@ -55,8 +56,9 @@ int LinkUSB(void)
 
 	if(hKernel32) {
 		CancelIo=reinterpret_cast<TCancelIo*>(GetProcAddress(hKernel32,"CancelIo"));
-	} else
+	} else {
 		return -5;
+	}
 
 	if(CancelIo==NULL)
 		return -6;

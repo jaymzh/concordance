@@ -17,7 +17,11 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+#ifndef WEB_H
+#define WEB_H
+
 int GetTag(const char *find, uint8_t*& pc, string *s=NULL);
 int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
-	struct options_t &options, string *learn_seq=NULL,
-	string *learn_key=NULL);
+	string *learn_seq=NULL, string *learn_key=NULL);
+
+#endif

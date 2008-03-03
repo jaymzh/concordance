@@ -16,26 +16,11 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef harmony_h
-#define harmony_h
+#ifndef HARMONY_H
+#define HARMONY_H
 
 #ifdef WIN32
-
 #include <windows.h>
-
-typedef unsigned char uint8_t;
-typedef signed short int16_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned __int64 uint64_t;
-
-/*
- * FIXME: We need to fix the code that is generating these warnings!!
- */
-#if _MSC_VER >= 1400
-#pragma warning( disable : 4996 )
-#endif
-
 #else // not Windows
 
 #define LIBUSB
@@ -54,4 +39,6 @@ struct options_t {
 	bool noweb;
 };
 
-#endif // ifndef harmony_h
+void report_net_error(const char *msg);
+
+#endif // ifndef HARMONY_H

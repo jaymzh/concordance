@@ -2,8 +2,8 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8,00"
-	Name="harmony_winhid"
-	ProjectGUID="{BA1F196C-918C-4CF9-98FC-35C2AC3D0F5F}"
+	Name="harmony"
+	ProjectGUID="{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}"
 	>
 	<Platforms>
 		<Platform
@@ -15,8 +15,8 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\Release/harmony_winhid"
-			IntermediateDirectory=".\Release/harmony_winhid"
+			OutputDirectory=".\Release"
+			IntermediateDirectory=".\Release"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -37,21 +37,21 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\Release/harmony_winhid/harmony_winhid.tlb"
+				TypeLibraryName=".\Release/harmony.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;NOCRYPT;WINHID"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\Release/harmony_winhid/harmony_winhid.pch"
-				AssemblerListingLocation=".\Release/harmony_winhid/"
-				ObjectFile=".\Release/harmony_winhid/"
-				ProgramDataBaseFileName=".\Release/harmony_winhid/"
+				PrecompiledHeaderFile=".\Release/harmony.pch"
+				AssemblerListingLocation=".\Release/"
+				ObjectFile=".\Release/"
+				ProgramDataBaseFileName=".\Release/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 			/>
@@ -68,11 +68,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="Release/harmony_winhid/harmony.exe"
+				AdditionalDependencies="./Release/libharmony.lib ws2_32.lib odbc32.lib odbccp32.lib"
+				OutputFile=".\Release/harmony.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				ProgramDatabaseFile=".\Release/harmony_winhid/harmony.pdb"
+				ProgramDatabaseFile=".\Release/harmony.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -88,7 +88,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Release/harmony_winhid/harmony_winhid.bsc"
+				OutputFile=".\Release/harmony.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -105,8 +105,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\Debug/harmony_winhid"
-			IntermediateDirectory=".\Debug/harmony_winhid"
+			OutputDirectory=".\Debug"
+			IntermediateDirectory=".\Debug"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -127,20 +127,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\Debug/harmony_winhid/harmony_winhid.tlb"
+				TypeLibraryName=".\Debug/harmony.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;NOCRYPT;WINHID"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\Debug/harmony_winhid/harmony_winhid.pch"
-				AssemblerListingLocation=".\Debug/harmony_winhid/"
-				ObjectFile=".\Debug/harmony_winhid/"
-				ProgramDataBaseFileName=".\Debug/harmony_winhid/"
+				PrecompiledHeaderFile=".\Debug/harmony.pch"
+				AssemblerListingLocation=".\Debug/"
+				ObjectFile=".\Debug/"
+				ProgramDataBaseFileName=".\Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
@@ -158,12 +158,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="Debug/harmony_winhid/harmony.exe"
+				AdditionalDependencies="./Debug/libharmony.lib ws2_32.lib odbc32.lib odbccp32.lib"
+				OutputFile=".\Debug/harmony.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\Debug/harmony_winhid/harmony.pdb"
+				ProgramDatabaseFile=".\Debug/harmony.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -179,7 +179,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Debug/harmony_winhid/harmony_winhid.bsc"
+				OutputFile=".\Debug/harmony.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -203,107 +203,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\binaryfile.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\harmony.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\remote.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\remote_z.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\usblan.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\web.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -324,7 +224,6 @@
 			</File>
 			<Filter
 				Name="getopt"
-				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 				>
 				<File
 					RelativePath="getopt\getopt.c"
@@ -367,60 +266,11 @@
 					</FileConfiguration>
 				</File>
 			</Filter>
-			<Filter
-				Name="winhid"
-				Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
-				>
-				<File
-					RelativePath="usb_rtl.cpp"
-					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="winhid.cpp"
-					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-				</File>
-			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
-			<File
-				RelativePath="..\binaryfile.h"
-				>
-			</File>
 			<File
 				RelativePath="getopt\getopt.h"
 				>
@@ -430,39 +280,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\harmony.h"
-				>
-			</File>
-			<File
-				RelativePath="..\hid.h"
-				>
-			</File>
-			<File
-				RelativePath="..\protocol_z.h"
-				>
-			</File>
-			<File
-				RelativePath="..\remote.h"
-				>
-			</File>
-			<File
-				RelativePath="..\remote_info.h"
-				>
-			</File>
-			<File
-				RelativePath="usb_rtl.h"
-				>
-			</File>
-			<File
-				RelativePath="..\usblan.h"
-				>
-			</File>
-			<File
-				RelativePath="..\web.h"
-				>
-			</File>
-			<File
-				RelativePath="..\xml_headers.h"
+				RelativePath="..\libharmony.h"
 				>
 			</File>
 		</Filter>

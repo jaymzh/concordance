@@ -16,6 +16,8 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+#ifndef HID_H
+#define HID_H
 
 struct THIDINFO {
 	string mfg;
@@ -28,11 +30,12 @@ struct THIDINFO {
 	unsigned int frl;
 };
 
-int InitUSB(void);
-void ShutdownUSB(void);
+int InitUSB();
+void ShutdownUSB();
 
-int FindRemote(THIDINFO &hid_info, struct options_t &options);
+int FindRemote(THIDINFO &hid_info);
 
 int HID_WriteReport(const uint8_t *data);
 int HID_ReadReport(uint8_t *data, unsigned int timeout=500);
 
+#endif

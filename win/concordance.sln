@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony_libusb", "harmony_libusb.vcproj", "{E9AF7970-AC86-4DDB-B8A9-DA3EC62D13B9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony", "harmony.vcproj", "{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony_winhid", "harmony_winhid.vcproj", "{BA1F196C-918C-4CF9-98FC-35C2AC3D0F5F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libharmony_libusb", "libharmony_libusb.vcproj", "{7BEA7F2F-6122-4C68-BF51-8BC194C0606A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snoop", "snoop.vcproj", "{26430BE1-F000-40EE-AE85-8FC134DE054D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libharmony_winhid", "libharmony_winhid.vcproj", "{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snoop", "snoop.vcproj", "{48704569-82CE-439E-BE83-D681DEAAB05C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,18 +15,22 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E9AF7970-AC86-4DDB-B8A9-DA3EC62D13B9}.Debug|Win32.ActiveCfg = Debug|Win32
-		{E9AF7970-AC86-4DDB-B8A9-DA3EC62D13B9}.Debug|Win32.Build.0 = Debug|Win32
-		{E9AF7970-AC86-4DDB-B8A9-DA3EC62D13B9}.Release|Win32.ActiveCfg = Release|Win32
-		{E9AF7970-AC86-4DDB-B8A9-DA3EC62D13B9}.Release|Win32.Build.0 = Release|Win32
-		{BA1F196C-918C-4CF9-98FC-35C2AC3D0F5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{BA1F196C-918C-4CF9-98FC-35C2AC3D0F5F}.Debug|Win32.Build.0 = Debug|Win32
-		{BA1F196C-918C-4CF9-98FC-35C2AC3D0F5F}.Release|Win32.ActiveCfg = Release|Win32
-		{BA1F196C-918C-4CF9-98FC-35C2AC3D0F5F}.Release|Win32.Build.0 = Release|Win32
-		{26430BE1-F000-40EE-AE85-8FC134DE054D}.Debug|Win32.ActiveCfg = Debug|Win32
-		{26430BE1-F000-40EE-AE85-8FC134DE054D}.Debug|Win32.Build.0 = Debug|Win32
-		{26430BE1-F000-40EE-AE85-8FC134DE054D}.Release|Win32.ActiveCfg = Release|Win32
-		{26430BE1-F000-40EE-AE85-8FC134DE054D}.Release|Win32.Build.0 = Release|Win32
+		{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}.Debug|Win32.ActiveCfg = Debug|Win32
+		{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}.Debug|Win32.Build.0 = Debug|Win32
+		{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}.Release|Win32.ActiveCfg = Release|Win32
+		{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}.Release|Win32.Build.0 = Release|Win32
+		{7BEA7F2F-6122-4C68-BF51-8BC194C0606A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7BEA7F2F-6122-4C68-BF51-8BC194C0606A}.Debug|Win32.Build.0 = Debug|Win32
+		{7BEA7F2F-6122-4C68-BF51-8BC194C0606A}.Release|Win32.ActiveCfg = Release|Win32
+		{7BEA7F2F-6122-4C68-BF51-8BC194C0606A}.Release|Win32.Build.0 = Release|Win32
+		{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}.Debug|Win32.Build.0 = Debug|Win32
+		{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}.Release|Win32.ActiveCfg = Release|Win32
+		{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}.Release|Win32.Build.0 = Release|Win32
+		{48704569-82CE-439E-BE83-D681DEAAB05C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{48704569-82CE-439E-BE83-D681DEAAB05C}.Debug|Win32.Build.0 = Debug|Win32
+		{48704569-82CE-439E-BE83-D681DEAAB05C}.Release|Win32.ActiveCfg = Release|Win32
+		{48704569-82CE-439E-BE83-D681DEAAB05C}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -17,23 +17,20 @@
  *  (C) Copyright Phil Dibowitz 2007
  */
 
-#include "harmony.h"
-#include "binaryfile.h"
-#include "hid.h"
-#include "usblan.h"
-#include "remote.h"
-#include "web.h"
-#include "protocol.h"
-#include "time.h"
+// Platform-agnostic includes
+#include "libharmony.h"
 #include <iostream>
-#include <string.h>
+using namespace std;
 
 #ifdef WIN32
+// Windows includes
 #include "win/getopt/getopt.h"
 #include <conio.h>
 #include <winsock.h>
-HANDLE con;
-CONSOLE_SCREEN_BUFFER_INFO sbi;
+
+#define strcasecmp stricmp
+#define strncasecmp strnicmp
+
 /*
  * Windows, in it's infinite awesomeness doesn't include POSIX things
  * like basename. This little hack will work for non-unicode filenames.
@@ -45,8 +42,20 @@ char* basename(char* file_name)
 
 	return _basename ? _basename+1 : file_name;
 }
-#else //non-windows
+
+HANDLE con;
+CONSOLE_SCREEN_BUFFER_INFO sbi;
+
+#else // non-Windows
+
+// *nix includes
 #include <getopt.h>
+#include <strings.h>
+
+#endif
+
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <libgen.h>
 #endif
 
 #define DEFAULT_CONFIG_FILENAME "Update.EZHex"
@@ -55,10 +64,14 @@ char* basename(char* file_name)
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-#define ZWAVE_HID_PID_MIN 0xC112
-#define ZWAVE_HID_PID_MAX 0xC115
+const char * const VERSION = "0.12+PHIL";
 
-const char * const VERSION = "0.13";
+struct options_t {
+	bool binary;
+	bool verbose;
+	bool noweb;
+	bool direct;
+};
 
 enum {
 	MODE_UNSET,
@@ -76,13 +89,15 @@ enum {
 	MODE_PRINT_INFO
 };
 
-static CRemoteBase *rmt = NULL;
-
-void cb_print_percent_status(int count, int curr, int total, void *arg)
+/*
+ * Start callbacks
+ */
+void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
+	void *arg)
 {
 #ifdef WIN32
-	GetConsoleScreenBufferInfo(con,&sbi);
-	SetConsoleCursorPosition(con,sbi.dwCursorPosition);
+	GetConsoleScreenBufferInfo(con, &sbi);
+	SetConsoleCursorPosition(con, sbi.dwCursorPosition);
 #else                   
 	if (count != 0) {
 		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
@@ -101,6 +116,19 @@ void cb_print_percent_status(int count, int curr, int total, void *arg)
        	fflush(stdout);
 }
 
+/*
+ * Start helper functions
+ */
+void direct_warning()
+{
+	printf("WARNING: You have requested direct mode. This only affects\n");
+	printf("\t firmware updates. To do this safely you MUST be in\n");
+	printf("\t SAFEMODE! This is only for those devices where we\n");
+	printf("\t don't yet support live firmware updates. See the docs\n");
+	printf("\t for information on how to boot into safemode.\n");
+	printf("\t Press <enter> to continue.\n");
+}
+
 void set_mode(int &mode, int val)
 {
 	if (mode == MODE_UNSET) {
@@ -111,8 +139,248 @@ void set_mode(int &mode, int val)
 		exit(1);
 	}
 }
-		
-		
+
+int dump_config(struct options_t &options, char *file_name,
+	lh_callback cb, void *cb_arg)
+{
+	int err = 0;
+
+	uint8_t *config;
+	uint32_t size = 0;
+
+	if ((err = read_config_from_remote(&config, &size, cb, (void *)true))) {
+		return err;
+	}
+
+	if ((err = write_config_to_file(config, file_name, size,
+			(int)options.binary))) {
+		return err;
+	}
+
+	delete[] config;
+
+	return 0;
+}
+
+void print_time(int action)
+{
+	static const char * const dow[8] =
+	{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "" };
+
+	if (action == 0) {
+		printf("Remote time is ");
+	} else {
+		printf("Remote time has been set to ");
+	}
+
+	printf("%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
+		get_time_year(), get_time_month(), get_time_day(),
+		dow[get_time_dow() & 7], get_time_hour(), get_time_minute(),
+		get_time_second(), get_time_utc_offset(), get_time_timezone());
+}
+
+
+
+/*
+ * Read the config from a file and write it to the remote
+ */
+int upload_config(char *file_name, struct options_t &options,
+	lh_callback cb, void *cb_arg)
+{
+	int err = 0;
+
+	uint8_t *data;
+	uint32_t size = 0;
+
+	read_config_from_file(file_name, &data, &size);
+
+	uint8_t *place_ptr = data;
+	uint32_t binsize = size;
+
+	if (!options.binary) {
+
+		if ((err = verify_xml_config(data, size)))
+			return LH_ERROR;
+
+		if ((err = find_binary_size(data, &binsize)))
+			return LH_ERROR;
+
+		// We no longer need size, let it get munged...
+		if ((err = find_binary_start(&place_ptr, &size)))
+			return LH_ERROR;
+
+		if (size < binsize)
+			return LH_ERROR;
+
+		if (!options.noweb)
+			post_preconfig(data);
+	}
+
+	/*
+	 * FIXME:
+	 * 	While having top-level functions like this is useful
+	 * 	we probably want to expose functions for invalidate,
+	 * 	read, write, etc., and then have this just be a short
+	 * 	cut for those.
+	 */
+
+	/*
+	 * We must invalidate flash before we erase and write so that
+	 * nothing will attempt to reference it while we're working.
+	 */
+	printf("Invalidating Flash:  ");
+	if ((err = invalidate_flash())) {
+		delete[] data;
+		return err;
+	}
+	printf("                     done\n");
+	/*
+	 * Flash can be changed to 0, but not back to 1, so you must
+	 * erase the flash (to 1) in order to write the flash.
+	 */
+	printf("Erasing Flash:       ");
+	if ((err = erase_config(binsize, cb, (void *)false))) {
+		delete[] data;
+		return err;
+	}
+	printf("       done\n");
+
+	printf("Writing config:      ");
+	if ((err = write_config_to_remote(place_ptr, binsize, cb,
+			(void *)true))) {
+		delete[] data;
+		return err;
+	}
+	printf("       done\n");
+
+	printf("Verifying Config:    ");
+	if ((err = verify_remote_config(place_ptr, binsize, cb, (void *)true))) {
+		delete[] data;
+		return err;
+	}
+	printf("       done\n");
+
+	if (!options.binary && !options.noweb) {
+		printf("Contacting website:  ");
+		if ((err = post_postconfig(data))) {
+			delete[] data;
+			return err;
+		}
+		printf("                     done\n");
+	}
+
+	delete[] data;
+
+	return 0;
+}
+
+int dump_safemode(char *file_name, lh_callback cb, void *cb_arg)
+{
+	uint8_t * safe = 0;
+	int err = 0;
+
+	if ((err = read_safemode_from_remote(&safe, cb, cb_arg))) {
+		delete[] safe;
+		return err;
+	}
+
+	if ((err = write_safemode_to_file(safe, file_name))) {
+		delete[] safe;
+		return err;
+	}
+
+	delete[] safe;
+	return 0;
+}
+
+int upload_firmware(char *file_name, struct options_t &options,
+	lh_callback cb, void *cb_arg)
+{
+	int err = 0;
+
+	if ((err = is_fw_update_supported()) && !options.direct) {
+		return err;
+	}
+
+	if (options.direct)
+		direct_warning();
+
+	uint8_t *firmware = 0;
+
+	/*
+	 * It may take a second for the device to initialize after the user
+	 * plugs into USB. As such rather than a useless sleep(), we'll
+	 * read in the firmware from the file while we wait.
+	 */
+	if ((err = read_firmware_from_file(file_name, &firmware,
+			options.binary))) {
+		delete[] firmware;
+		return err;
+	}
+
+	if (!options.direct) {
+		if ((err = prep_firmware())) {
+			printf("Failed to prepare remote for FW update\n");
+			delete[] firmware;
+			return err;
+		}
+	}
+
+	printf("Invalidating Flash:  ");
+	if ((err = invalidate_flash())) {
+		delete[] firmware;
+		return err;
+	}
+	printf("                     done\n");
+
+	printf("Erasing Flash:       ");
+	if ((err = erase_firmware(options.direct, cb, (void *)false))) {
+		delete[] firmware;
+		return err;
+	}
+	printf("       done\n");
+
+	printf("Writing firmware:    ");
+	if ((err = write_firmware_to_remote(firmware, options.direct, cb,
+			cb_arg))) {
+		delete[] firmware;
+		return err;
+	}
+	printf("       done\n");
+
+	if (!options.direct) {
+		if ((err = finish_firmware())) {
+			printf("Failed to finalize FW update\n");
+			delete[] firmware;
+			return err;
+		}
+	}
+	delete[] firmware;
+	return 0;
+}
+
+int dump_firmware(struct options_t &options, char *file_name,
+	lh_callback cb, void *cb_arg)
+{
+	int err = 0;
+	uint8_t *firmware = 0;
+
+	if ((err = read_firmware_from_remote(&firmware, cb, cb_arg))) {
+		delete[] firmware;
+		return err;
+	}
+
+	if ((err = write_firmware_to_file(firmware, file_name,
+			(int)options.binary))) {
+		delete[] firmware;
+		return err;
+	}
+
+	delete[] firmware;
+	return 0;
+}
+
+
 /*
  * Parse our options.
  */
@@ -124,6 +392,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 		{"binary", no_argument, 0, 'b'},
 		{"dump-config", optional_argument, 0, 'c'},
 		{"write-config", required_argument, 0, 'C'},
+		{"direct", no_argument, 0, 'd'},
 		{"dump-firmware", optional_argument, 0, 'f'},
 		{"write-firmware", required_argument, 0, 'F'},
 		{"help", no_argument, 0, 'h'},
@@ -142,12 +411,13 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 	options.verbose = false;
 	options.binary = false;
 	options.noweb = false;
+	options.direct = false;
 
 	mode = MODE_UNSET;
 
 	int tmpint = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:f::F:hil:rs::t:kKvw",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvw",
 				long_options, NULL)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -170,6 +440,9 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			set_mode(mode, MODE_WRITE_CONFIG);
 			file_name = optarg;
 			break;
+		case 'd':
+			options.direct = true;
+			break;
 		case 'f':
 			set_mode(mode, MODE_DUMP_FIRMWARE);
 			if (optarg != NULL)
@@ -181,6 +454,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 				exit(1);
 			}
 			set_mode(mode, MODE_WRITE_FIRMWARE);
+			file_name = optarg;
 			break;
 		case 'h':
 			set_mode(mode, MODE_HELP);
@@ -244,12 +518,12 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			file_name = argv[optind];
 
 			/*
- 			 * FIXME: We'll attempt to figure out what to
- 			 *        do based on filename. This is fragile
- 			 *        and should be done based on some
- 			 *        metadata int he file... but this will
- 			 *        do for now.
- 			 */
+			 * FIXME: We'll attempt to figure out what to
+			 *        do based on filename. This is fragile
+			 *        and should be done based on some
+			 *        metadata int he file... but this will
+			 *        do for now.
+			 */
 
 			/*
 			 * Dup our string since POSIX basename()
@@ -257,11 +531,12 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 			 */
 			char *file_name_copy = strdup(file_name);
 			char *file = basename(file_name_copy);
-			if (!stricmp(file,"connectivity.ezhex")) {
+
+			if (!strcasecmp(file,"connectivity.ezhex")) {
 				mode = MODE_CONNECTIVITY;
-			} else if (!stricmp(file,"update.ezhex")) {
+			} else if (!strcasecmp(file,"update.ezhex")) {
 				mode = MODE_WRITE_CONFIG;
-			} else if (!stricmp(file,"learnir.eztut")) {
+			} else if (!strcasecmp(file,"learnir.eztut")) {
 				mode = MODE_LEARN_IR;
 			} else {
 				cerr << "Don't know what to do with"
@@ -269,7 +544,7 @@ void parse_options(struct options_t &options, int &mode, char *&file_name,
 				exit(1);
 			}
 			free(file_name_copy);
-			/*
+			/*	
 			 * Since basename returns a pointer to
 			 * file_name_copy, if we free(file), we get
 			 * a double-free bug.
@@ -309,7 +584,7 @@ void help()
 		<< " information will\n\tbe printed if -v is also used.\n\n";
 	cout << "   -s, --dump-safemode [<filename>]\n"
 		<< "\tRead the safemode firmware from the remote and write it"
-		<< " to a file.\n\tIf no filename is specified, safe.bin is"
+		<< " to a file.\n\tIf no filename is psecified, safe.bin is"
 		<< " used.\n\n";
 	cout << "   -t, --connectivity-test <filename>\n"
 		<< "\tDo a connectivity test using <filename>\n\n";
@@ -351,468 +626,72 @@ void help()
 
 }
 
-
 /*
  * Print all version info in a format readable by humans.
  */
-int print_version_info(TRemoteInfo &ri, THIDINFO &hid_info,
-					   struct options_t &options)
+int print_version_info(struct options_t &options)
 {
-	printf("Device Info:\n");
-	if (ri.model->code_name) {
-		printf("  Model: %s %s (%s)\n",ri.model->mfg,
-			ri.model->model,ri.model->code_name);
+
+	printf("  Model: %s %s", get_mfg(), get_model());
+	const char *cn = get_codename();
+
+	if (strcmp(cn,"")) {
+		printf(" (%s)\n", cn);
 	} else {
-		printf("  Model: %s %s\n",ri.model->mfg,
-			ri.model->model);
+		printf("\n");
 	}
 
 	if (options.verbose)
-		printf("  Skin: %i\n",ri.skin);
+		printf("  Skin: %i\n", get_skin());
 
-	printf("  Firmware Version: %i.%i\n",ri.fw_ver_major, ri.fw_ver_minor);
+	printf("  Firmware Version: %i.%i\n", get_fw_ver_maj(),
+		get_fw_ver_min());
 
 	if (options.verbose)
-		printf("  Firmware Type: %i\n",ri.fw_type);
+		printf("  Firmware Type: %i\n", get_fw_type());
 
-	printf("  Hardware Version: %i.%i\n",ri.hw_ver_major, ri.hw_ver_minor);
+	printf("  Hardware Version: %i.%i\n", get_hw_ver_maj(),
+		get_hw_ver_min());
 
 	if (options.verbose) {
-		if ((ri.flash->size&0x03FF) == 0 && (ri.flash->size>>10)!=0) {
-			printf("  External Flash: %i MiB - %02X:%02X %s\n",
-				ri.flash->size>>10,ri.flash_mfg,
-				ri.flash_id,ri.flash->part);
+		//if ((ri.flash->size & 0x03FF) == 0 && (ri.flash->size>>10)!=0) {
+		int size = get_flash_size();
+		printf("  External Flash: ");
+		if (size >> 10 != 0) {
+			printf("%i MiB", size >> 10);
 		} else {
-			printf("  External Flash: %i KiB - %02X:%02X %s\n",
-				ri.flash->size,ri.flash_mfg,ri.flash_id,
-				ri.flash->part);
+			printf("%i KiB", size);
 		}
+		printf(" - %02X:%02X %s\n", get_flash_mfg(),
+			get_flash_id(), get_flash_part_num());
 
-		printf("  Architecture: %i\n",ri.architecture);
-		printf("  Protocol: %i\n",ri.protocol);
+		printf("  Architecture: %i\n", get_arch());
+		printf("  Protocol: %i\n", get_proto());
 
-		printf("  Manufacturer: %s\n",hid_info.mfg.c_str());
-		printf("  Product: %s\n",hid_info.prod.c_str());
-		printf("  IRL, ORL, FRL: %i, %i, %i\n",
-			hid_info.irl,hid_info.orl,hid_info.frl);
-		printf("  USB VID: %04X\n",hid_info.vid);
-		printf("  USB PID: %04X\n",hid_info.pid);
-		printf("  USB Ver: %04X\n",hid_info.ver);
+		printf("  Manufacturer: %s\n", get_hid_mfg_str());
+		printf("  Product: %s\n", get_hid_prod_str());
+		printf("  IRL, ORL, FRL: %i, %i, %i\n", get_hid_irl(),
+			get_hid_orl(), get_hid_frl());
+		printf("  USB VID: %04X\n", get_usb_vid());
+		printf("  USB PID: %04X\n", get_usb_pid());
+		printf("  USB Ver: %04X\n", get_usb_bcd());
 
-		printf("  Serial Number: %s\n\t%s\n\t%s\n",
-			ri.serial[0].c_str(),ri.serial[1].c_str(),
-			ri.serial[2].c_str());
+		printf("  Serial Number: %s\n\t%s\n\t%s\n", get_serial(1),
+			get_serial(2), get_serial(3));
 	}
 
-	if (ri.flash->size == 0) {
-		printf("  Unsupported flash type\n");
-		return 1;
-	}
-
-	if (ri.arch == NULL || ri.arch->cookie==0) {
-		printf("  Unsupported architecure\n");
-		return 1;
-	}
-
-	if (ri.valid_config) {
-		printf("  Config Flash Used: %i%% (%i of %i KiB)\n",
-			(ri.config_bytes_used*100+99) / ri.max_config_size,
-			(ri.config_bytes_used+1023)>>10,
-			(ri.max_config_size+1023)>>10);
-	} else {
-		printf("  Invalid config!\n");
-	}
+	int used = get_config_bytes_used();
+	int total = get_config_bytes_total();
+	printf("  Config Flash Used: %i%% (%i of %i KiB)\n\n",
+		(used*100+99) / total, (used+1023)>>10, (total+1023)>>10);
 
 	return 0;
 }
 
 /*
- * Pull the config from the remote and write it to a file
+ * In certain cases we don't require filenames, this provides
+ * sane defaults.
  */
-int dump_config(TRemoteInfo &ri, struct options_t &options, char *file_name)
-{
-	int err = 0;
-
-	if (!ri.valid_config) {
-		printf("Invalid config - can not read\n");
-		return 1;
-	}
-
-	printf("Reading Config:      ");
-
-	uint8_t *config = new uint8_t[ri.config_bytes_used];
-	if ((err = rmt->ReadFlash(ri.arch->config_base, ri.config_bytes_used,
-			config,ri.protocol,false,cb_print_percent_status,
-			(void *)true))) {
-		printf("Failed to read flash\n");
-		return 1;
-	}
-        printf("       done\n");
-
-	binaryoutfile of;
-	
-	if (of.open(file_name) != 0) {
-		printf("Failed to open %s\n", file_name);
-		return 1;
-	}
-
-	if (options.binary) {
-		of.write(config,ri.config_bytes_used);
-	} else {
-		uint32_t u = ri.config_bytes_used;
-		uint8_t chk = 0x69;
-		uint8_t *pc = config;
-		while (u--)
-			chk ^= *pc++;
-
-		extern const char *config_header;
-		char *ch = new char[strlen(config_header) + 200];
-		const int chlen = sprintf(ch,
-			config_header,ri.protocol,
-			ri.skin,ri.flash_mfg,
-			ri.flash_id,ri.hw_ver_major,
-			ri.hw_ver_minor,ri.fw_type,
-			ri.protocol,ri.skin,
-			ri.flash_mfg,ri.flash_id,
-			ri.hw_ver_major,ri.hw_ver_minor,
-			ri.fw_type,
-			ri.config_bytes_used,chk);
-		of.write(reinterpret_cast<uint8_t*>(ch),
-			chlen);
-		of.write(config,ri.config_bytes_used);
-	}
-	
-	if (of.close() != 0) {
-		printf("Failed to close %s\n", file_name);
-		return 1;
-	}
-
-	delete[] config;
-
-	return 0;
-}
-
-/*
- * Do a connectivity test
- */
-int connect_test(TRemoteInfo &ri, char *file_name, struct options_t &options)
-{
-	/*
-	 * If we arrived, we can talk to the remote - so if it's
-	 * just a connectivity test, tell the site we succeeded
-	 */
-	binaryinfile file;
-	if (file.open(file_name) != 0) {
-		printf("Failed to open %s\n", file_name);
-		return 1;
-	}
-
-	const unsigned int size = file.getlength();
-	uint8_t * const buf = new uint8_t[size+1];
-	file.read(buf,size);
-	// Prevent GetTag() from going off the deep end
-	buf[size]=0;
-
-	Post(buf,"POSTOPTIONS",ri,options);
-
-	if (file.close() != 0) {
-		printf("Failed to close %s\n", file_name);
-		return 1;
-	}
-
-	return 0;
-}
-
-/*
- * Read the config from a file and write it to the remote
- */
-int write_config(TRemoteInfo &ri, char *file_name, struct options_t &options)
-{
-	int err = 0;
-	binaryinfile file;
-
-	if (file.open(file_name) != 0) {
-		printf("Failed to open %s\n", file_name);
-		return 1;
-	}
-	uint32_t size = file.getlength();
-	uint8_t * const x = new uint8_t[size+1];
-	file.read(x,size);
-
-	if (file.close() != 0) {
-		printf("Failed to close %s\n", file_name);
-		return 1;
-	}
-	// Prevent GetTag() from going off the deep end
-	x[size] = 0;
-
-	uint8_t *y=x;
-
-	if (!options.binary) {
-		/*
-		 * If we were passed in a full XML file, parse it, check
-		 * that the size/checksum reported in it matches the binary
-		 * blob, and print some data about it.
-		 */
-		uint8_t *t = x;
-		string s;
-		GetTag("BINARYDATASIZE",t,&s);
-		uint32_t data_size = atoi(s.c_str());
-		GetTag("CHECKSUM",t,&s);
-		const uint8_t checksum = atoi(s.c_str());
-
-		GetTag("/INFORMATION",y);
-		y += 2;
-		size -= (y-x);
-
-		if (options.verbose) {
-			printf("data size %i\n",data_size);
-			printf("checksum %i\n",checksum);
-			printf("size %i\n",size);
-		}
-
-		if (size != data_size)
-			printf("Data size mismatch %i %i\n",size,data_size);
-
-		uint32_t u=size;
-		uint8_t chk=0x69;
-		uint8_t *pc=y;
-		while (u--)
-			chk^=*pc++;
-		if (chk != checksum)
-			printf("Bad checksum %02X %02X\n",chk, checksum);
-
-		if (file_name)
-			Post(x,"POSTOPTIONS",ri,options);
-	}
-
-	/*
-	 * We must invalidate flash before we erase and write so that
-	 * nothing will attempt to reference it while we're working.
-	 */
-	printf("Invalidating flash:  ");
-	if ((err = rmt->InvalidateFlash())) {
-		delete[] x;
-		printf("Failed to invalidate flash! Bailing out!\n");
-		return err;
-	}
-	printf("                     done\n");
-	/*
-	 * Flash can be changed to 0, but not back to 1, so you must
-	 * erase the flash (to 1) in order to write the flash.
-	 */
-	printf("Erasing flash:       ");
-	if ((err = rmt->EraseFlash(ri.arch->config_base,size, ri,
-			cb_print_percent_status, (void*)false))) {
-		delete[] x;
-		printf("Failed to erase flash! Bailing out!\n");
-		return err;
-	}
-        printf("       done\n");
-
-	printf("Writing config:      ");
-	if ((err = rmt->WriteFlash(ri.arch->config_base,size,y,
-			ri.protocol,cb_print_percent_status,(void *)true))) {
-		delete[] x;
-		printf("Failed to write flash! Bailing out!\n");
-		return err;
-	}
-        printf("       done\n");
-
-	printf("Verifying Config:    ");
-	if ((err = rmt->ReadFlash(ri.arch->config_base,size,y,
-			ri.protocol,true,cb_print_percent_status,(void *)true))) {
-		delete[] x;
-		printf("Failed to read flash! Bailing out!\n");
-		return err;
-	}
-        printf("       done\n");
-
-	if (file_name && !options.binary)
-		Post(x,"COMPLETEPOSTOPTIONS",ri,options);
-
-	delete[] x;
-
-	return 0;
-}
-
-int dump_safemode(TRemoteInfo &ri, char *file_name)
-{
-	binaryoutfile of;
-	uint8_t * const safe = new uint8_t[64*1024];
-	int err = 0;
-
-	printf("Reading Safemode FW: ");
-	if ((err = rmt->ReadFlash(ri.arch->flash_base,64*1024,safe,
-			ri.protocol,false,cb_print_percent_status,(void *)true))) {
-		delete[] safe;
-		printf("Failed to read Safe Mode firmware.\n");
-		return 1;
-	}
-        printf("       done\n");
-
-	if (of.open(file_name) != 0) {
-		printf("Failed to open %s\n", file_name);
-		return 1;
-	}
-	of.write(safe,64*1024);
-	if (of.close() != 0) {
-		printf("Failed to close %s\n", file_name);
-		return 1;
-	}
-
-	delete[] safe;
-
-	return 0;
-}
-
-int dump_firmware(TRemoteInfo &ri, struct options_t &options, char *file_name)
-{
-	binaryoutfile of;
-	int err = 0;
-	uint8_t * const firmware = new uint8_t[64*1024];
-
-	printf("Reading Firmware:    ");
-	if ((err = rmt->ReadFlash(ri.arch->firmware_base,64*1024,firmware,
-			ri.protocol, false, cb_print_percent_status,(void *)true))) {
-		printf("Failed to read firmware.\n");
-		return 1;
-	}
-        printf("       done\n");
-
-	if (of.open(file_name) != 0) {
-		printf("Failed to open %s\n", file_name);
-		return 1;
-	}
-
-	if (options.binary) {
-		of.write(firmware,64*1024);
-	} else {
-		/// todo: file header
-		uint16_t *pw =
-		   reinterpret_cast<uint16_t*>(firmware);
-		uint16_t wc = 0x4321;
-		unsigned int n = 32*1024;
-		while (n--) wc ^= *pw++;
-		//TRACE1("Checksum: %04X\n",wc);
-
-		firmware[0] = firmware[1] = firmware[2] = firmware[3] = 0xFF;
-
-		uint8_t *pf = firmware;
-		const uint8_t *fwend = firmware+64*1024;
-		do {
-			of.write("\t\t\t<DATA>");
-			char hex[16];
-			int u=32;
-			while (u--) {
-				sprintf(hex,"%02X",*pf++);
-				of.write(hex);
-			}
-			of.write("</DATA>\n");
-		} while (pf < fwend);
-	}
-
-	if (of.close() != 0) {
-		printf("Failed to close %s\n", file_name);
-		return 1;
-	}
-
-	delete[] firmware;
-
-	return 0;
-}
-
-int learn_ir_commands(TRemoteInfo &ri, char *file_name,
-	struct options_t &options)
-{
-	if (file_name) {
-		binaryinfile file;
-		if (file.open(file_name) != 0) {
-			printf("Failed to open %s\n", file_name);
-			return 1;
-		}
-
-		uint32_t size=file.getlength();
-		uint8_t * const x=new uint8_t[size+1];
-		file.read(x,size);
-
-		if (file.close() != 0) {
-			printf("Failed to close %s\n", file_name);
-			return 1;
-		}
-
-		// Prevent GetTag() from going off the deep end
-		x[size]=0;
-
-		uint8_t *t=x;
-		string keyname;
-		do {
-			GetTag("KEY",t,&keyname);
-		} while (*t && keyname!="KeyName");
-		GetTag("VALUE",t,&keyname);
-		printf("Key Name: %s\n",keyname.c_str());
-
-		string ls;
-
-		printf("Learn IR - Waiting...\n");
-		rmt->LearnIR(&ls);
-		printf("                                          done\n");
-
-		Post(x,"POSTOPTIONS",ri,options,&ls,&keyname);
-	} else {
-		rmt->LearnIR();
-	}
-
-	return 0;
-}
-
-void print_harmony_time(const THarmonyTime &ht)
-{
-	static const char * const dow[8] =
-	{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "" };
-
-	printf("%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
-		ht.year,ht.month,ht.day,dow[ht.dow&7],
-		ht.hour,ht.minute,ht.second,ht.utc_offset,ht.timezone.c_str());
-}
-
-int get_time(TRemoteInfo &ri)
-{
-	THarmonyTime ht;
-	int err;
-	if ((err = rmt->GetTime(ri,ht))) return err;
-	printf("The remote's time is currently ");
-	print_harmony_time(ht);
-	return 0;
-}
-
-int set_time(TRemoteInfo &ri)
-{
-	const time_t t = time(NULL);
-	struct tm *lt = localtime(&t);
-	THarmonyTime ht;
-	ht.second = lt->tm_sec;
-	ht.minute = lt->tm_min;
-	ht.hour = lt->tm_hour;
-	ht.day = lt->tm_mday;
-	ht.dow = lt->tm_wday;
-	ht.month = lt->tm_mon + 1;
-	ht.year = lt->tm_year + 1900;
-	ht.utc_offset = 0;
-	ht.timezone = "";
-
-	printf("The remote's time has been set to ");
-	print_harmony_time(ht);
-	return rmt->SetTime(ri,ht);
-}
-
-int reset_remote()
-{
-        printf("Reseting...\n");
-	int err = rmt->Reset(COMMAND_RESET_DEVICE);
-	return err;
-}
-
 void populate_default_filename(int mode, struct options_t &options,
 	char *&file_name)
 {
@@ -854,19 +733,13 @@ int main(int argc, char *argv[])
 #ifdef WIN32
 	SetConsoleTextAttribute(con,
 		FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN);
-
-	// Initialize WinSock
-	WSADATA wsainfo;
-	int error=WSAStartup(1*256 + 1, &wsainfo);
-	if (error) {
-		printf("WSAStartup() Error: %i\n",error);
-		return error;
-	}
 #endif
 
 	struct options_t options;
 	char *file_name = NULL;
 	int mode = MODE_UNSET;
+	//struct CRemoteBase *rmt = NULL;
+
 	parse_options(options, mode, file_name, argc, argv);
 
 	if (mode == MODE_UNSET) {
@@ -883,55 +756,20 @@ int main(int argc, char *argv[])
 	}
 
 	/*
- 	 * In a few special cases, we populate a default filename. NEVER
- 	 * if we're are writing to the device, however.
- 	 */
+	 * In a few special cases, we populate a default filename. NEVER
+	 * if we're are writing to the device, however.
+	 */
 	if (!file_name) {
 		populate_default_filename(mode, options, file_name);
 	}
 
 	int err = 0;
-	TRemoteInfo ri;
-	THIDINFO hid_info;
 
-	if (InitUSB()) {
-		printf("Unable to initialize USB\n");
-		err = -1;
-		goto cleanup;
-	}
-
-	if ((err = FindRemote(hid_info, options))) {
-		printf("Unable to find a HID remote (error %i)\n", err);
-		hid_info.pid=0;
-#ifndef linux
-		if ((err = FindUsbLanRemote())) {
-			printf("Unable to find a TCP remote (error %i)\n", err);
-			goto cleanup;
-		}
-		rmt = new CRemoteZ_TCP;
-#else
-		goto cleanup;
-#endif
-	}
-
-	/*
-	 * If hid_info is defined AND pid is 0XC11F, we found something
-	 * via HID that's a 1000... that REALLY shouldn't even be possible
-	 * but this'll catch that.
-	 */
-	if (hid_info.pid == 0xC11F) {
-		printf("Harmony 1000 requires Belcarra USB LAN driver\n");
-		goto cleanup;
-	}
-
-	if (!rmt) {
-		if (hid_info.pid >= ZWAVE_HID_PID_MIN &&
-		    hid_info.pid <= ZWAVE_HID_PID_MAX) {
-			// 890, Monstor, etc.
-			rmt = new CRemoteZ_HID;
-		} else {
-			rmt = new CRemote;
-		}
+	err = init_harmony();
+	if (err != 0) {
+		printf("Error initializing harmony libraries: %s\n",
+			lh_strerror(err));
+		exit(1);
 	}
 
 	/*
@@ -941,7 +779,8 @@ int main(int argc, char *argv[])
 	 * near the beginning instead of the SWITCH below.
 	 */
 	if (mode == MODE_RESET) {
-		err = reset_remote();
+		printf("Reseting...\n");
+		reset_remote();
 		goto cleanup;
 	}
 
@@ -949,13 +788,12 @@ int main(int argc, char *argv[])
 	 * Get and print all the version info
 	 */
 
-        printf("Requesting Identity: ");
-	if ((err = rmt->GetIdentity(ri, hid_info, cb_print_percent_status,
-			(void *)false))) {
+	printf("Requesting Identity: ");
+	if (get_identity(cb_print_percent_status, NULL) != 0) {
+		printf("Error requesting identity\n");
 		goto cleanup;
 	}
-        printf("       done\n");
-
+	printf("       done\n");
 
 	/*
 	 * Now do whatever we've been asked to do
@@ -963,63 +801,100 @@ int main(int argc, char *argv[])
 
 	switch (mode) {
 		case MODE_PRINT_INFO:
-			err = print_version_info(ri, hid_info, options);
+			err = print_version_info(options);
 			break;
 
 		case MODE_CONNECTIVITY:
-			err = connect_test(ri, file_name, options);
+			if (!options.noweb)
+				printf("Contacting website:  ");
+				err = post_connect_test_success(file_name);
+				printf("       done\n");
 			break;
 
 		case MODE_DUMP_CONFIG:
-			err = dump_config(ri, options, file_name);
+			printf("Dumping config:      ");
+			err = dump_config(options, file_name,
+				cb_print_percent_status, NULL);
+			if (err != 0) {
+				printf("Failed to dump config: %s\n",
+					lh_strerror(err));
+			} else {
+				printf("       done\n");
+			}
 			break;
 
 		case MODE_WRITE_CONFIG:
-			if ((err = write_config(ri, file_name, options)))
+			err = upload_config(file_name, options,
+				cb_print_percent_status, NULL);
+			if (err != 0)
 				break;
 			err = reset_remote();
 			break;
 
 		case MODE_DUMP_FIRMWARE:
-			err = dump_firmware(ri, options, file_name);
+			printf("Dumping firmware:    ");
+			err = dump_firmware(options, file_name,
+				cb_print_percent_status, NULL);
+			if (err != 0) {
+				printf("Failed to dump firmware: %s\n",
+					lh_strerror(err));
+			} else {
+				printf("       done\n");
+			}
 			break;
 
 		case MODE_WRITE_FIRMWARE:
-			printf("This isn't supported yet.\n");
+			err = upload_firmware(file_name, options,
+				cb_print_percent_status, NULL);
+			if (err != 0) {
+				printf("Failed to upload firmware: %s\n",
+					lh_strerror(err));
+				break;
+			}
+			err = reset_remote();
+			//printf("This isn't supported yet.\n");
 			/*
 			 * FIXME: Implement this.
 			 */
 			break;
 
 		case MODE_DUMP_SAFEMODE:
-			err = dump_safemode(ri, file_name);
+			printf("Dumping safemode fw: ");
+			err = dump_safemode(file_name, cb_print_percent_status,
+				NULL);
+			if (err != 0) {
+				printf("Failed to dump safemode: %s\n",
+					lh_strerror(err));
+			} else {
+				printf("       done\n");
+			}
 			break;
 
 		case MODE_LEARN_IR:
-			err = learn_ir_commands(ri, file_name, options);
+			err = learn_ir_commands(file_name, (int)!options.noweb);
 			break;
 
 		case MODE_GET_TIME:
-			err = get_time(ri);
+			err = get_time();
+			print_time(0);
 			break;
 
 		case MODE_SET_TIME:
-			err = set_time(ri);
+			err = set_time();
+			print_time(1);
 			break;
-/*
+
 		default:
 			cerr << "ERROR: Got to a place I don't understand!\n";
 			break;
-*/
 	}
 			
 cleanup:
-	ShutdownUSB();
 
-	delete rmt;
+	deinit_harmony();
 
 	if (err) {
-		printf("Failed with error %i\n", err);
+		printf("Failed with error %i\n",err);
 	} else {
 		printf("Success!\n");
 	}
@@ -1027,11 +902,12 @@ cleanup:
 #ifdef WIN32
 	// Shutdown WinSock
 	WSACleanup();
+#endif
+
 #ifdef _DEBUG
 	printf("\nPress any key to exit");
-	_getch();
+	getchar();
 #endif // debug
-#endif // WIN32
 
 	return err;
 }

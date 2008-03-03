@@ -10,7 +10,13 @@ package - usually libusb-dev or libusb-devel, depending on your distribution.
 
 1. BUILD THE SOFTARE
 
-As a normal user, simply run "make"
+   As a normal user...
+     A. ***IF**** You are building from CVS, run "autoreconf --install"
+     B. Run "./configure"
+     C. Run "make"
+
+Various options, such as '--prefix' are available to the configure script to
+help you choose where software gets installed and how it is built.
 
 2. INSTALL THE SOFTWARE
 

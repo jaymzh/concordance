@@ -1,0 +1,95 @@
+LIBRARY      "libharmony"
+
+EXPORTS
+
+; REMOTE INFORMATION ACCESSORS
+;
+get_mfg
+get_model
+get_codename
+get_skin
+get_fw_ver_maj
+get_fw_ver_min
+get_fw_type
+get_hw_ver_maj
+get_hw_ver_min
+get_flash_size
+get_flash_mfg
+get_flash_id
+get_flash_part_num
+get_arch
+get_proto
+get_hid_mfg_str
+get_hid_prod_str
+get_hid_irl
+get_hid_orl
+get_hid_frl
+get_usb_vid
+get_usb_pid
+get_usb_bcd
+get_serial
+get_config_bytes_used
+get_config_bytes_total
+
+; TIME ACCESSORS
+;
+get_time_second
+get_time_minute
+get_time_hour
+get_time_day
+get_time_dow
+get_time_month
+get_time_year
+get_time_utc_offset
+get_time_timezone
+
+; HELPER FUNCTIONS
+;
+lh_strerror
+find_binary_size
+find_binary_start
+
+; GENERAL REMOTE INTERACTIONS
+;
+init_harmony
+deinit_harmony
+get_identity
+reset_remote
+get_time
+set_time
+post_connect_test_success
+post_preconfig
+post_postconfig
+invalidate_flash
+
+; CONFIGURATION INTERACTIONS
+;
+read_config_from_remote
+write_config_to_remote
+read_config_from_file
+write_config_to_file
+verify_xml_config
+verify_remote_config
+erase_config
+
+; SAFEMODE FIRMWARE INTERACTIONS
+;
+erase_safemode
+read_safemode_from_remote
+write_safemode_to_file
+read_safemode_from_file
+
+; FIRMWARE INTERACTIONS
+;
+is_fw_update_supported
+prep_firmware
+finish_firmware
+erase_firmware
+read_firmware_from_remote
+write_firmware_to_remote
+write_firmware_to_file
+read_firmware_from_file
+
+; IR-stuff
+;
+learn_ir_commands

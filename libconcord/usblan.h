@@ -16,9 +16,13 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+#ifndef USBLAN_H
+#define USBLAN_H
 
 int InitializeUsbLan(void);
 int ShutdownUsbLan(void);
 int FindUsbLanRemote(void);
 int UsbLan_Write(unsigned int len, uint8_t *data);
 int UsbLan_Read(unsigned int &len, uint8_t *data);
+
+#endif

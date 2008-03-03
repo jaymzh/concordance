@@ -19,7 +19,7 @@
 
 // C++ iostreams will eat EOF chars, even when ios::binary is used with read() and write()
 
-
+#include "libharmony.h"
 #include "harmony.h"
 
 #include <stdio.h>
@@ -49,9 +49,8 @@ int binaryfile::close(void)
 		const int i = fclose(m_f);
 		m_f = NULL;
 		return i;
-	} else {
+	} else
 		return 0;
-	}
 }
 
 binaryoutfile::binaryoutfile()
@@ -72,7 +71,7 @@ size_t binaryoutfile::write(const uint8_t *b, uint32_t len)
 
 size_t binaryoutfile::write(const char *c)
 {
-	return fwrite(c, strlen(c), 1, m_f);
+	return fwrite(c,strlen(c), 1, m_f);
 }
 
 
@@ -83,7 +82,7 @@ binaryinfile::binaryinfile()
 
 int binaryinfile::open(const char *path)
 {
-	m_f=fopen(path, "rb");
+	m_f = fopen(path, "rb");
 	return m_f ? 0 : 1;
 }
 

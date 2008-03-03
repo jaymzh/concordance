@@ -16,6 +16,8 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+#ifndef BINARY_H
+#define BINARY_H
 
 class binaryfile {
 protected:
@@ -43,3 +45,5 @@ public:
 	unsigned int getlength(void);
 	size_t read(uint8_t *b, uint32_t len);
 };
+
+#endif

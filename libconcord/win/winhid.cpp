@@ -19,6 +19,7 @@
 
 #ifdef WINHID
 
+#include "../libharmony.h"
 #include "../harmony.h"
 
 #define TRACE0
@@ -35,7 +36,7 @@ OVERLAPPED ol;
 HIDP_CAPS caps;
 HANDLE h_hid=NULL;
 
-int InitUSB(void)
+int InitUSB()
 {
 #ifdef _DEBUG
 	printf("Using Windows HID stack\n");
@@ -47,7 +48,7 @@ int InitUSB(void)
 	return LinkUSB();
 }
 
-void ShutdownUSB(void)
+void ShutdownUSB()
 {
 	if(h_hid) {
 		CloseHandle(h_hid);
@@ -60,7 +61,7 @@ void ShutdownUSB(void)
 	ol.hEvent=NULL;
 }
 
-int FindRemote(THIDINFO &hid_info, struct options_t &options)
+int FindRemote(THIDINFO &hid_info)
 {
 	if(h_hid) { CloseHandle(h_hid); h_hid=NULL; }
 
@@ -227,22 +228,28 @@ int FindRemote(THIDINFO &hid_info, struct options_t &options)
 int HID_WriteReport(const uint8_t *data)
 {
 	DWORD err,dw;
-	if(!WriteFile(h_hid,data,caps.OutputReportByteLength,&dw,&ol)) {
-		err=GetLastError();
-		if(err!=ERROR_IO_PENDING) {
+	if (!WriteFile(h_hid,data,caps.OutputReportByteLength,&dw,&ol)) {
+		err = GetLastError();
+		if (err != ERROR_IO_PENDING) {
+#ifdef _DEBUG
 			printf("WriteFile() failed with error %i\n",err);
+#endif
 			return err;
 		}
 	}
 
 	const DWORD ws=WaitForSingleObject(ol.hEvent,500);
 
-	if(ws==WAIT_TIMEOUT) {
+	if (ws==WAIT_TIMEOUT) {
+#ifdef _DEBUG
 		printf("Write failed to complete within alloted time\n");
+#endif
 		CancelIo(h_hid);
 		err=1;
 	} else if(ws!=WAIT_OBJECT_0) {
+#ifdef _DEBUG
 		printf("Wait failed with code %i\n",ws);
+#endif
 		err=2;
 	} else {
 		err=0;
@@ -257,7 +264,9 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
 	if(!ReadFile(h_hid,data,caps.InputReportByteLength,&dw,&ol)) {
 		err=GetLastError();
 		if(err!=ERROR_IO_PENDING) {
+#ifdef _DEBUG
 			printf("ReadFile() failed with error %i\n",err);
+#endif
 			return err;
 		}
 	}
@@ -265,11 +274,15 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
 	const DWORD ws=WaitForSingleObject(ol.hEvent,timeout);
 
 	if(ws==WAIT_TIMEOUT) {
+#ifdef _DEBUG
 		printf("No response from remote\n");
+#endif
 		CancelIo(h_hid);
 		err=1;
 	} else if(ws!=WAIT_OBJECT_0) {
+#ifdef _DEBUG
 		printf("Wait failed with code %i\n",ws);
+#endif
 		err=2;
 	} else {
 		err=0;

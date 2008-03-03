@@ -16,17 +16,22 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+#include "libharmony.h"
 #include "harmony.h"
+#include <errno.h>
 
 #ifdef WIN32
 #include <winsock.h>
 #else
-#include <errno.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #define closesocket close
 #define SOCKET int
 #define SOCKET_ERROR -1
+#endif
+
+#ifdef __FreeBSD__
+#include <netinet/in.h>
 #endif
 
 static SOCKET sock = SOCKET_ERROR;
@@ -44,18 +49,14 @@ int ShutdownUsbLan(void)
 	int err=0;
 
 	// Close the socket
-	if (sock!=SOCKET_ERROR) {
+	if (sock != SOCKET_ERROR) {
 		if ((err = closesocket(sock))) {
-#ifdef WIN32
-			err = WSAGetLastError();
-			printf("Close Error: %i\n",err);
-#else
-			printf("Close Error: %s\n",strerror(errno));
-#endif
+			report_net_error("closesocket()");
+			return LH_ERROR_OS_NET;
 		}
 	}
 
-	return err;
+	return 0;
 }
 
 int FindUsbLanRemote(void)
@@ -65,14 +66,8 @@ int FindUsbLanRemote(void)
 	hostent* addr = gethostbyname(harmony_ip_address);
 
 	if (!addr) {
-#ifdef WIN32
-		err = WSAGetLastError();
-		printf("gethostbyname() Error: %i\n", err);
-		return err;
-#else
-		printf("gethostbyname() Error: %s\n", strerror(errno));
-		return -1;
-#endif
+		report_net_error("gethostbyname()");
+		return LH_ERROR_OS_NET;
 	}
 
 	sockaddr_in sa;
@@ -80,22 +75,19 @@ int FindUsbLanRemote(void)
 	sa.sin_family = AF_INET;		// TCP/IP
 	sa.sin_port = htons(harmony_port);	// Port 3074
 
-	sock = socket( sa.sin_family, SOCK_STREAM, 0 );	// TCP
-	//sock=socket( sa.sin_family, SOCK_DGRAM, 0 );	// UDP
+	sock = socket(sa.sin_family, SOCK_STREAM, 0);	// TCP
+	//sock = socket(sa.sin_family, SOCK_DGRAM, 0);	// UDP
 
-	if ((err = connect(sock, (struct sockaddr*) &sa, sizeof(sa)))) {
-#ifdef WIN32
-		err = WSAGetLastError();
-		printf("Connect Error: %i\n", err);
-#else
-		printf("Connect Error: %s\n", strerror(errno));
-#endif
-		return err;
+	if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+		report_net_error("connect()");
+		return LH_ERROR_OS_NET;
 	}
 
+#ifdef _DEBUG
 	printf("\nConnected to USB LAN driver!\n\n");
+#endif
 
-	return err;
+	return 0;
 }
 
 int UsbLan_Write(unsigned int len, uint8_t *data)
@@ -103,17 +95,15 @@ int UsbLan_Write(unsigned int len, uint8_t *data)
 	int err = send(sock, reinterpret_cast<char*>(data), len, 0);
 
 	if (err == SOCKET_ERROR) {
-#ifdef WIN32
-		err = WSAGetLastError();
-		printf("send() failed with error %i\n", err);
-#else
-		printf("send() error: %s\n", strerror(errno));
-#endif
-		return err;
+		report_net_error("send()");
+		return LH_ERROR_OS_NET;
 	}
-	printf("%i bytes sent\n", err);
 
-	return err;
+#ifdef _DEBUG
+	printf("%i bytes sent\n", err);
+#endif
+
+	return 0;
 }
 
 
@@ -122,19 +112,15 @@ int UsbLan_Read(unsigned int &len, uint8_t *data)
 	int err = recv(sock, reinterpret_cast<char*>(data), len, 0);
 
 	if (err == SOCKET_ERROR) {
-#ifdef WIN32
-		err = WSAGetLastError();
-		printf("recv() failed with error %i\n", err);
-#else
-		printf("recv() error: %s\n", strerror(errno));
-#endif
+		report_net_error("recv()");
 		len = 0;
-	} else {
-		len = static_cast<unsigned int>(err);
-		printf("%i bytes received\n", len);
-		err = 0;
-	}
+		return LH_ERROR_OS_NET;
+	} 
 
-	return err;
+	len = static_cast<unsigned int>(err);
+#ifdef _DEBUG
+	printf("%i bytes received\n", len);
+#endif
+
+	return 0;
 }
-

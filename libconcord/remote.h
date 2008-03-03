@@ -14,12 +14,16 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *  (C) Copyright Kevin Timmerman 2007
- *  (C) Copyright Phil Dibowitz 2008
+ *  (C) Copyright Phil Dibowitz 2007
  */
+
+#ifndef REMOTE_H
+#define REMOTE_H
 
 #define FLASH_EEPROM_ADDR 0x10
 #define FLASH_SERIAL_ADDR 0x000110
 #define FLASH_SIZE 48
+#define MAX_PULSE_COUNT 1000
 
 /*
  * WARNING: Do not change this!
@@ -63,6 +67,7 @@ struct TArchInfo {
 	uint32_t	flash_base;
 	uint32_t	firmware_base;
 	uint32_t	config_base;
+	uint32_t	firmware_update_base;
 	uint32_t	cookie;
 	uint32_t	cookie_size;
 	uint32_t	end_vector;
@@ -87,7 +92,9 @@ struct TRemoteInfo {
 	uint8_t			skin;
 	uint8_t			protocol;
 	const TModel	*model;
-	string			serial[3];
+	char			*serial1;
+	char			*serial2;
+	char			*serial3;
 	bool			valid_config;
 	uint32_t		config_bytes_used;
 	uint32_t		max_config_size;
@@ -101,7 +108,7 @@ struct THarmonyTime {
 	unsigned int	day;
 	unsigned int	month;
 	unsigned int	year;
-	int				utc_offset;
+	int			utc_offset;
 	string			timezone;
 };
 
@@ -115,19 +122,21 @@ public:
 	CRemoteBase() {};
 	virtual ~CRemoteBase() {};
 	virtual int Reset(uint8_t kind)=0;
-	virtual int GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-		void (*cb)(int,int,int,void*)=NULL, void *cb_arg=NULL)=0;
+	virtual int GetIdentity(TRemoteInfo &ri, struct THIDINFO &hid,
+		lh_callback cb=NULL, void *cb_arg=NULL)=0;
 
 	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		void (*cb)(int,int,int,void*)=NULL, void *cb_arg=NULL)=0;
+		lh_callback cb=NULL, void *cb_arg=NULL)=0;
 	virtual int InvalidateFlash(void)=0;
 	virtual int EraseFlash(uint32_t addr, uint32_t len,
-		const TRemoteInfo &ri, void (*cb)(int,int,int,void*)=NULL,
+		const TRemoteInfo &ri, lh_callback cb=NULL,
 		void *cb_arg=NULL)=0;
 	virtual int WriteFlash(uint32_t addr, const uint32_t len,
 		const uint8_t *wr, unsigned int protocol,
-		void (*cb)(int,int,int,void*)=NULL, void *cb_arg=NULL)=0;
+		lh_callback cb=NULL, void *cb_arg=NULL)=0;
+	virtual int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)=0;
+	virtual int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)=0;
 
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
 	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)=0;
@@ -138,31 +147,33 @@ public:
 class CRemote : public CRemoteBase	// All non-Z-Wave remotes
 {
 private:
-	int ReadMiscByte(uint8_t addr, unsigned int len, uint8_t kind,
+	int ReadMiscByte(uint8_t addr, uint32_t len, uint8_t kind,
 		uint8_t *rd);
-	int ReadMiscWord(uint16_t addr, unsigned int len, uint8_t kind,
+	int ReadMiscWord(uint16_t addr, uint32_t len, uint8_t kind,
 		uint16_t *rd);
-	int WriteMiscByte(uint8_t addr, unsigned int len, uint8_t kind,
+	int WriteMiscByte(uint8_t addr, uint32_t len, uint8_t kind,
 		uint8_t *wr);
-	int WriteMiscWord(uint16_t addr, unsigned int len, uint8_t kind,
+	int WriteMiscWord(uint16_t addr, uint32_t len, uint8_t kind,
 		uint16_t *wr);
 
 public:
 	CRemote() {};
 	virtual ~CRemote() {};
 	int Reset(uint8_t kind);
-	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-		void (*cb)(int,int,int,void*)=NULL, void *cb_arg=NULL);
+	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
+		lh_callback cb=NULL, void *cb_arg=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		void (*cb)(int,int,int,void*)=0, void *cb_arg=NULL);
+		lh_callback cb=0, void *cb_arg=NULL);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		void (*cb)(int,int,int,void*)=NULL, void *cb_arg=NULL);
+		lh_callback cb=NULL, void *cb_arg=NULL);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-		unsigned int protocol, void (*cb)(int,int,int,void*)=NULL,
+		unsigned int protocol, lh_callback cb=NULL,
 		void *cb_arg=NULL);
+	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
+	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
@@ -175,13 +186,13 @@ class CRemoteZ_Base : public CRemoteBase
 {
 protected:
 	struct TParamList {
-		unsigned int count;
+		uint32_t count;
 		uint8_t *p[32];
 	};
-	virtual int Write(uint8_t typ, uint8_t cmd, unsigned int len=0,
+	virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
 		uint8_t *data=NULL)=0;
-	virtual int Read(uint8_t &status, unsigned int &len, uint8_t *data)=0;
-	virtual int ParseParams(unsigned int len, uint8_t *data,
+	virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data)=0;
+	virtual int ParseParams(uint32_t len, uint8_t *data,
 		TParamList &pl)=0;
 	virtual uint16_t GetWord(uint8_t *x)=0;
 
@@ -189,18 +200,20 @@ public:
 	CRemoteZ_Base() {};
 	virtual ~CRemoteZ_Base() {};
 	int Reset(uint8_t kind);
-	int GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-		void (*cb)(int,int,int,void*)=NULL, void *cb_arg=NULL);
+	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
+		lh_callback cb=NULL, void *cb_arg=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		void (*cb)(int,int,int,void*)=0, void *cb_arg=NULL);
+		lh_callback cb=0, void *cb_arg=NULL);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		void (*cb)(int,int,int,void*)=NULL, void *cb_arg=NULL);
+		lh_callback cb=NULL, void *cb_arg=NULL);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-		unsigned int protocol, void (*cb)(int,int,int,void*)=NULL,
+		unsigned int protocol, lh_callback cb=NULL,
 		void *cb_arg=NULL);
+	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
+	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
@@ -214,18 +227,18 @@ class CRemoteZ_HID : public CRemoteZ_Base
 private:
 	uint8_t m_tx_seq;
 	uint8_t m_rx_seq;
-	int UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0,
+	int UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
 		uint8_t *data=NULL);
-	int UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
-	int TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len=0,
+	int UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data);
+	int TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
 		uint8_t *data=NULL);
-	int TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data);
+	int TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data);
 
 protected:
-	virtual int Write(uint8_t typ, uint8_t cmd, unsigned int len=0,
+	virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
 		uint8_t *data=NULL);
-	virtual int Read(uint8_t &status, unsigned int &len, uint8_t *data);
-	virtual int ParseParams(unsigned int len, uint8_t *data,
+	virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data);
+	virtual int ParseParams(uint32_t len, uint8_t *data,
 		TParamList &pl);
 	virtual uint16_t GetWord(uint8_t *x) { return x[1]<<8 | x[0]; };
 
@@ -238,10 +251,10 @@ public:
 class CRemoteZ_TCP : public CRemoteZ_Base
 {
 protected:
-	virtual int Write(uint8_t typ, uint8_t cmd, unsigned int len=0,
+	virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
 		uint8_t *data=NULL);
-	virtual int Read(uint8_t &status, unsigned int &len, uint8_t *data);
-	virtual int ParseParams(unsigned int len, uint8_t *data,
+	virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data);
+	virtual int ParseParams(uint32_t len, uint8_t *data,
 		TParamList &pl);
 	virtual uint16_t GetWord(uint8_t *x) { return x[0]<<8 | x[1]; };
 
@@ -250,3 +263,4 @@ public:
 	virtual ~CRemoteZ_TCP() {};
 };
 
+#endif //REMOTE_H

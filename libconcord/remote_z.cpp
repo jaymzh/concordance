@@ -16,20 +16,21 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
+#include "libharmony.h"
 #include "harmony.h"
 #include "hid.h"
 #include "remote.h"
 #include "usblan.h"
 #include "protocol_z.h"
 
-int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len,
+int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
 	if (len > 60)
 		return 1;
 	uint8_t pkt[68];
 	pkt[0] = 0;
-	pkt[1] = 3 + len;
+	pkt[1] = 3+len;
 	pkt[2] = 1; // UDP
 	pkt[3] = typ;
 	pkt[4] = cmd;
@@ -39,7 +40,7 @@ int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, unsigned int len,
 	return HID_WriteReport(pkt);
 }
 
-int CRemoteZ_HID::UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data)
+int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
 	uint8_t pkt[68];
 	int err;
@@ -49,37 +50,34 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, unsigned int &len, uint8_t *data)
 		return 1;
 	status = pkt[5];
 	len = pkt[1] - 4;
-	//if (!len) return 0;
+	//if(!len) return 0;
 	//memcpy(data, pkt + 6, len);
 	memcpy(data, pkt + 2, len + 4);
 	return 0;
 }
 
-// Should never be needed - psuedo-net over over HID only uses UDP
-int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, unsigned int len,
+int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
 	return 0;
 }
-
-// Should never be needed - psuedo-net over over HID only uses UDP
-int CRemoteZ_HID::TCP_Read(uint8_t &status, unsigned int &len, uint8_t *data)
+int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
 	return 0;
 }
 
-int CRemoteZ_HID::Write(uint8_t typ, uint8_t cmd, unsigned int len,
+int CRemoteZ_HID::Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
 	return UDP_Write(typ, cmd, len, data);
 }
 
-int CRemoteZ_HID::Read(uint8_t &status, unsigned int &len, uint8_t *data)
+int CRemoteZ_HID::Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
 	return UDP_Read(status, len, data);
 }
 
-int CRemoteZ_HID::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
+int CRemoteZ_HID::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 {
 	switch (data[2]) {
 		case COMMAND_GET_SYSTEM_INFO:
@@ -102,7 +100,7 @@ int CRemoteZ_HID::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 			pl.p[4] = data + 9;
 			pl.p[5] = data + 10;
 			pl.p[6] = data + 11;
-			pl.p[7] = data +12;
+			pl.p[7] = data + 12;
 			pl.p[8] = data + 14;
 			pl.p[9] = data + 16;
 			pl.p[10] = data + 18;
@@ -110,14 +108,14 @@ int CRemoteZ_HID::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 			break;
 		case COMMAND_GET_GUID:
 			pl.count = 1;
-			pl.p[0] = data+4;
+			pl.p[0] = data + 4;
 			break;
 	}
 	return 0;
 }
 
 
-int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, unsigned int len,
+int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
 	if (len > 60)
@@ -143,7 +141,7 @@ int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, unsigned int len,
 	return UsbLan_Write(len, pkt);
 }
 
-int CRemoteZ_TCP::Read(uint8_t &status, unsigned int &len, uint8_t *data)
+int CRemoteZ_TCP::Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
 	uint8_t buf[1600];
 	len = sizeof(buf);
@@ -151,18 +149,12 @@ int CRemoteZ_TCP::Read(uint8_t &status, unsigned int &len, uint8_t *data)
 	if ((err = UsbLan_Read(len, buf)))
 		return err;
 
-#if 0
-	// Show the received received data
-	for(unsigned int i=0; i<len; ++i) printf("%02X ",buf[i]);
-	printf("\n\n");
-#endif
-
 	memcpy(data, buf, len);
 
 	return err;
 }
 
-int CRemoteZ_TCP::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
+int CRemoteZ_TCP::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 {
 	unsigned int n = 0;
 	unsigned int i = 4;
@@ -182,7 +174,7 @@ int CRemoteZ_TCP::ParseParams(unsigned int len, uint8_t *data, TParamList &pl)
 		}
 		++i;
 		pl.p[n++] = data+i;
-#if 1
+#ifdef _DEBUG
 		printf("%3i:", param_len);
 		for(unsigned int j = 0; j < param_len; ++j)
 			printf(" %02X",data[i+j]);
@@ -212,7 +204,7 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 }
 
 int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-	void (*cb)(int,int,int,void*), void *arg)
+	lh_callback cb, void *cb_arg)
 {
 	Write(TYPE_REQUEST, COMMAND_GET_SYSTEM_INFO);
 	uint8_t rsp[60];
@@ -259,14 +251,14 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	make_serial(pl.p[0], ri);
 
 	ri.config_bytes_used = 0;
-	ri.max_config_size = 1;
+	ri.max_config_size  =1;
 
 #if 0	// Get region info - 1000 only!
 	uint8_t rr[] = { 1, 1, 1 }; // AddByteParam(1);
 	Write(TYPE_REQUEST, COMMAND_GET_REGION_IDS, 3, rr);
 	uint8_t rgn[64];
-	Read(status,len,rgn);
-	ParseParams(len,rgn,pl);
+	Read(status, len, rgn);
+	ParseParams(len, rgn, pl);
 	if (pl.count==1) {
 		const unsigned int rc = *(pl.p[0]-1) & 0x3F;
 		for(unsigned int r = 0; r<rc; ++r) {
@@ -286,8 +278,8 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 }
 
 int CRemoteZ_Base::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
-	unsigned int protocol, bool verify, void (*cb)(int,int,int,void*),
-	void *arg)
+	unsigned int protocol, bool verify, lh_callback cb,
+	void *cb_arg)
 {
 	return 0;
 }
@@ -298,14 +290,24 @@ int CRemoteZ_Base::InvalidateFlash(void)
 }
 
 int CRemoteZ_Base::EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-	void (*cb)(int,int,int,void*), void *cb_arg)
+	lh_callback cb, void *cb_arg)
 {
 	return 0;
 }
 
 int CRemoteZ_Base::WriteFlash(uint32_t addr, const uint32_t len,
-	const uint8_t *wr, unsigned int protocol, void (*cb)(int,int,int,void*),
+	const uint8_t *wr, unsigned int protocol, lh_callback cb,
 	void *arg)
+{
+	return 0;
+}
+
+int CRemoteZ_Base::WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)
+{
+	return 0;
+}
+
+int CRemoteZ_Base::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 {
 	return 0;
 }
@@ -316,7 +318,7 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	uint8_t time[60];
 	unsigned int len;
 	uint8_t status;
-	Read(status,len,time);
+	Read(status, len, time);
 	CRemoteZ_Base::TParamList pl;
 	ParseParams(len, time, pl);
 
@@ -328,7 +330,7 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	ht.second = *pl.p[5];
 	ht.dow = *pl.p[6]&7;
 	ht.utc_offset = static_cast<int16_t>(GetWord(pl.p[7]));
-	if(pl.count > 11)
+	if(pl.count>11)
 		ht.timezone = reinterpret_cast<char*>(pl.p[11]);
 	else
 		ht.timezone = "";
@@ -338,7 +340,6 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 
 int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 {
-	printf("Set time is not currently supported for this mode remote\n");
 	return 1;
 }
 

@@ -18,6 +18,7 @@
  */
 
 #include "../harmony.h"
+#include "../libharmony.h"
 
 #ifdef LIBUSB
 
@@ -46,25 +47,26 @@ static unsigned int orl;
 static int ep_read = -1;
 static int ep_write = -1;
 
-int InitUSB(void)
+int InitUSB()
 {
 	usb_init();
 	return 0;
 }
 
-void ShutdownUSB(void)
+void ShutdownUSB()
 {
 	if (h_hid) {
 		usb_release_interface(h_hid,0);
 	}
 }
 
-void check_ep(usb_endpoint_descriptor &ued, struct options_t &options)
+void check_ep(usb_endpoint_descriptor &ued)
 {
-	if (options.verbose)
-		printf("address %02X attrib %02X max_length %i\n",
-			ued.bEndpointAddress, ued.bmAttributes,
-			ued.wMaxPacketSize);
+#ifdef _DEBUG
+	printf("address %02X attrib %02X max_length %i\n",
+		ued.bEndpointAddress, ued.bmAttributes,
+		ued.wMaxPacketSize);
+#endif
 	if ((ued.bmAttributes & USB_ENDPOINT_TYPE_MASK) ==
 	    USB_ENDPOINT_TYPE_INTERRUPT) {
 		if (ued.bEndpointAddress & USB_ENDPOINT_DIR_MASK) {
@@ -102,7 +104,7 @@ bool is_harmony(struct usb_device *h_dev)
  * Find a HID device with VendorID == 0x046D ||
  *    (VendorID == 0x0400 && ProductID == 0xC359)
  */
-int FindRemote(THIDINFO &hid_info, struct options_t &options)
+int FindRemote(THIDINFO &hid_info)
 {
 
 	usb_find_busses();
@@ -123,9 +125,11 @@ int FindRemote(THIDINFO &hid_info, struct options_t &options)
 		h_hid = usb_open(h_dev);
 	}
 	if (!h_hid) {
+#ifdef _DEBUG
 		printf("Failed to establish communication with remote: %s\n",
 			usb_strerror());
-		return 2;
+#endif
+		return LH_ERROR_CONNECT;
 	}
 
 #ifdef linux
@@ -141,14 +145,18 @@ int FindRemote(THIDINFO &hid_info, struct options_t &options)
 
 	int err;
 	if ((err = usb_set_configuration(h_hid, 1))) {
+#ifdef _DEBUG
 		printf("Failed to set device configuration: %d (%s)\n", err,
 			usb_strerror());
+#endif
 		return err;
 	}
 
 	if ((err=usb_claim_interface(h_hid, 0))) {
+#ifdef _DEBUG
 		printf("Failed to claim interface: %d (%s)\n", err,
 			usb_strerror());
+#endif
 		return err;
 	}
 
@@ -162,27 +170,26 @@ int FindRemote(THIDINFO &hid_info, struct options_t &options)
 			for (unsigned char l = 0; l < maxalt; ++l) {
 				usb_interface_descriptor &uid =
 					ui.altsetting[l];
-				if (options.verbose)
+#ifdef _DEBUG
 					printf("bNumEndpoints %i\n",
 						uid.bNumEndpoints);
+#endif
 				unsigned char maxep = uid.bNumEndpoints;
 				for (unsigned char n = 0; n < maxep; ++n) {
-					check_ep(uid.endpoint[n], options);
+					check_ep(uid.endpoint[n]);
 				}
 			}
 		}
 	}
 
-	if (ep_read == -1 || ep_write == -1)
-		return 1;
+	if (ep_read == -1 || ep_write == -1) return 1;
 
 	// Fill in hid_info
 
 	char s[128];
-	usb_get_string_simple(h_hid, h_dev->descriptor.iManufacturer, s,
-		sizeof(s));
+	usb_get_string_simple(h_hid,h_dev->descriptor.iManufacturer,s,sizeof(s));
 	hid_info.mfg = s;
-	usb_get_string_simple(h_hid, h_dev->descriptor.iProduct, s, sizeof(s));
+	usb_get_string_simple(h_hid,h_dev->descriptor.iProduct,s,sizeof(s));
 	hid_info.prod = s;
 
 	hid_info.vid = h_dev->descriptor.idVendor;
@@ -208,8 +215,10 @@ int HID_WriteReport(const uint8_t *data)
 		orl, 500);
 
 	if (err < 0) {
+#ifdef _DEBUG
 		printf("Failed to write to device: %d (%s)\n", err,
 			usb_strerror());
+#endif
 		return err;
 	}
 
@@ -222,8 +231,10 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
 		reinterpret_cast<char *>(data+1), irl, timeout);
 
 	if (err < 0) {
+#ifdef _DEBUG
 		printf("Failed to read from device: %d (%s)\n", err,
 			usb_strerror());
+#endif
 		return err;
 	}
 

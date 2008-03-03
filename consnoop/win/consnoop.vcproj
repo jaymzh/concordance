@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8,00"
 	Name="snoop"
-	ProjectGUID="{26430BE1-F000-40EE-AE85-8FC134DE054D}"
+	ProjectGUID="{48704569-82CE-439E-BE83-D681DEAAB05C}"
 	>
 	<Platforms>
 		<Platform
@@ -15,8 +15,8 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\Release/snoop"
-			IntermediateDirectory=".\Release/snoop"
+			OutputDirectory=".\Release"
+			IntermediateDirectory=".\Release"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -37,7 +37,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\Release/snoop/snoop.tlb"
+				TypeLibraryName=".\Release/snoop.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -48,10 +48,10 @@
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\Release/snoop/snoop.pch"
-				AssemblerListingLocation=".\Release/snoop/"
-				ObjectFile=".\Release/snoop/"
-				ProgramDataBaseFileName=".\Release/snoop/"
+				PrecompiledHeaderFile=".\Release/snoop.pch"
+				AssemblerListingLocation=".\Release/"
+				ObjectFile=".\Release/"
+				ProgramDataBaseFileName=".\Release/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 			/>
@@ -68,10 +68,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile=".\Release/snoop/snoop.exe"
+				OutputFile=".\Release/snoop.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				ProgramDatabaseFile=".\Release/snoop/snoop.pdb"
+				ProgramDatabaseFile=".\Release/snoop.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -87,7 +87,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Release/snoop/snoop.bsc"
+				OutputFile=".\Release/snoop.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -104,8 +104,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\Debug/snoop"
-			IntermediateDirectory=".\Debug/snoop"
+			OutputDirectory=".\Debug"
+			IntermediateDirectory=".\Debug"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -126,7 +126,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\Debug/snoop/snoop.tlb"
+				TypeLibraryName=".\Debug/snoop.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -136,10 +136,10 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\Debug/snoop/snoop.pch"
-				AssemblerListingLocation=".\Debug/snoop/"
-				ObjectFile=".\Debug/snoop/"
-				ProgramDataBaseFileName=".\Debug/snoop/"
+				PrecompiledHeaderFile=".\Debug/snoop.pch"
+				AssemblerListingLocation=".\Debug/"
+				ObjectFile=".\Debug/"
+				ProgramDataBaseFileName=".\Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
@@ -157,11 +157,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile=".\Debug/snoop/snoop.exe"
+				OutputFile=".\Debug/snoop.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\Debug/snoop/snoop.pdb"
+				ProgramDatabaseFile=".\Debug/snoop.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -177,7 +177,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Debug/snoop/snoop.bsc"
+				OutputFile=".\Debug/snoop.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
