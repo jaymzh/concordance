@@ -8,5 +8,5 @@ libharmony_la_LDFLAGS = -version-info 0 -lusb
 libharmony_la_LADD = usb
 
 bin_PROGRAMS = harmony
-harmony_SOURCES = harmony.cpp
+harmony_SOURCES = harmony.c
 harmony_LDADD = libharmony.la
