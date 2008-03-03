@@ -338,6 +338,11 @@ int find_binary_start(uint8_t **ptr, uint32_t *size)
 	return 0;
 }
 
+int delete_blob(uint8_t *ptr)
+{
+	delete[] ptr;
+	return 1;
+}
 
 
 /*

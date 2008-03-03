@@ -148,6 +148,12 @@ int find_binary_size(uint8_t *ptr, uint32_t *size);
  * for the the change in *ptr.
  */
 int find_binary_start(uint8_t **ptr, uint32_t *size);
+/*
+ * Many functions require you to pass in a ptr which then gets pointed
+ * to data that we allocate. You should then call this to clean that
+ * data up when you are done with it.
+ */
+int delete_blob(uint8_t *ptr);
 
 
 /*
