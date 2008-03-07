@@ -18,7 +18,7 @@
  */
 
 // Platform-agnostic includes
-#include "libharmony.h"
+#include "libconcord.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -734,7 +734,7 @@ int main(int argc, char *argv[])
 	SetConsoleTextAttribute(con,FOREGROUND_BLUE|FOREGROUND_INTENSITY);
 #endif
 
-	printf("Harmony Control %s\n", VERSION);
+	printf("Concordance %s\n", VERSION);
 	printf("Copyright 2007 Kevin Timmerman and Phil Dibowitz\n");
 	printf("This software is distributed under the GPLv3.\n\n");
 

@@ -19,8 +19,8 @@
 
 // C++ iostreams will eat EOF chars, even when ios::binary is used with read() and write()
 
-#include "libharmony.h"
-#include "harmony.h"
+#include "libconcord.h"
+#include "concordance.h"
 
 #include <stdio.h>
 

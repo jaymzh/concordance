@@ -17,8 +17,8 @@
  *  (C) Copyright Phil Dibowitz 2007
  */
 
-#include "libharmony.h"
-#include "harmony.h"
+#include "libconcord.h"
+#include "concordance.h"
 #include "hid.h"
 #include "protocol.h"
 #include "remote.h"

@@ -17,8 +17,8 @@
  *  (C) Copyright Phil Dibowitz 2007
  */
 
-#include "../harmony.h"
-#include "../libharmony.h"
+#include "../concordance.h"
+#include "../libconcord.h"
 
 #ifdef LIBUSB
 

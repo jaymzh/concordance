@@ -24,8 +24,8 @@
  */
 
 #include <stdio.h>
-#include "libharmony.h"
-#include "harmony.h"
+#include "libconcord.h"
+#include "concordance.h"
 #include "remote.h"
 #include "binaryfile.h"
 #include "hid.h"

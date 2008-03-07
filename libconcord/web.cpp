@@ -16,8 +16,8 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
-#include "libharmony.h"
-#include "harmony.h"
+#include "libconcord.h"
+#include "concordance.h"
 #include "hid.h"
 #include "remote.h"
 #include "xml_headers.h"
