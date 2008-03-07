@@ -129,7 +129,7 @@ int FindRemote(THIDINFO &hid_info)
 		printf("Failed to establish communication with remote: %s\n",
 			usb_strerror());
 #endif
-		return LH_ERROR_CONNECT;
+		return LC_ERROR_CONNECT;
 	}
 
 #ifdef linux

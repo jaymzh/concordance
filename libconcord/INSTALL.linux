@@ -24,14 +24,10 @@ As root, simply run "make install"
 
 
 ==== EXTRA INSTALL NOTES ====
-By default this software installs in /usr/bin. You can override the PREFIX
-(/usr) by passing a PREFIX variable to make:
+By default this library installs in /usr/local/lib. You can override the PREFIX
+(/usr/local) by passing a PREFIX variable to make:
 
-  make PREFIX=/usr/local
-
-You can override the bin directory by passing a BIN variable to make:
-
-  make BIN=sbin
+  make PREFIX=/usr/
 
 
 ==== RUNNING THE SOFTWARE IN UNIX ====
@@ -39,7 +35,7 @@ You can override the bin directory by passing a BIN variable to make:
 Because this software uses libusb, it does Direct IO. That means you must
 either be root to use it, or you must have the RAWIO capability.
 
-In addition, harmony attempts to unbind any in-kernel drivers that may
+In addition, libconcord attempts to unbind any in-kernel drivers that may
 bind to your remote. However, if it can't, you'll need to unbind them manually.
 Check dmesg, if the hid driver attached to your Harmony follow the
 instructions here to unbind it:

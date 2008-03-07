@@ -123,18 +123,18 @@ public:
 	virtual ~CRemoteBase() {};
 	virtual int Reset(uint8_t kind)=0;
 	virtual int GetIdentity(TRemoteInfo &ri, struct THIDINFO &hid,
-		lh_callback cb=NULL, void *cb_arg=NULL)=0;
+		lc_callback cb=NULL, void *cb_arg=NULL)=0;
 
 	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lh_callback cb=NULL, void *cb_arg=NULL)=0;
+		lc_callback cb=NULL, void *cb_arg=NULL)=0;
 	virtual int InvalidateFlash(void)=0;
 	virtual int EraseFlash(uint32_t addr, uint32_t len,
-		const TRemoteInfo &ri, lh_callback cb=NULL,
+		const TRemoteInfo &ri, lc_callback cb=NULL,
 		void *cb_arg=NULL)=0;
 	virtual int WriteFlash(uint32_t addr, const uint32_t len,
 		const uint8_t *wr, unsigned int protocol,
-		lh_callback cb=NULL, void *cb_arg=NULL)=0;
+		lc_callback cb=NULL, void *cb_arg=NULL)=0;
 	virtual int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)=0;
 	virtual int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)=0;
 
@@ -161,16 +161,16 @@ public:
 	virtual ~CRemote() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		lh_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lh_callback cb=0, void *cb_arg=NULL);
+		lc_callback cb=0, void *cb_arg=NULL);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		lh_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-		unsigned int protocol, lh_callback cb=NULL,
+		unsigned int protocol, lc_callback cb=NULL,
 		void *cb_arg=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
@@ -201,16 +201,16 @@ public:
 	virtual ~CRemoteZ_Base() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		lh_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lh_callback cb=0, void *cb_arg=NULL);
+		lc_callback cb=0, void *cb_arg=NULL);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		lh_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-		unsigned int protocol, lh_callback cb=NULL,
+		unsigned int protocol, lc_callback cb=NULL,
 		void *cb_arg=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);

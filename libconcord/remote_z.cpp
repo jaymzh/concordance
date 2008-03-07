@@ -204,7 +204,7 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 }
 
 int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	Write(TYPE_REQUEST, COMMAND_GET_SYSTEM_INFO);
 	uint8_t rsp[60];
@@ -278,7 +278,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 }
 
 int CRemoteZ_Base::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
-	unsigned int protocol, bool verify, lh_callback cb,
+	unsigned int protocol, bool verify, lc_callback cb,
 	void *cb_arg)
 {
 	return 0;
@@ -290,13 +290,13 @@ int CRemoteZ_Base::InvalidateFlash(void)
 }
 
 int CRemoteZ_Base::EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	return 0;
 }
 
 int CRemoteZ_Base::WriteFlash(uint32_t addr, const uint32_t len,
-	const uint8_t *wr, unsigned int protocol, lh_callback cb,
+	const uint8_t *wr, unsigned int protocol, lc_callback cb,
 	void *arg)
 {
 	return 0;

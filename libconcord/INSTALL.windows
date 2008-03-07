@@ -13,20 +13,20 @@ c) Micosoft Visual Studio 2008 (9.0) - Express Edition
 Open the Project tree in your Development-System, by (letters here correspond
 to development environment above - pick one):
 
-a) Open the Workspace-File '.\win\harmonycontrol.dsw' or
+a) Open the Workspace-File '.\win\concordance.dsw' or
 b) Open the Workspace-File and convert it to the VS2005 format
 (its done automatically by the conversion wizard)
 or
-c) Open the Solution file '.\win\harmonycontrol.sln'.
+c) Open the Solution file '.\win\concordance.sln'.
 
 Now you should see five Projects in your Workspace/Solution-Tree
 
-- libharmony_libusb: a static link library using the libusb package (see note 1)
-- libharmony_winhid: a static link library using native win-usb support
+- libconcord_libusb: a static link library using the libusb package (see note 1)
+- libconcord_winhid: a static link library using native win-usb support
 
-- harmony: a cli that utilizes the library
+- concordance: a cli that utilizes the library
 
-- snoop: A debugging program for harmony developers
+- consnoop: A debugging program for concordance developers
 
 ==== NOTES ====
 1) If you want to use this version of the library, you'll also need the libusb

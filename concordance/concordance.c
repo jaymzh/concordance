@@ -144,7 +144,7 @@ void set_mode(int *mode, int val)
 }
 
 int dump_config(struct options_t *options, char *file_name,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
@@ -188,7 +188,7 @@ void print_time(int action)
  * Read the config from a file and write it to the remote
  */
 int upload_config(char *file_name, struct options_t *options,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
@@ -203,17 +203,17 @@ int upload_config(char *file_name, struct options_t *options,
 	if (!(*options).binary) {
 
 		if ((err = verify_xml_config(data, size)))
-			return LH_ERROR;
+			return LC_ERROR;
 
 		if ((err = find_binary_size(data, &binsize)))
-			return LH_ERROR;
+			return LC_ERROR;
 
 		// We no longer need size, let it get munged...
 		if ((err = find_binary_start(&place_ptr, &size)))
-			return LH_ERROR;
+			return LC_ERROR;
 
 		if (size < binsize)
-			return LH_ERROR;
+			return LC_ERROR;
 
 		if (!(*options).noweb)
 			post_preconfig(data);
@@ -277,7 +277,7 @@ int upload_config(char *file_name, struct options_t *options,
 	return 0;
 }
 
-int dump_safemode(char *file_name, lh_callback cb, void *cb_arg)
+int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 {
 	uint8_t * safe = 0;
 	int err = 0;
@@ -297,7 +297,7 @@ int dump_safemode(char *file_name, lh_callback cb, void *cb_arg)
 }
 
 int upload_firmware(char *file_name, struct options_t *options,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
@@ -363,7 +363,7 @@ int upload_firmware(char *file_name, struct options_t *options,
 }
 
 int dump_firmware(struct options_t *options, char *file_name,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 	uint8_t *firmware = 0;
@@ -566,10 +566,10 @@ void help()
 {
 	printf("There are two ways to invoke this software. You can specify");
 	printf(" what you want\nto do:\n");
-	printf("\tharmony <options>\n\n");
+	printf("\tconcordance <options>\n\n");
 	printf("Or you can let the software attempt to figure out what to");
 	printf(" do for you:\n");
-	printf("\tharmony <file>\n\n");
+	printf("\tconcordance <file>\n\n");
 
 	printf("In automatic mode, just pass in the file, and the software");
 	printf(" will use the\nfilename to figure out the proper mode.\n\n");
@@ -773,10 +773,10 @@ int main(int argc, char *argv[])
 
 	int err = 0;
 
-	err = init_harmony();
+	err = init_concord();
 	if (err != 0) {
-		printf("Error initializing harmony libraries: %s\n",
-			lh_strerror(err));
+		printf("Error initializing libconcord: %s\n",
+			lc_strerror(err));
 		exit(1);
 	}
 
@@ -825,7 +825,7 @@ int main(int argc, char *argv[])
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to dump config: %s\n",
-					lh_strerror(err));
+					lc_strerror(err));
 			} else {
 				printf("       done\n");
 			}
@@ -845,7 +845,7 @@ int main(int argc, char *argv[])
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to dump firmware: %s\n",
-					lh_strerror(err));
+					lc_strerror(err));
 			} else {
 				printf("       done\n");
 			}
@@ -856,7 +856,7 @@ int main(int argc, char *argv[])
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to upload firmware: %s\n",
-					lh_strerror(err));
+					lc_strerror(err));
 				break;
 			}
 			err = reset_remote();
@@ -872,7 +872,7 @@ int main(int argc, char *argv[])
 				NULL);
 			if (err != 0) {
 				printf("Failed to dump safemode: %s\n",
-					lh_strerror(err));
+					lc_strerror(err));
 			} else {
 				printf("       done\n");
 			}
@@ -900,7 +900,7 @@ int main(int argc, char *argv[])
 			
 cleanup:
 
-	deinit_harmony();
+	deinit_concord();
 
 	if (err) {
 		printf("Failed with error %i\n",err);

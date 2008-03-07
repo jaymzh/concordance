@@ -7,6 +7,3 @@ include_HEADERS = libconcord.h
 libconcord_la_LDFLAGS = -version-info 0 -lusb
 libconcord_la_LADD = usb
 
-#bin_PROGRAMS = harmony
-#harmony_SOURCES = harmony.c
-#harmony_LDADD = libharmony.la

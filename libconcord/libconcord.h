@@ -17,8 +17,8 @@
  *  (C) Copyright Kevin Timmerman 2007
  */
 
-#ifndef LIBHARMONY_H
-#define LIBHARMONY_H
+#ifndef LIBCONCORD_H
+#define LIBCONCORD_H
 
 #ifdef WIN32
 typedef unsigned char uint8_t;
@@ -38,22 +38,22 @@ typedef unsigned __int64 uint64_t;
 #include <stdint.h>
 #endif
 
-#define LH_ERROR 1
-#define LH_ERROR_INVALID_DATA_FROM_REMOTE 2
-#define LH_ERROR_READ 3
-#define LH_ERROR_WRITE 4
-#define LH_ERROR_INVALIDATE 5
-#define LH_ERROR_ERASE 6
-#define LH_ERROR_VERIFY 7
-#define LH_ERROR_POST 8
-#define LH_ERROR_GET_TIME 9
-#define LH_ERROR_SET_TIME 10
-#define LH_ERROR_CONNECT 11
-#define LH_ERROR_OS 12
-#define LH_ERROR_OS_NET 13
-#define LH_ERROR_OS_FILE 14
-#define LH_ERROR_UNSUPP 15
-#define LH_ERROR_INVALID_CONFIG 16
+#define LC_ERROR 1
+#define LC_ERROR_INVALID_DATA_FROM_REMOTE 2
+#define LC_ERROR_READ 3
+#define LC_ERROR_WRITE 4
+#define LC_ERROR_INVALIDATE 5
+#define LC_ERROR_ERASE 6
+#define LC_ERROR_VERIFY 7
+#define LC_ERROR_POST 8
+#define LC_ERROR_GET_TIME 9
+#define LC_ERROR_SET_TIME 10
+#define LC_ERROR_CONNECT 11
+#define LC_ERROR_OS 12
+#define LC_ERROR_OS_NET 13
+#define LC_ERROR_OS_FILE 14
+#define LC_ERROR_UNSUPP 15
+#define LC_ERROR_INVALID_CONFIG 16
 
 /*
  * Actual C clients are not fully supported yet, but that's the goal...
@@ -75,7 +75,7 @@ extern "C" {
  *   void *arg      - opaque object you can pass to functions to have them
  *                    pass back to your callback.
  */
-typedef void (*lh_callback)(uint32_t, uint32_t, uint32_t, void*);
+typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, void*);
 
 /*
  * REMOTE INFORMATION ACCESSORS
@@ -134,7 +134,7 @@ const char *get_time_timezone();
  * Translate a return value into an actual error message. Pass in the int
  * you received, get back a string.
  */
-const char *lh_strerror(int err);
+const char *lc_strerror(int err);
 /*
  * Get the value from the BINARYSIZE tag in the XML.
  */
@@ -164,18 +164,18 @@ int delete_blob(uint8_t *ptr);
  * Initialize USB (and WinSock if necessary) and find the remote
  * if possible.
  */
-int init_harmony();
+int init_concord();
 /*
  * Release the USB device, and tear down anything else necessary.
  */
-int deinit_harmony();
+int deinit_concord();
 /*
  * This is another initialization function. Generally speaking you always
  * want to call this before you do anything. It will query the remote about
  * it's data and fill in internal data structures with that information. This
  * counts as a successful "connectivity test"
  */
-int get_identity(lh_callback cb, void *cb_arg);
+int get_identity(lc_callback cb, void *cb_arg);
 /*
  * Reboot the remote.
  */
@@ -232,14 +232,14 @@ int invalidate_flash();
  * reclaim this memory.
  */
 int read_config_from_remote(uint8_t **out, uint32_t *size,
-	lh_callback cb, void *cb_arg);
+	lc_callback cb, void *cb_arg);
 /*
  * Given a config block in the byte array *in that is size big, write
  * it to the remote. This should be *just* the binary blog (see
  * find_binary_start()). CB info above.
  */
 int write_config_to_remote(uint8_t *in, uint32_t size,
-	lh_callback cb, void *cb_arg);
+	lc_callback cb, void *cb_arg);
 /*
  * Read the config from a file. If it's a standard XML file from the
  * harmonyremote.com website, the XML will be included. If it's just
@@ -267,13 +267,13 @@ int verify_xml_config(uint8_t *in, uint32_t size);
  * After doing a write_config_to_remote(), this should be called to verify
  * that config. The data will be compared to what's in *in.
  */
-int verify_remote_config(uint8_t *in, uint32_t size, lh_callback cb,
+int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
 	void *cb_arg);
 /*
  * Flash can be changed to 0, but not back to 1, so you must erase the
  * flash (to 1) in order to write the flash.
  */
-int erase_config(uint32_t size, lh_callback cb, void *cb_arg);
+int erase_config(uint32_t size, lc_callback cb, void *cb_arg);
 
 /*
  * SAFEMODE FIRMWARE INTERACTIONS
@@ -282,7 +282,7 @@ int erase_config(uint32_t size, lh_callback cb, void *cb_arg);
  * Make the safemode area of the flash all 1's so you can write
  * to it.
  */
-int erase_safemode(lh_callback cb, void *cb_arg);
+int erase_safemode(lc_callback cb, void *cb_arg);
 /*
  * Same as read_config_from_remote(), but reading the safemode firmware
  * instead.
@@ -291,7 +291,7 @@ int erase_safemode(lh_callback cb, void *cb_arg);
  * allocate a char array and point your pointer at it. Use delete[] to
  * reclaim this memory.
  */
-int read_safemode_from_remote(uint8_t **out, lh_callback cb,
+int read_safemode_from_remote(uint8_t **out, lc_callback cb,
 	void *cb_arg);
 /*
  * NOTE: You CAN NOT WRITE SAFEMODE FIRMWARE OVER USB!
@@ -312,7 +312,7 @@ int read_safemode_from_file(char *file_name, uint8_t **out);
  */
 /*
  * We don't yet support live firmware upgrades on all remotes,
- * this will return 0 for yes and LH_ERROR_UNSUPP otherwise.
+ * this will return 0 for yes and LC_ERROR_UNSUPP otherwise.
  */
 int is_fw_update_supported();
 /*
@@ -329,7 +329,7 @@ int finish_firmware();
  * Make the firmware area of the flash all 1's so you can write
  * to it.
  */
-int erase_firmware(int direct, lh_callback cb, void *cb_arg);
+int erase_firmware(int direct, lc_callback cb, void *cb_arg);
 /*
  * Same as read_config_from_remote(), but reading the firmware instead.
  *
@@ -337,9 +337,9 @@ int erase_firmware(int direct, lh_callback cb, void *cb_arg);
  * allocate a char array and point your pointer at it. Use delete[] to
  * reclaim this memory.
  */
-int read_firmware_from_remote(uint8_t **out, lh_callback cb,
+int read_firmware_from_remote(uint8_t **out, lc_callback cb,
 	void *cb_arg);
-int write_firmware_to_remote(uint8_t *in, int direct, lh_callback cb,
+int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 	void *cb_arg);
 /*
  * Same as write_config_to_remote(), but with the firmware instead. Note
@@ -364,5 +364,5 @@ int learn_ir_commands(char *file_name, int post);
 }
 #endif
 
-#endif // LIBHARMONY_H
+#endif // LIBCONCORD_H
 

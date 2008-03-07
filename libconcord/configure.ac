@@ -1,4 +1,4 @@
-AC_INIT([harmony], [0.12+PHIL], [bug-automake@gnu.org])
+AC_INIT([libconcord], [0.13+PHIL], [bug-automake@gnu.org])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_LIBTOOL
 AC_PROG_CXX

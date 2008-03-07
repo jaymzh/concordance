@@ -79,7 +79,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 	hostent* addr = gethostbyname(server.c_str());
 	if (!addr) {
 		report_net_error("gethostbyname()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 	// Fill in the sockaddr structure
@@ -95,7 +95,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 	// Connect
 	if ((err = connect(sock,(struct sockaddr*)&sa, sizeof(sa)))) {
 		report_net_error("connect()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 #ifdef _DEBUG
@@ -105,7 +105,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 	err = send(sock, s1, strlen(s1), 0);
 	if (err == SOCKET_ERROR) {
 		report_net_error("send()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 #ifdef _DEBUG
@@ -115,7 +115,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 	err = send(sock, s2, strlen(s2), 0);
 	if (err == SOCKET_ERROR) {
 		report_net_error("send()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 #ifdef _DEBUG
@@ -127,7 +127,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 
 	if (err == SOCKET_ERROR) {
 		report_net_error("recv()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 	// Show the received received data
@@ -139,7 +139,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 	// Close the socket
 	if ((err = closesocket(sock))) {
 		report_net_error("closesocket()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 #if _DEBUG

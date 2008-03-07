@@ -18,8 +18,7 @@
  */
 
 /*
- * This file is entry points into what will hopefully become
- * libharmony.
+ * This file is entry points into libconcord.
  *   - phil    Sat Aug 18 22:49:48 PDT 2007
  */
 
@@ -240,72 +239,72 @@ const char *get_time_timezone()
  * HELPER FUNCTIONS
  */
 
-const char *lh_strerror(int err)
+const char *lc_strerror(int err)
 {
 	switch (err) {
-		case LH_ERROR:
+		case LC_ERROR:
 			return "Unknown error";
 			break;
 
-		case LH_ERROR_INVALID_DATA_FROM_REMOTE:
+		case LC_ERROR_INVALID_DATA_FROM_REMOTE:
 			return "Invalid data received from remote";
 			break;
 
-		case LH_ERROR_READ:
+		case LC_ERROR_READ:
 			return "Error while reading from the remote";
 			break;
 
-		case LH_ERROR_WRITE:
+		case LC_ERROR_WRITE:
 			return "Error while writing to the remote";
 			break;
 
-		case LH_ERROR_INVALIDATE:
+		case LC_ERROR_INVALIDATE:
 			return 
 			"Error while asking the remote to invalidate it's flash";
 			break;
 
-		case LH_ERROR_ERASE:
+		case LC_ERROR_ERASE:
 			return "Error while erasing flash";
 			break;
 
-		case LH_ERROR_VERIFY:
+		case LC_ERROR_VERIFY:
 			return "Error while verifying flash";
 			break;
 
-		case LH_ERROR_POST:
+		case LC_ERROR_POST:
 			return "Error sending post data to Harmony website";
 			break;
 
-		case LH_ERROR_GET_TIME:
+		case LC_ERROR_GET_TIME:
 			return "Error getting time from remote";
 			break;
 
-		case LH_ERROR_SET_TIME:
+		case LC_ERROR_SET_TIME:
 			return "Error setting time on the remote";
 			break;
 
-		case LH_ERROR_CONNECT:
+		case LC_ERROR_CONNECT:
 			return "Error connecting or finding the remote";
 			break;
 
-		case LH_ERROR_OS:
+		case LC_ERROR_OS:
 			return "OS-level error";
 			break;
 
-		case LH_ERROR_OS_FILE:
+		case LC_ERROR_OS_FILE:
 			return "OS-level error related to file operations";
 			break;
 
-		case LH_ERROR_OS_NET:
+		case LC_ERROR_OS_NET:
 			return "OS-level error related to network operations";
 			break;
 
-		case LH_ERROR_UNSUPP:
+		case LC_ERROR_UNSUPP:
 			return 
 			"Model or configuration or operation unsupported";
 			break;
 
-		case LH_ERROR_INVALID_CONFIG:
+		case LC_ERROR_INVALID_CONFIG:
 			return 
 			"The configuration present on the remote is invalid";
 			break;
@@ -319,7 +318,7 @@ int find_binary_size(uint8_t *ptr, uint32_t *size)
 	string size_s;
 	int err = GetTag("BINARYDATASIZE", ptr, &size_s);
 	if (err == -1)
-		return LH_ERROR;
+		return LC_ERROR;
 
 	*size = (uint32_t)atoi(size_s.c_str());
 	return 0;
@@ -330,7 +329,7 @@ int find_binary_start(uint8_t **ptr, uint32_t *size)
 	uint8_t *optr = *ptr;
 	int err = GetTag("/INFORMATION", *ptr);
 	if (err == -1)
-		return LH_ERROR;
+		return LC_ERROR;
 
 	*ptr += 2;
 	*size -= ((*ptr) - optr);
@@ -348,7 +347,7 @@ int delete_blob(uint8_t *ptr)
 /*
  * GENERAL REMOTE STUFF
  */
-int init_harmony()
+int init_concord()
 {
 	int err;
 	rmt = NULL;
@@ -361,12 +360,12 @@ int init_harmony()
 #ifdef _DEBUG
 		printf("WSAStartup() Error: %i\n", error);
 #endif
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 #endif
 
 	if (InitUSB()) {
-		return LH_ERROR_OS;
+		return LC_ERROR_OS;
 	}
 
 	if ((err = FindRemote(hid_info))) {
@@ -374,12 +373,12 @@ int init_harmony()
 
 #ifdef WIN32
 		if ((err = FindUsbLanRemote())) {
-			return LH_ERROR_CONNECT;
+			return LC_ERROR_CONNECT;
 		}
 
 		rmt = new CRemoteZ_TCP;
 #else
-		return LH_ERROR_CONNECT;
+		return LC_ERROR_CONNECT;
 #endif
 	}
 
@@ -389,7 +388,7 @@ int init_harmony()
 	 * but this'll catch that.
 	 */
 	if (hid_info.pid == 0xC11F) {
-		return LH_ERROR_INVALID_DATA_FROM_REMOTE;
+		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
 	}
 
 	if (!rmt) {
@@ -405,30 +404,30 @@ int init_harmony()
 	return 0;
 }
 
-int deinit_harmony()
+int deinit_concord()
 {
 	ShutdownUSB();
 	delete rmt;
 	return 0;
 }
 
-int get_identity(lh_callback cb, void *cb_arg)
+int get_identity(lc_callback cb, void *cb_arg)
 {
 	if ((rmt->GetIdentity(ri, hid_info, cb, cb_arg))) {
-		return LH_ERROR;
+		return LC_ERROR;
 	}
 
 	/* Do some sanity checking */
 	if (ri.flash->size == 0) {
-		return LH_ERROR_INVALID_CONFIG;
+		return LC_ERROR_INVALID_CONFIG;
 	}
 
 	if (ri.arch == NULL || ri.arch->cookie==0) {
-		return LH_ERROR_INVALID_CONFIG;
+		return LC_ERROR_INVALID_CONFIG;
 	}
 
 	if (!ri.valid_config) {
-		return LH_ERROR_INVALID_CONFIG;
+		return LC_ERROR_INVALID_CONFIG;
 	}
 
 	return 0;
@@ -445,7 +444,7 @@ int invalidate_flash()
 	int err = 0;
 
 	if ((err = rmt->InvalidateFlash()))
-		return LH_ERROR_INVALIDATE;
+		return LC_ERROR_INVALIDATE;
 
 	return 0;
 }
@@ -470,7 +469,7 @@ int post_connect_test_success(char *file_name)
 	 */
 	binaryinfile file;
 	if (file.open(file_name) != 0) {
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	const uint32_t size = file.getlength();
@@ -482,7 +481,7 @@ int post_connect_test_success(char *file_name)
 	Post(buf,"POSTOPTIONS", ri);
 
 	if (file.close() != 0) {
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	return 0;
@@ -492,7 +491,7 @@ int get_time()
 {
 	int err;
 	if ((err = rmt->GetTime(ri, rtime)))
-		return LH_ERROR_GET_TIME;
+		return LC_ERROR_GET_TIME;
 
 	return 0;
 }
@@ -524,12 +523,12 @@ int set_time()
  * CONFIG-RELATED
  */
 int read_config_from_remote(uint8_t **out, uint32_t *size,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
 	if (!ri.valid_config) {
-		return LH_ERROR_INVALID_CONFIG;
+		return LC_ERROR_INVALID_CONFIG;
 	}
 
 	if (!cb_arg) {
@@ -541,14 +540,14 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
 
 	if ((err = rmt->ReadFlash(ri.arch->config_base, *size,
 			*out, ri.protocol, false, cb, cb_arg))) {
-		return LH_ERROR_READ;
+		return LC_ERROR_READ;
 	}
 
 	return 0;
 }
 
 int write_config_to_remote(uint8_t *in, uint32_t size,
-	lh_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
@@ -558,7 +557,7 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
 
 	if ((err = rmt->WriteFlash(ri.arch->config_base, size, in,
 			ri.protocol, cb, cb_arg))) {
-		return LH_ERROR_WRITE;
+		return LC_ERROR_WRITE;
 	}
 
 	return 0;
@@ -572,7 +571,7 @@ int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
 #ifdef _DEBUG
 		printf("Failed to open %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	*size = file.getlength();
@@ -583,7 +582,7 @@ int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
 #ifdef _DEBUG
 		printf("Failed to close %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	/*
@@ -604,7 +603,7 @@ int write_config_to_file(uint8_t *in, char *file_name, uint32_t size,
 #ifdef _DEBUG
 		printf("Failed to open %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	if (!binary) {
@@ -639,7 +638,7 @@ int write_config_to_file(uint8_t *in, char *file_name, uint32_t size,
 #ifdef _DEBUG
 		printf("Failed to close %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	return 0;
@@ -672,7 +671,7 @@ int verify_xml_config(uint8_t *data, uint32_t size)
 #ifdef _DEBUG
 		printf("Data size mismatch %i %i\n", size, data_size);
 #endif
-		return LH_ERROR;
+		return LC_ERROR;
 	}
 
 	// Calculate checksum
@@ -686,32 +685,32 @@ int verify_xml_config(uint8_t *data, uint32_t size)
 #ifdef _DEBUG
 		printf("Bad checksum %02X %02X\n",chk, checksum);
 #endif
-		return LH_ERROR;
+		return LC_ERROR;
 	}
 
 	return 0;
 }
 
-int verify_remote_config(uint8_t *in, uint32_t size, lh_callback cb,
+int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
 	void *cb_arg)
 {
 	int err = 0;
 
 	if ((err = rmt->ReadFlash(ri.arch->config_base, size, in,
 			ri.protocol, true, cb, cb_arg))) {
-		return LH_ERROR_VERIFY;
+		return LC_ERROR_VERIFY;
 	}
 
 	return 0;
 }
 
-int erase_config(uint32_t size, lh_callback cb, void *cb_arg)
+int erase_config(uint32_t size, lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
 	if ((err = rmt->EraseFlash(ri.arch->config_base, size, ri, cb,
 			cb_arg))) {
-		return LH_ERROR_ERASE;
+		return LC_ERROR_ERASE;
 	}
 
 	return 0;
@@ -731,23 +730,23 @@ int _is_fw_update_supported()
 	return 1;
 }
 
-int _write_fw_to_remote(uint8_t *in, uint32_t addr, lh_callback cb,
+int _write_fw_to_remote(uint8_t *in, uint32_t addr, lc_callback cb,
 	void *cb_arg)
 {
 	int err = 0;
 
 	if (!_is_fw_update_supported()) {
-		return LH_ERROR_UNSUPP;
+		return LC_ERROR_UNSUPP;
 	}
 
 	if ((err = rmt->WriteFlash(addr, FIRMWARE_SIZE, in,
 			ri.protocol, cb, cb_arg))) {
-		return LH_ERROR_WRITE;
+		return LC_ERROR_WRITE;
 	}
 	return 0;
 }
 
-int _read_fw_from_remote(uint8_t *&out, uint32_t addr, lh_callback cb,
+int _read_fw_from_remote(uint8_t *&out, uint32_t addr, lc_callback cb,
 	void *cb_arg)
 {
 	out = new uint8_t[FIRMWARE_SIZE];
@@ -759,7 +758,7 @@ int _read_fw_from_remote(uint8_t *&out, uint32_t addr, lh_callback cb,
 
 	if ((err = rmt->ReadFlash(addr, FIRMWARE_SIZE, out,
 				ri.protocol, false, cb, cb_arg))) {
-		return LH_ERROR_READ;
+		return LC_ERROR_READ;
 	}
 
 	return 0;
@@ -768,19 +767,19 @@ int _read_fw_from_remote(uint8_t *&out, uint32_t addr, lh_callback cb,
 /*
  * SAFEMODE FIRMWARE RELATED
  */
-int erase_safemode(lh_callback cb, void *cb_arg)
+int erase_safemode(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
 	if ((err = rmt->EraseFlash(ri.arch->flash_base, FIRMWARE_SIZE, ri,
 			cb, cb_arg))) {
-		return LH_ERROR_ERASE;
+		return LC_ERROR_ERASE;
 	}
 
 	return 0;
 }
 
-int read_safemode_from_remote(uint8_t **out, lh_callback cb,
+int read_safemode_from_remote(uint8_t **out, lc_callback cb,
 	void *cb_arg)
 {
 	return _read_fw_from_remote(*out, ri.arch->flash_base, cb, cb_arg);
@@ -791,13 +790,13 @@ int write_safemode_to_file(uint8_t *in, char *file_name)
 	binaryoutfile of;
 
 	if (of.open(file_name) != 0) {
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	of.write(in, FIRMWARE_SIZE);
 
 	if (of.close() != 0) {
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	return 0;
@@ -811,7 +810,7 @@ int read_safemode_from_file(char *file_name, uint8_t **out)
 #ifdef _DEBUG
 		printf("Failed to open %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	*out = new uint8_t[FIRMWARE_SIZE];
@@ -821,7 +820,7 @@ int read_safemode_from_file(char *file_name, uint8_t **out)
 #ifdef _DEBUG
 		printf("Failed to close %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	return 0;
@@ -839,7 +838,7 @@ int is_fw_update_supported()
 	if (_is_fw_update_supported()) {
 		return 0;
 	} else {
-		return LH_ERROR_UNSUPP;
+		return LC_ERROR_UNSUPP;
 	}
 }
 
@@ -849,11 +848,11 @@ int prep_firmware()
 
 	uint8_t data[1] = { 0 };
 	if ((err = rmt->WriteRam(0, 1, data)))
-		return LH_ERROR_WRITE;
+		return LC_ERROR_WRITE;
 	if ((err = rmt->ReadRam(0, 1, data)))
-		return LH_ERROR_WRITE;
+		return LC_ERROR_WRITE;
 	if (data[0] != 0)
-		return LH_ERROR_VERIFY;
+		return LC_ERROR_VERIFY;
 
 	return 0;
 }
@@ -864,21 +863,21 @@ int finish_firmware()
 
 	uint8_t data[1] = { 2 };
 	if ((err = rmt->WriteRam(0, 1, data)))
-		return LH_ERROR_WRITE;
+		return LC_ERROR_WRITE;
 	if ((err = rmt->ReadRam(0, 1, data)))
-		return LH_ERROR_WRITE;
+		return LC_ERROR_WRITE;
 	if (data[0] != 2)
-		return LH_ERROR_VERIFY;
+		return LC_ERROR_VERIFY;
 
 	return 0;
 }
 
-int erase_firmware(int direct, lh_callback cb, void *cb_arg)
+int erase_firmware(int direct, lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
 	if (!_is_fw_update_supported()) {
-		return LH_ERROR_UNSUPP;
+		return LC_ERROR_UNSUPP;
 	}
 
 	uint32_t addr = ri.arch->firmware_update_base;
@@ -890,19 +889,19 @@ int erase_firmware(int direct, lh_callback cb, void *cb_arg)
 	}
 
 	if ((err = rmt->EraseFlash(addr, FIRMWARE_SIZE, ri, cb, cb_arg))) {
-		return LH_ERROR_ERASE;
+		return LC_ERROR_ERASE;
 	}
 
 	return 0;
 }
 
-int read_firmware_from_remote(uint8_t **out, lh_callback cb,
+int read_firmware_from_remote(uint8_t **out, lc_callback cb,
 	void *cb_arg)
 {
 	return _read_fw_from_remote(*out, ri.arch->firmware_base, cb, cb_arg);
 }
 
-int write_firmware_to_remote(uint8_t *in, int direct, lh_callback cb,
+int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 	void *cb_arg)
 {
 	uint32_t addr = ri.arch->firmware_update_base;
@@ -921,7 +920,7 @@ int write_firmware_to_file(uint8_t *in, char *file_name, int binary)
 {
 	binaryoutfile of;
 	if (of.open(file_name) != 0) {
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	if (binary) {
@@ -963,7 +962,7 @@ int write_firmware_to_file(uint8_t *in, char *file_name, int binary)
 	}
 
 	if (of.close() != 0) {
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	return 0;
@@ -993,7 +992,7 @@ int read_firmware_from_file(char *file_name, uint8_t **out, int binary)
 #ifdef _DEBUG
 		printf("Failed to open %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	uint32_t size = 0;
@@ -1018,7 +1017,7 @@ int read_firmware_from_file(char *file_name, uint8_t **out, int binary)
 #ifdef _DEBUG
 		printf("Failed to close %s\n", file_name);
 #endif
-		return LH_ERROR_OS_FILE;
+		return LC_ERROR_OS_FILE;
 	}
 
 	return 0;
@@ -1032,13 +1031,13 @@ int learn_ir_commands(char *file_name, int post)
 	if (file_name) {
 		binaryinfile file;
 		if (file.open(file_name)) {
-			return LH_ERROR_OS_FILE;
+			return LC_ERROR_OS_FILE;
 		}
 		uint32_t size=file.getlength();
 		uint8_t * const x=new uint8_t[size+1];
 		file.read(x,size);
 		if (file.close() != 0) {
-			return LH_ERROR_OS_FILE;
+			return LC_ERROR_OS_FILE;
 		}
 		// Prevent GetTag() from going off the deep end
 		x[size]=0;

@@ -74,7 +74,7 @@ int CRemote::Reset(uint8_t kind)
  * Then populate our struct with all the relevant info.
  */
 int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-	lh_callback cb, void *arg)
+	lc_callback cb, void *arg)
 {
 	int err = 0;
 	uint32_t cb_count = 0;
@@ -102,7 +102,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 #ifdef _DEBUG
 		printf("Bogus ident response: %02X\n", rsp[1]);
 #endif
-		return LH_ERROR_INVALID_DATA_FROM_REMOTE;
+		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
 	}
 
 	ri.fw_ver_major = rsp[2] >> 4;
@@ -122,7 +122,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	uint8_t rd[1024];
 	if ((err=ReadFlash(ri.arch->config_base, 1024, rd, ri.protocol,
 								false))) {
-		return LH_ERROR_READ;
+		return LC_ERROR_READ;
 	}
 	if (cb) {
 		cb(cb_count++, 1, 2, arg);
@@ -159,7 +159,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 			COMMAND_MISC_EEPROM, rsp)
 		// All newer models store it in Flash
 		: ReadFlash(FLASH_SERIAL_ADDR, 48, rsp, ri.protocol))) {
-		return LH_ERROR_READ;
+		return LC_ERROR_READ;
 	}
 
 	if (cb) {
@@ -172,7 +172,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 }
 
 int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
-	unsigned int protocol, bool verify, lh_callback cb,
+	unsigned int protocol, bool verify, lc_callback cb,
 	void *cb_arg)
 {
 
@@ -226,7 +226,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 			if (r == RESPONSE_READ_FLASH_DATA) {
 				if (seq != rsp[2]) {
-					err = LH_ERROR;
+					err = LC_ERROR;
 #ifdef _DEBUG
 					printf("\nInvalid sequence %02X %02x\n",
 						seq, rsp[2]);
@@ -239,7 +239,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 				if (rxlen) {
 					if (verify) {
 						if (memcmp(pr, rsp+3, rxlen)) {
-							err = LH_ERROR_VERIFY;
+							err = LC_ERROR_VERIFY;
 							break;
 						}
 					} else {
@@ -255,7 +255,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 #ifdef _DEBUG
 				printf("\nInvalid response [%02X]\n", rsp[1]);
 #endif
-				err = LH_ERROR;
+				err = LC_ERROR;
 			}
 		} while (err == 0);
 
@@ -290,7 +290,7 @@ int CRemote::InvalidateFlash(void)
 
 
 int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
-	lh_callback cb, void *arg)
+	lc_callback cb, void *arg)
 {
 	const unsigned int *sectors = ri.flash->sectors;
 	const unsigned int flash_base = ri.arch->flash_base;
@@ -358,7 +358,7 @@ int CRemote::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 }
 
 int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-	unsigned int protocol, lh_callback cb, void *arg)
+	unsigned int protocol, lc_callback cb, void *arg)
 {
 
 	uint32_t cb_count = 0;

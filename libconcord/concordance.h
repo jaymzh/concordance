@@ -16,8 +16,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef HARMONY_H
-#define HARMONY_H
+#ifndef CONCORDANCE_H
+#define CONCORDANCE_H
 
 #ifdef WIN32
 #include <windows.h>
@@ -41,4 +41,4 @@ struct options_t {
 
 void report_net_error(const char *msg);
 
-#endif // ifndef HARMONY_H
+#endif // ifndef CONCORDANCE_H

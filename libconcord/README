@@ -17,30 +17,30 @@ Here is how you use this software:
 
 0. I got a file from the website, do something useful with it.
 
-  $ sudo harmony <filename>
+  $ sudo concordance <filename>
 
-This will attempt to figure out what to do, and do it. Note that harmony uses
-the *filename* to figure out what to do with it, so don't rename it. This
+This will attempt to figure out what to do, and do it. Note that concordance
+uses the *filename* to figure out what to do with it, so don't rename it. This
 option is designed for associating the .EZHex extension in your browser with
-the harmony software. Of course, this requires your desktop environment to
-support someway of getting harmony root access such as gksu or similar, but
+the concordance software. Of course, this requires your desktop environment to
+support someway of getting concordance root access such as gksu or similar, but
 should allow the same seemless process the Logitech software does. If you
-would prefer to rename it, tell harmony what you need done using one of it's
+would prefer to rename it, tell concordance what you need done using one of it's
 many options...
 
 1. Backup the config
 
-  $ sudo harmony --dump-config=/tmp/config.EZHex
+  $ sudo concordance --dump-config=/tmp/config.EZHex
 
 This will read the config off of your remote and write it to /tmp/config.EZHex.
 It's a good tool for development as well as backing up your config. This can
 however be created from the members.harmonyremote.com website. The equals
 is needed if you pass in a filename since the filename is optional. If
-you don't specify, harmony will use 'config.EZHex' in the current directory.
+you don't specify, concordance will use 'config.EZHex' in the current directory.
 
 2. Connectivity test
 
-  $ sudo harmony --connectivity-test Connectivity.EZHex
+  $ sudo concordance --connectivity-test Connectivity.EZHex
 
 The site will always do a connectivity test before trying to send a config,
 so be prepared to do this before next step.
@@ -50,11 +50,11 @@ so be prepared to do this before next step.
 Once you have downloaded a file from members.harmonyremote.com website to
 program your remote with, you can use it with:
 
-  $ sudo harmony --write-config Update.EZHex
+  $ sudo concordance --write-config Update.EZHex
 
 4. Backup the firmware
 
-  $ sudo harmony --dump-firmware
+  $ sudo concordance --dump-firmware
 
 This will read the firmware off of your remote and write it to fimrware.EZHex.
 See "1. Backup the config" for more information.
@@ -63,7 +63,7 @@ See "1. Backup the config" for more information.
 
 NOTE: THIS IS NOT YET SUPPORTED. However it would work like this:
 
-  $ sudo harmony --write-firmware Firmware.EZHex
+  $ sudo concordance --write-firmware Firmware.EZHex
 
 
 There are other options - check out the --help one!

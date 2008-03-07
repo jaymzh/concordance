@@ -52,7 +52,7 @@ int ShutdownUsbLan(void)
 	if (sock != SOCKET_ERROR) {
 		if ((err = closesocket(sock))) {
 			report_net_error("closesocket()");
-			return LH_ERROR_OS_NET;
+			return LC_ERROR_OS_NET;
 		}
 	}
 
@@ -67,7 +67,7 @@ int FindUsbLanRemote(void)
 
 	if (!addr) {
 		report_net_error("gethostbyname()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 	sockaddr_in sa;
@@ -80,7 +80,7 @@ int FindUsbLanRemote(void)
 
 	if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
 		report_net_error("connect()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 #ifdef _DEBUG
@@ -96,7 +96,7 @@ int UsbLan_Write(unsigned int len, uint8_t *data)
 
 	if (err == SOCKET_ERROR) {
 		report_net_error("send()");
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	}
 
 #ifdef _DEBUG
@@ -114,7 +114,7 @@ int UsbLan_Read(unsigned int &len, uint8_t *data)
 	if (err == SOCKET_ERROR) {
 		report_net_error("recv()");
 		len = 0;
-		return LH_ERROR_OS_NET;
+		return LC_ERROR_OS_NET;
 	} 
 
 	len = static_cast<unsigned int>(err);

@@ -33,27 +33,23 @@ As root, simply run "make install"
 
 You need to install the kext. To do this:
    cd mac
-   sudo cp -R libusbshieldharmony.kext /System/Library/Extensions
-   sudo chown -R root:wheel /System/Library/Extensions/libusbshieldharmony.kext
+   sudo cp -R libusbshieldlibconcord.kext /System/Library/Extensions
+   sudo chown -R root:wheel /System/Library/Extensions/libusbshieldlibconcord.kext
 
 You will now need to reboot for this to take effect (kextload'ing the extension
 does not appear to work).
 
 
 ==== EXTRA INSTALL NOTES ====
-By default this software installs in /usr/bin. You can override the PREFIX
-(/usr) by passing a PREFIX variable to make:
+By default this software installs in /usr/local/lib. You can override the PREFIX
+(/usr/local) by passing a PREFIX variable to make:
 
-  make PREFIX=/usr/local
-
-You can override the bin directory by passing a BIN variable to make:
-
-  make BIN=sbin
+  make PREFIX=/usr
 
 
 ==== RUNNING THE SOFTWARE IN MAC ====
 
 Unlike other libusb platforms, you do not have to have root access to use
-libusb - you can run harmony as an ordinary user.
+libusb - you can run concordance as an ordinary user.
 
 
