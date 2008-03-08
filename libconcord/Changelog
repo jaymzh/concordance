@@ -1,7 +1,7 @@
 CVS
 Released:
 phil@ipom.com
-- split harmony into library and CLI
+- split into library and CLI
 - formalize API
 - document API
 - convert to autoconf/automake/libtool
@@ -9,6 +9,7 @@ phil@ipom.com
 - cleanup output throughout libharmony code
 - compilation fixes for Mac
 - kext for Mac
+- rename from harmony to concord
 
 s-t-harmony@wwwdotorg.org:
 - remove usage of ** where * is sufficient

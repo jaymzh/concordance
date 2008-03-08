@@ -7,7 +7,7 @@
 	<key>CFBundleGetInfoString</key>
 	<string>Libusb USB device Shield</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.libusb.USB_Shield.harmony</string>
+	<string>com.libusb.USB_Shield.libconcord</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

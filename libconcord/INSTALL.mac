@@ -13,7 +13,7 @@ be:
 If you get errors about -System while building libusb, upgrade your version of
 Xcode.
 
-1. BUILD THE SOFTARE
+1. BUILD THE LIBRARY
 
    As a normal user...
      A. ***IF**** You are building from CVS, run "autoreconf --install"
@@ -41,7 +41,7 @@ does not appear to work).
 
 
 ==== EXTRA INSTALL NOTES ====
-By default this software installs in /usr/local/lib. You can override the PREFIX
+By default this library installs in /usr/local/lib. You can override the PREFIX
 (/usr/local) by passing a PREFIX variable to make:
 
   make PREFIX=/usr
@@ -49,7 +49,8 @@ By default this software installs in /usr/local/lib. You can override the PREFIX
 
 ==== RUNNING THE SOFTWARE IN MAC ====
 
-Unlike other libusb platforms, you do not have to have root access to use
-libusb - you can run concordance as an ordinary user.
+Unlike other libusb platforms, libusb on Mac does not require root access. As
+such, software utilizing libusb (and hence software utilizing libconcord) do
+not need to have root access to use libusb.
 
 

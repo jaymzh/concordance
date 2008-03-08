@@ -191,7 +191,7 @@ int get_time();
  */
 int set_time();
 /*
- * POST to the harmonyremote.com website that the connection test was
+ * POST to the members.harmonyremote.com website that the connection test was
  * successful. A Connectivity.EZHex file must be passed in so that we
  * can get the URL, cookie information, etc.
  */
@@ -205,7 +205,7 @@ int post_connect_test_success(char *file_name);
 int post_preconfig(uint8_t *data);
 /*
  * After writing the config to the remote, this should be called to tell
- * the harmonyremote.com website that it was successful.
+ * the members.harmonyremote.com website that it was successful.
  */
 int post_postconfig(uint8_t *data);
 /*
@@ -242,7 +242,7 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
 	lc_callback cb, void *cb_arg);
 /*
  * Read the config from a file. If it's a standard XML file from the
- * harmonyremote.com website, the XML will be included. If it's just
+ * membersharmonyremote.com website, the XML will be included. If it's just
  * the binary blob, that's fine too. size will be returned.
  *
  * NOTE: The pointer *out should not point to anything useful. We will
@@ -345,7 +345,7 @@ int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
  * Same as write_config_to_remote(), but with the firmware instead. Note
  * that unless binary is specified, the firmware is broken into chunks
  * and written in ASCII-encoded HEX in XML <DATA> blocks, the way
- * the harmonyremote.com website delivers it.
+ * the members.harmonyremote.com website delivers it.
  */
 int write_firmware_to_file(uint8_t *in, char *file_name, int binary);
 /*

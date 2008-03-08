@@ -1,4 +1,4 @@
-LIBRARY      "libharmony"
+LIBRARY      "libconcord"
 
 EXPORTS
 
@@ -51,8 +51,8 @@ find_binary_start
 
 ; GENERAL REMOTE INTERACTIONS
 ;
-init_harmony
-deinit_harmony
+init_libconcord
+deinit_libconcord
 get_identity
 reset_remote
 get_time

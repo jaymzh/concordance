@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "harmony", "harmony.vcproj", "{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "concordance", "concordance.vcproj", "{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libharmony_libusb", "libharmony_libusb.vcproj", "{7BEA7F2F-6122-4C68-BF51-8BC194C0606A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libconcord_libusb", "libconcord_libusb.vcproj", "{7BEA7F2F-6122-4C68-BF51-8BC194C0606A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libharmony_winhid", "libharmony_winhid.vcproj", "{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libconcord_winhid", "libconcord_winhid.vcproj", "{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snoop", "snoop.vcproj", "{48704569-82CE-439E-BE83-D681DEAAB05C}"
 EndProject

@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "harmony"=.\harmony.dsp - Package Owner=<4>
+Project: "concordance"=.\concordance.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libharmony_libusb"=.\libharmony_libusb.dsp - Package Owner=<4>
+Project: "libconcord_libusb"=.\libconcord_libusb.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -27,7 +27,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libharmony_winhid"=.\libharmony_winhid.dsp - Package Owner=<4>
+Project: "libconcord_winhid"=.\libconcord_winhid.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

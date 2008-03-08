@@ -1,0 +1,54 @@
+==== BASIC INSTALLATION ====
+
+0. INSTALL REQUIRED SOFTWARE
+
+  A. You *MUST* install libusb. This library is in most distributions, so
+     apt-get/yum/up2date/urpmi/etc. it.
+
+     If you're compiling from source, you'll also need the libusb development
+     package - usually libusb-dev or libusb-devel, depending on your
+     distribution.
+
+  B. Install libconcord - also from the concordance project. See the install
+     instructions provided with libconcord.
+
+
+1. BUILD THE SOFTARE
+
+   As a normal user...
+     A. ***IF**** You are building from CVS, run "autoreconf --install"
+     B. Run "./configure"
+     C. Run "make"
+
+Various options, such as '--prefix' are available to the configure script to
+help you choose where software gets installed and how it is built.
+
+2. INSTALL THE SOFTWARE
+
+As root, simply run "make install"
+
+
+==== EXTRA INSTALL NOTES ====
+By default this program installs in /usr/local/bin. You can override the PREFIX
+(/usr/local) by passing a PREFIX variable to make:
+
+  make PREFIX=/usr/
+
+You can override the bin directory by passing a BIN variable to make:
+
+  make BIN=sbin
+
+
+==== RUNNING THE SOFTWARE IN UNIX ====
+
+Because this software relies on libconcord which uses libusb, it does Direct
+IO. That means you must either be root to use it, or you must have the RAWIO
+capability.
+
+In addition, libconcord attempts to unbind any in-kernel drivers that may
+bind to your remote. However, if it can't, you'll need to unbind them manually.
+Check dmesg, if the hid driver attached to your Harmony follow the
+instructions here to unbind it:
+   http://lwn.net/Articles/143397/
+
+

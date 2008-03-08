@@ -36,8 +36,8 @@
 
 static SOCKET sock = SOCKET_ERROR;
 
-const char * const harmony_ip_address = "169.254.1.2";
-const u_short harmony_port            = 3074;
+const char * const remote_ip_address = "169.254.1.2";
+const u_short remote_port            = 3074;
 
 int InitializeUsbLan(void)
 {
@@ -63,7 +63,7 @@ int FindUsbLanRemote(void)
 {
 	int err;
 
-	hostent* addr = gethostbyname(harmony_ip_address);
+	hostent* addr = gethostbyname(remote_ip_address);
 
 	if (!addr) {
 		report_net_error("gethostbyname()");
@@ -73,7 +73,7 @@ int FindUsbLanRemote(void)
 	sockaddr_in sa;
 	memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
 	sa.sin_family = AF_INET;		// TCP/IP
-	sa.sin_port = htons(harmony_port);	// Port 3074
+	sa.sin_port = htons(remote_port);	// Port 3074
 
 	sock = socket(sa.sin_family, SOCK_STREAM, 0);	// TCP
 	//sock = socket(sa.sin_family, SOCK_DGRAM, 0);	// UDP

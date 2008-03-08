@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8,00"
-	Name="harmony"
+	Name="concordance"
 	ProjectGUID="{05A4BCC0-DDA0-43C1-89D4-9AC6D8972A42}"
 	>
 	<Platforms>
@@ -37,7 +37,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\Release/harmony.tlb"
+				TypeLibraryName=".\Release/concordance.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -48,7 +48,7 @@
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\Release/harmony.pch"
+				PrecompiledHeaderFile=".\Release/concordance.pch"
 				AssemblerListingLocation=".\Release/"
 				ObjectFile=".\Release/"
 				ProgramDataBaseFileName=".\Release/"
@@ -68,11 +68,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="./Release/libharmony.lib ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile=".\Release/harmony.exe"
+				AdditionalDependencies="./Release/libconcord.lib ws2_32.lib odbc32.lib odbccp32.lib"
+				OutputFile=".\Release/concordance.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				ProgramDatabaseFile=".\Release/harmony.pdb"
+				ProgramDatabaseFile=".\Release/concordance.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -88,7 +88,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Release/harmony.bsc"
+				OutputFile=".\Release/concordance.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -127,7 +127,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\Debug/harmony.tlb"
+				TypeLibraryName=".\Debug/concordance.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -137,7 +137,7 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\Debug/harmony.pch"
+				PrecompiledHeaderFile=".\Debug/concordance.pch"
 				AssemblerListingLocation=".\Debug/"
 				ObjectFile=".\Debug/"
 				ProgramDataBaseFileName=".\Debug/"
@@ -158,12 +158,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="./Debug/libharmony.lib ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile=".\Debug/harmony.exe"
+				AdditionalDependencies="./Debug/libconcord.lib ws2_32.lib odbc32.lib odbccp32.lib"
+				OutputFile=".\Debug/concordance.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\Debug/harmony.pdb"
+				ProgramDatabaseFile=".\Debug/concordance.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -179,7 +179,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Debug/harmony.bsc"
+				OutputFile=".\Debug/concordance.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -203,7 +203,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\harmony.cpp"
+				RelativePath="..\concordance.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -280,7 +280,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\libharmony.h"
+				RelativePath="..\libconcord.h"
 				>
 			</File>
 		</Filter>

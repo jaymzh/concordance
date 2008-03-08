@@ -1,0 +1,34 @@
+==== BASIC INSTALLATION ====
+
+0. INSTALL REQUIRED SOFTWARE
+
+You need one these Development Platforms:
+
+a) Microsoft Visual C++ 6.0 with Service Pack 6 (SP6)
+b) Micosoft Visual Studio 2005 (8.0)
+c) Micosoft Visual Studio 2008 (9.0) - Express Edition
+
+1. BUILD THE SOFTWARE
+
+Open the Project tree in your Development-System, by (letters here correspond
+to development environment above - pick one):
+
+a) Open the Workspace-File '.\win\concordance.dsw' or
+b) Open the Workspace-File and convert it to the VS2005 format
+(its done automatically by the conversion wizard)
+or
+c) Open the Solution file '.\win\concordance.sln'.
+
+Now you should see five Projects in your Workspace/Solution-Tree
+
+- libconcord_libusb: a static link library using the libusb package (see note 1)
+- libconcord_winhid: a static link library using native win-usb support
+
+- concordance: a cli that utilizes the library
+
+- consnoop: A debugging program for concordance developers
+
+==== NOTES ====
+1) If you want to use this version of the library, you'll also need the libusb
+development package (http://sourceforge.net/projects/libusb-win32/)
+

@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8,00"
-	Name="libharmony_winhid"
+	Name="libconcord_winhid"
 	ProjectGUID="{5CDE9383-55BA-4A2A-B0DD-881D321FF0A0}"
 	>
 	<Platforms>
@@ -41,18 +41,18 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName=".\Release/libharmony_winhid.tlb"
+				TypeLibraryName=".\Release/libconcord_winhid.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_USRDLL;LIBHARMONY_WINHID_EXPORTS;NOCRYPT;WINHID"
+				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_USRDLL;LIBCONCORD_WINHID_EXPORTS;NOCRYPT;WINHID"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\Release/libharmony_winhid.pch"
+				PrecompiledHeaderFile=".\Release/libconcord_winhid.pch"
 				AssemblerListingLocation=".\Release/"
 				ObjectFile=".\Release/"
 				ProgramDataBaseFileName=".\Release/"
@@ -73,12 +73,12 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="Release/libharmony.dll"
+				OutputFile="Release/libconcord.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				ModuleDefinitionFile="..\libharmony.def"
-				ProgramDatabaseFile=".\Release/libharmony.pdb"
-				ImportLibrary=".\Release/libharmony.lib"
+				ModuleDefinitionFile="..\libconcord.def"
+				ProgramDatabaseFile=".\Release/libconcord.pdb"
+				ImportLibrary=".\Release/libconcord.lib"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -93,7 +93,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Release/libharmony_winhid.bsc"
+				OutputFile=".\Release/libconcord_winhid.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -106,8 +106,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="copying libharmony.dll (Release/WinHID version)"
-				CommandLine="copy .\Release\libharmony.lib ..\harmony\Release\libharmony.lib&#x0D;&#x0A;copy .\Release\libharmony.dll ..\harmony\Release\libharmony.dll&#x0D;&#x0A;"
+				Description="copying libconcord.dll (Release/WinHID version)"
+				CommandLine="copy .\Release\libconcord.lib ..\concordance\Release\libconcord.lib&#x0D;&#x0A;copy .\Release\libconcord.dll ..\concordance\Release\libconcord.dll&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -138,17 +138,17 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName=".\Debug/libharmony_winhid.tlb"
+				TypeLibraryName=".\Debug/libconcord_winhid.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_USRDLL;LIBHARMONY_WINHID_EXPORTS;NOCRYPT;WINHID"
+				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_USRDLL;LIBCONCORD_WINHID_EXPORTS;NOCRYPT;WINHID"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\Debug/libharmony_winhid.pch"
+				PrecompiledHeaderFile=".\Debug/libconcord_winhid.pch"
 				AssemblerListingLocation=".\Debug/"
 				ObjectFile=".\Debug/"
 				ProgramDataBaseFileName=".\Debug/"
@@ -170,13 +170,13 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="Debug/libharmony.dll"
+				OutputFile="Debug/libconcord.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
-				ModuleDefinitionFile="..\libharmony.def"
+				ModuleDefinitionFile="..\libconcord.def"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\Debug/libharmony.pdb"
-				ImportLibrary=".\Debug/libharmony.lib"
+				ProgramDatabaseFile=".\Debug/libconcord.pdb"
+				ImportLibrary=".\Debug/libconcord.lib"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -191,7 +191,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\Debug/libharmony_winhid.bsc"
+				OutputFile=".\Debug/libconcord_winhid.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -204,8 +204,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="copying libharmony.dll (Debug/WinHID version)"
-				CommandLine="copy .\Debug\libharmony.lib ..\harmony\Debug\libharmony.lib&#x0D;&#x0A;copy .\Debug\libharmony.dll ..\harmony\Debug\libharmony.dll&#x0D;&#x0A;"
+				Description="copying libconcord.dll (Debug/WinHID version)"
+				CommandLine="copy .\Debug\libconcord.lib ..\concordance\Debug\libconcord.lib&#x0D;&#x0A;copy .\Debug\libconcord.dll ..\concordance\Debug\libconcord.dll&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -237,7 +237,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\libharmony.cpp"
+				RelativePath="..\libconcord.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -384,7 +384,7 @@
 				Name="module definitions"
 				>
 				<File
-					RelativePath="libharmony.def"
+					RelativePath="libconcord.def"
 					>
 				</File>
 			</Filter>
@@ -398,7 +398,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\harmony.h"
+				RelativePath="..\concordance.h"
 				>
 			</File>
 			<File
@@ -406,7 +406,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\libharmony.h"
+				RelativePath="..\libconcord.h"
 				>
 			</File>
 			<File

@@ -19,8 +19,8 @@
 
 #ifdef WINHID
 
-#include "../libharmony.h"
-#include "../harmony.h"
+#include "../libconcord.h"
+#include "../concordance.h"
 
 #define TRACE0
 #define TRACE1
