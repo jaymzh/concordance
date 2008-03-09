@@ -17,6 +17,9 @@ s-t-harmony@wwwdotorg.org:
 - Project files, def file for DLL
 - API/type cleanups
 
+simon@budig.de
+- Fix sector calculation in EraseFlash() (bug#1910326)
+
 0.13
 Released: 02/29/08
 phil@ipom.com
