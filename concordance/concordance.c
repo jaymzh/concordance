@@ -301,20 +301,27 @@ int upload_firmware(char *file_name, struct options_t *options,
 {
 	int err = 0;
 
-	if ((err = is_fw_update_supported()) && !(*options).direct) {
+	if ((err = is_fw_update_supported((*options).direct))) {
+		fprintf(stderr, "Sorry, firmware upgrades are not yet");
+		fprintf(stderr, " on your remote model yet.\n");
 		return err;
 	}
 
-	if ((*options).direct)
+	if ((*options).direct) {
 		direct_warning();
+	} else {
+		if (is_config_safe_after_fw() != 0) {
+			printf("NOTE: A firmware upgrade, will erase your");
+			printf(" remote's config and you will need to update");
+			printf(" it. You may want to make a backup with -c");
+			printf(" or otherwise just use the website.\n");
+			printf("Press <enter> to continue.\n");
+			getchar();
+		}
+	}
 
 	uint8_t *firmware = 0;
 
-	/*
-	 * It may take a second for the device to initialize after the user
-	 * plugs into USB. As such rather than a useless sleep(), we'll
-	 * read in the firmware from the file while we wait.
-	 */
 	if ((err = read_firmware_from_file(file_name, &firmware,
 			(*options).binary))) {
 		delete_blob(firmware);

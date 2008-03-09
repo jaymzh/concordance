@@ -21,7 +21,7 @@
 #include <fstream>
 using namespace std;
 
-#include "../protocol.h"
+#include "../libconcord/protocol.h"
 
 #ifdef WIN32
 typedef unsigned char uint8_t;

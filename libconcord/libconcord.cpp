@@ -719,14 +719,27 @@ int erase_config(uint32_t size, lc_callback cb, void *cb_arg)
 /*
  * Private fuctions that the safemode and firmware functions use.
  */
-int _is_fw_update_supported()
+int _is_fw_update_supported(int direct)
 {
 	/*
-	 * Currently firmware upgrades are only available on architecture 8
+	 * If we don't have a fw_base, then we don't support fw updates
+	 * in anyway (direct or live).
+	 *
+	 * If we're in 'live' mode, then we need to make sure we we have a
+	 * fw_up_base (we know we have a fw_base from previous portion of if),
+	 * to know we're capable of doing it.
+	 *
+	 * IN ADDITION, remotes whose fw_base and fw_up_base are the same
+	 * require extra steps we don't yet support, so don't attempt them,
+	 * in live mode! Hence the last part.
 	 */
-	if (ri.architecture != 8) {
+	if (ri.arch->firmware_base == 0
+	    || (!direct &&
+                (ri.arch->firmware_update_base == 0
+                 || ri.arch->firmware_update_base == ri.arch->firmware_base))) {
 		return 0;
 	}
+
 	return 1;
 }
 
@@ -734,10 +747,6 @@ int _write_fw_to_remote(uint8_t *in, uint32_t addr, lc_callback cb,
 	void *cb_arg)
 {
 	int err = 0;
-
-	if (!_is_fw_update_supported()) {
-		return LC_ERROR_UNSUPP;
-	}
 
 	if ((err = rmt->WriteFlash(addr, FIRMWARE_SIZE, in,
 			ri.protocol, cb, cb_arg))) {
@@ -830,15 +839,29 @@ int read_safemode_from_file(char *file_name, uint8_t **out)
  * FIRMWARE RELATED
  */
 
-int is_fw_update_supported()
+int is_fw_update_supported(int direct)
 {
 	/*
-	 * Currently firmware upgrades are only available on architecture 8
+	 * Currently firmware upgrades are only available certain remotes.
 	 */
-	if (_is_fw_update_supported()) {
+	if (_is_fw_update_supported(direct)) {
 		return 0;
 	} else {
 		return LC_ERROR_UNSUPP;
+	}
+}
+
+int is_config_safe_after_fw()
+{
+	/*
+	 * For some remotes, firmware updates wipes out the config. The
+	 * user code needs to be able to determine this so they can tell
+	 * the user and/or update the config.
+	 */
+	if (ri.arch->firmware_update_base == ri.arch->config_base) {
+		return LC_ERROR;
+	} else {
+		return 0;
 	}
 }
 
@@ -876,7 +899,7 @@ int erase_firmware(int direct, lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if (!_is_fw_update_supported()) {
+	if (!_is_fw_update_supported(direct)) {
 		return LC_ERROR_UNSUPP;
 	}
 
@@ -905,6 +928,10 @@ int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 	void *cb_arg)
 {
 	uint32_t addr = ri.arch->firmware_update_base;
+
+	if (!_is_fw_update_supported(direct)) {
+		return LC_ERROR_UNSUPP;
+	}
 
 	if (direct) {
 #ifdef _DEBUG

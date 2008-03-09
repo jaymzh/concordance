@@ -311,10 +311,19 @@ int read_safemode_from_file(char *file_name, uint8_t **out);
  * FIRMWARE INTERACTIONS
  */
 /*
- * We don't yet support live firmware upgrades on all remotes,
- * this will return 0 for yes and LC_ERROR_UNSUPP otherwise.
+ * We don't yet support firmware upgrades on all remotes. This function
+ * will tell you if it's supported on the remote we found. You must pass
+ * in whether you intend to do direct or not (direct isn't always supported
+ * either). This will return 0 for yes and LC_ERROR_UNSUPP otherwise.
  */
-int is_fw_update_supported();
+int is_fw_update_supported(int direct);
+/*
+ * This function tells you if the config will be wiped out by a live
+ * firmware upgrade (some remotes use the config area in memory as a
+ * staging area for the firmware). This will return 0 for yes and LC_ERROR
+ * for no.
+ */
+int is_config_safe_after_fw();
 /*
  * Preps the remote for a firmware upgrade
  */
