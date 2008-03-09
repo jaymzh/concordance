@@ -310,7 +310,7 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 	n++;
 
 	num_sectors = n;
-	while (sectors[num_sectors] < end) {
+	while (sectors[num_sectors] + flash_base < end) {
 		num_sectors++;
 	}
 	num_sectors -= n - 1;
