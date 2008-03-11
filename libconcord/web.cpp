@@ -221,6 +221,11 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 	if ((err = GetTag("VALUE", x, &userid)))
 		return err;
 
+	cookie += ";CookieKeyValue=";
+	cookie += ri.serial1;
+	cookie += ri.serial2;
+	cookie += ri.serial3;
+
 #if _DEBUG
 	printf("Connecting to %s:", server.c_str());
 #endif
