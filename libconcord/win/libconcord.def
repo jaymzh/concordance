@@ -51,8 +51,8 @@ find_binary_start
 
 ; GENERAL REMOTE INTERACTIONS
 ;
-init_libconcord
-deinit_libconcord
+init_concord
+deinit_concord
 get_identity
 reset_remote
 get_time

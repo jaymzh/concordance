@@ -129,6 +129,7 @@ void direct_warning()
 	printf("\t don't yet support live firmware updates. See the docs\n");
 	printf("\t for information on how to boot into safemode.\n");
 	printf("\t Press <enter> to continue.\n");
+	getchar();
 }
 
 void set_mode(int *mode, int val)
