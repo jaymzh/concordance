@@ -924,10 +924,41 @@ int read_firmware_from_remote(uint8_t **out, lc_callback cb,
 	return _read_fw_from_remote(*out, ri.arch->firmware_base, cb, cb_arg);
 }
 
+/*
+ * The first 6 bytes of the firmware file we receive from the
+ * website will be blanked out (0xFF), and we need to fill them
+ * in with the magic 6 bytes from the existing firmware.
+ *
+ * So why don't we always do this? If the user has a dump from us,
+ * it already has the right first 6 bytes... and if somehow the
+ * firmware on the device is messed up, we don't want to ignore
+ * that useful data in the file.
+ *
+ * So we only retreive it from the remote if it isn't given to us.
+ * For most users, that will be all the time.
+ *
+ *   - Phil Dibowitz    Tue Mar 11 23:17:53 PDT 2008
+ */
+int _fix_six_magic_bytes(uint8_t *in)
+{
+	int err = 0;
+
+	if (in[0] == 0xFF && in[1] == 0xFF && in[2] == 0xFF && in[3] == 0xFF
+	    && in[4] == 0xFF && in[5] == 0xFF) {
+		if ((err = rmt->ReadFlash(ri.arch->firmware_base, 6,
+			in, ri.protocol, false, NULL, NULL))) {
+			return LC_ERROR_READ;
+		}
+	}
+
+	return 0;
+}
+
 int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 	void *cb_arg)
 {
 	uint32_t addr = ri.arch->firmware_update_base;
+	int err = 0;
 
 	if (!_is_fw_update_supported(direct)) {
 		return LC_ERROR_UNSUPP;
@@ -938,6 +969,10 @@ int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 		printf("WARNING: Writing direct\n");
 #endif
 		addr = ri.arch->firmware_base;
+	}
+
+	if ((err = _fix_six_magic_bytes(in))) {
+		return LC_ERROR_READ;
 	}
 
 	return _write_fw_to_remote(in, addr, cb, cb_arg);
