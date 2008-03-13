@@ -29,11 +29,11 @@ CXXFILES?= snoop.cpp
 LIBS?=
 CPPFLAGS?=
 
-all: snoop
+all: consnoop
 
 snoop: $(CXXFILES)
-	$(CXX) $(CXXFLAGS) $(CXXFILES) -o snoop $(CPPFLAGS)
+	$(CXX) $(CXXFLAGS) $(CXXFILES) -o consnoop $(CPPFLAGS)
 
 clean:
-	/bin/rm -f snoop
+	/bin/rm -f consnoop
 
