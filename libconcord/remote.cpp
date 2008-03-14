@@ -347,6 +347,13 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 	return err;
 }
 
+int CRemote::RestartConfig()
+{
+	uint8_t data[1] = { 0x00 };
+
+	return WriteMiscByte(0x09, 1, COMMAND_MISC_RESTART_CONFIG, data);
+}
+
 int CRemote::WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)
 {
 	return WriteMiscByte(addr, len, COMMAND_MISC_RAM, wr);

@@ -312,6 +312,11 @@ int CRemoteZ_Base::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 	return 0;
 }
 
+int CRemoteZ_Base::RestartConfig()
+{
+	return 0;
+}
+
 int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 {
 	Write(TYPE_REQUEST, COMMAND_GET_CURRENT_TIME);

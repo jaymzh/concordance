@@ -741,9 +741,7 @@ int _is_fw_update_supported(int direct)
 	 * in live mode! Hence the last part.
 	 */
 	if (ri.arch->firmware_base == 0
-	    || (!direct &&
-                (ri.arch->firmware_update_base == 0
-                 || ri.arch->firmware_update_base == ri.arch->firmware_base))) {
+	    || (!direct && ri.arch->firmware_update_base == 0)) {
 		return 0;
 	}
 
@@ -875,14 +873,35 @@ int is_config_safe_after_fw()
 int prep_firmware()
 {
 	int err = 0;
+	uint8_t data[1];
 
-	uint8_t data[1] = { 0 };
-	if ((err = rmt->WriteRam(0, 1, data)))
-		return LC_ERROR_WRITE;
-	if ((err = rmt->ReadRam(0, 1, data)))
-		return LC_ERROR_WRITE;
-	if (data[0] != 0)
-		return LC_ERROR_VERIFY;
+	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
+		/*
+		 * The preperation for where the staging area IS the config
+		 * area.
+		 *    restart config
+		 *    write "1" to flash addr 200000
+		 */
+		if ((err = rmt->RestartConfig()))
+			return LC_ERROR;
+		data[0] = 0x01;
+		if ((err = rmt->WriteFlash(200000, 1, data, ri.protocol, NULL,
+				NULL)))
+			return LC_ERROR;
+	} else {
+		/*
+		 * The preperation for where the staging area is distinct.
+		 *    write "1" to ram addr 0
+		 *    read it back
+		 */
+		data[0] = 0x00;
+		if ((err = rmt->WriteRam(0, 1, data)))
+			return LC_ERROR_WRITE;
+		if ((err = rmt->ReadRam(0, 1, data)))
+			return LC_ERROR_WRITE;
+		if (data[0] != 0)
+			return LC_ERROR_VERIFY;
+	}
 
 	return 0;
 }
@@ -891,13 +910,21 @@ int finish_firmware()
 {
 	int err = 0;
 
-	uint8_t data[1] = { 2 };
-	if ((err = rmt->WriteRam(0, 1, data)))
-		return LC_ERROR_WRITE;
-	if ((err = rmt->ReadRam(0, 1, data)))
-		return LC_ERROR_WRITE;
-	if (data[0] != 2)
-		return LC_ERROR_VERIFY;
+	uint8_t data[1];
+	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
+		data[0] = 0x01;
+		if ((err = rmt->WriteFlash(200000, 1, data, ri.protocol, NULL,
+			NULL)))
+			return LC_ERROR;
+	} else {
+		data[0] = 0x02;
+		if ((err = rmt->WriteRam(0, 1, data)))
+			return LC_ERROR_WRITE;
+		if ((err = rmt->ReadRam(0, 1, data)))
+			return LC_ERROR_WRITE;
+		if (data[0] != 2)
+			return LC_ERROR_VERIFY;
+	}
 
 	return 0;
 }
