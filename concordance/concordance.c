@@ -97,6 +97,7 @@ enum {
 void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
 	void *arg)
 {
+	int is_bytes;
 #ifdef WIN32
 	GetConsoleScreenBufferInfo(con, &sbi);
 	SetConsoleCursorPosition(con, sbi.dwCursorPosition);
@@ -105,7 +106,7 @@ void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
 		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 	}
 #endif          
-	int is_bytes = 0;
+	is_bytes = 0;
 	if (arg) {
 		is_bytes = (int)(arg);
 	}
@@ -195,11 +196,13 @@ int upload_config(char *file_name, struct options_t *options,
 
 	uint8_t *data;
 	uint32_t size = 0;
+	uint8_t *place_ptr;
+	uint32_t binsize;
 
 	read_config_from_file(file_name, &data, &size);
 
-	uint8_t *place_ptr = data;
-	uint32_t binsize = size;
+	place_ptr = data;
+	binsize = size;
 
 	if (!(*options).binary) {
 
@@ -292,7 +295,12 @@ int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 int upload_firmware(char *file_name, struct options_t *options,
 	lc_callback cb, void *cb_arg)
 {
-	int err = 0;
+	int err;
+	uint8_t *firmware;
+	uint8_t *firmware_bin;
+
+	err = 0;
+	firmware = firmware_bin = 0;
 
 	if ((err = is_fw_update_supported((*options).direct))) {
 		fprintf(stderr, "Sorry, firmware upgrades are not yet");
@@ -312,9 +320,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 			getchar();
 		}
 	}
-
-	uint8_t *firmware = 0;
-	uint8_t *firmware_bin = 0;
 
 	if ((err = read_firmware_from_file(file_name, &firmware,
 			(*options).binary))) {
@@ -413,6 +418,7 @@ int dump_firmware(struct options_t *options, char *file_name,
 void parse_options(struct options_t *options, int *mode, char **file_name,
 	int argc, char *argv[])
 {
+	int tmpint;
 
 	static struct option long_options[] = {
 		{"binary", no_argument, 0, 'b'},
@@ -441,7 +447,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 
 	*mode = MODE_UNSET;
 
-	int tmpint = 0;
+	tmpint = 0;
 
 	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvw",
 				long_options, NULL)) != EOF) {
@@ -538,6 +544,9 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 	 */
 	if (*mode == MODE_UNSET) {
 		if (optind < argc) {
+			char *file_name_copy;
+			char *file;
+
 			if (optind + 1 < argc) {
 				fprintf(stderr, "Multiple arguments were");
 				fprintf(stderr, " specified after the options");
@@ -560,8 +569,8 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			 * Dup our string since POSIX basename()
 			 * may modify it.
 			 */
-			char *file_name_copy = (char *)strdup(*file_name);
-			char *file = basename(file_name_copy);
+			file_name_copy = (char *)strdup(*file_name);
+			file = basename(file_name_copy);
 
 			if (!strcasecmp(file,"connectivity.ezhex")) {
 				*mode = MODE_CONNECTIVITY;
@@ -663,9 +672,11 @@ void help()
  */
 int print_version_info(struct options_t *options)
 {
+	const char *cn;
+	int used, total;
 
 	printf("  Model: %s %s", get_mfg(), get_model());
-	const char *cn = get_codename();
+	cn = get_codename();
 
 	if (strcmp(cn,"")) {
 		printf(" (%s)\n", cn);
@@ -711,8 +722,8 @@ int print_version_info(struct options_t *options)
 			get_serial(2), get_serial(3));
 	}
 
-	int used = get_config_bytes_used();
-	int total = get_config_bytes_total();
+	used = get_config_bytes_used();
+	total = get_config_bytes_total();
 	printf("  Config Flash Used: %i%% (%i of %i KiB)\n\n",
 		(used*100+99) / total, (used+1023)>>10, (total+1023)>>10);
 
@@ -754,6 +765,9 @@ void populate_default_filename(int mode, int binary, char **file_name)
 
 int main(int argc, char *argv[])
 {
+	struct options_t options;
+	char *file_name;
+	int mode, err;
 
 #ifdef WIN32
 	con=GetStdHandle(STD_OUTPUT_HANDLE);
@@ -769,9 +783,8 @@ int main(int argc, char *argv[])
 		FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN);
 #endif
 
-	struct options_t options;
-	char *file_name = NULL;
-	int mode = MODE_UNSET;
+	file_name = NULL;
+	mode = MODE_UNSET;
 
 	parse_options(&options, &mode, &file_name, argc, argv);
 
@@ -796,7 +809,7 @@ int main(int argc, char *argv[])
 		populate_default_filename(mode, options.binary, &file_name);
 	}
 
-	int err = 0;
+	err = 0;
 
 	err = init_concord();
 	if (err != 0) {
