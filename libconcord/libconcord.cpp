@@ -950,12 +950,25 @@ int _fix_six_magic_bytes(uint8_t *in)
 {
 	int err = 0;
 
-	if (in[0] == 0xFF && in[1] == 0xFF && in[2] == 0xFF && in[3] == 0xFF
-	    && in[4] == 0xFF && in[5] == 0xFF) {
-		if ((err = rmt->ReadFlash(ri.arch->firmware_base, 6,
-			in, ri.protocol, false, NULL, NULL))) {
-			return LC_ERROR_READ;
-		}
+	if (in[0] == 0xFF && in[1] == 0xFF) {
+		/*
+		 * FIXME: This is HORRIBLE and will only work
+		 * 	for the LATEST firmware (at time of writing)
+		 * 	but it's simply a place holder. These two
+		 * 	bytes are some magic "value" - perhaps
+		 * 	a checksum, perhaps something else. Until
+		 * 	we figure it out, we'll hardcode the latest.
+		 */
+		in[0] = 0xFB;
+		in[1] = 0x85;
+
+		/*
+		 * These two bytes are "always" 0x48 and 0x47, at least
+		 * for architecture 8, which is all we've thus-far figured
+		 * out definitively.
+		 */
+		in[4] = 0x48;
+		in[5] = 0x47;
 	}
 
 	return 0;
