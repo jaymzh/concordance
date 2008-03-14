@@ -372,7 +372,7 @@ int write_firmware_to_file(uint8_t *in, char *file_name, int binary);
 /*
  * Read firmware from file_name into out.
  * Note that if you read the firmware from a file in non-binary mode,
- * you must use extract_binary_firmware() to get the binary data out
+ * you must use extract_firmware_binary() to get the binary data out
  * to pass to this function.
  */
 int read_firmware_from_file(char *file_name, uint8_t **out, int binary);
@@ -381,7 +381,7 @@ int read_firmware_from_file(char *file_name, uint8_t **out, int binary);
  * read_firmware_from_file(). Obviously this function isn't necessary in
  * binary mode.
  */
-int extract_binary_firmware(uint8_t *in, uint8_t **out);
+int extract_firmware_binary(uint8_t *in, uint8_t **out);
 
 /*
  * IR-stuff. This stuff hasn't yet been cleaned up, you'll have to

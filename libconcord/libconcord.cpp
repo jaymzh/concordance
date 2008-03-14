@@ -1066,7 +1066,7 @@ int convert_to_binary(string hex, uint8_t *&ptr)
 	return 0;
 }
 
-int extract_binary_firmware(uint8_t *in, uint8_t **out)
+int extract_firmware_binary(uint8_t *in, uint8_t **out)
 {
 	string hex;
 	*out = new uint8_t[FIRMWARE_SIZE];

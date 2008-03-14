@@ -327,7 +327,7 @@ int upload_firmware(char *file_name, struct options_t *options,
 		return err;
 	}
 
-	if ((err = extract_binary_firmware(firmware, &firmware_bin))) {
+	if ((err = extract_firmware_binary(firmware, &firmware_bin))) {
 		delete_blob(firmware);
 		delete_blob(firmware_bin);
 		return err;
