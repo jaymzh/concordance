@@ -17,14 +17,14 @@
  *  (C) Copyright Phil Dibowitz 2007
  */
 
-// Platform-agnostic includes
+/* Platform-agnostic includes */
 #include <libconcord.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef WIN32
-// Windows includes
+/* Windows includes*/
 #include "win/getopt/getopt.h"
 #include <conio.h>
 #include <winsock.h>
@@ -47,9 +47,9 @@ char* basename(char* file_name)
 HANDLE con;
 CONSOLE_SCREEN_BUFFER_INFO sbi;
 
-#else // non-Windows
+#else
+/* NON-Windows */
 
-// *nix includes
 #include <getopt.h>
 #include <strings.h>
 #include <libgen.h>
@@ -209,7 +209,7 @@ int upload_config(char *file_name, struct options_t *options,
 		if ((err = find_config_binary_size(data, &binsize)))
 			return LC_ERROR;
 
-		// We no longer need size, let it get munged...
+		/* We no longer need size, let it get munged... */
 		if ((err = find_config_binary_start(&place_ptr, &size)))
 			return LC_ERROR;
 
@@ -361,7 +361,7 @@ int upload_firmware(char *file_name, struct options_t *options,
 	}
 	printf("       done\n");
 
-	// Done with this...
+	/* Done with this... */
 	delete_blob(firmware_bin);
 
 	if (!(*options).direct) {
@@ -431,7 +431,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 		{"set-time", no_argument, 0, 'K' },
 		{"verbose", no_argument, 0, 'v'},
 		{"no-web", no_argument, 0, 'w'},
-		{0,0,0,0} // terminating null entry
+		{0,0,0,0} /* terminating null entry */
 	};
 
 	(*options).verbose = 0;
@@ -560,7 +560,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			 * Dup our string since POSIX basename()
 			 * may modify it.
 			 */
-			char *file_name_copy = strdup(*file_name);
+			char *file_name_copy = (char *)strdup(*file_name);
 			char *file = basename(file_name_copy);
 
 			if (!strcasecmp(file,"connectivity.ezhex")) {
@@ -686,7 +686,6 @@ int print_version_info(struct options_t *options)
 		get_hw_ver_min());
 
 	if ((*options).verbose) {
-		//if ((ri.flash->size & 0x03FF) == 0 && (ri.flash->size>>10)!=0) {
 		int size = get_flash_size();
 		printf("  External Flash: ");
 		if (size >> 10 != 0) {
@@ -729,22 +728,26 @@ void populate_default_filename(int mode, int binary, char **file_name)
 	switch (mode) {
 		case MODE_DUMP_CONFIG:
 			if (binary) {
-				*file_name = strdup(DEFAULT_CONFIG_FILENAME_BIN);
+				*file_name = (char *)
+					strdup(DEFAULT_CONFIG_FILENAME_BIN);
 			} else {
-				*file_name = strdup(DEFAULT_CONFIG_FILENAME);
+				*file_name = (char *)
+					strdup(DEFAULT_CONFIG_FILENAME);
 			}
 			break;
 
 		case MODE_DUMP_FIRMWARE:
 			if (binary) {
-				*file_name = strdup(DEFAULT_FW_FILENAME_BIN);
+				*file_name = (char *)
+					strdup(DEFAULT_FW_FILENAME_BIN);
 			} else {
-				*file_name = strdup(DEFAULT_FW_FILENAME);
+				*file_name = (char *)
+					strdup(DEFAULT_FW_FILENAME);
 			}
 			break;
 
 		case MODE_DUMP_SAFEMODE:
-			*file_name = strdup(DEFAULT_SAFE_FILENAME);
+			*file_name = (char *) strdup(DEFAULT_SAFE_FILENAME);
 			break;
 	}
 }
@@ -769,7 +772,6 @@ int main(int argc, char *argv[])
 	struct options_t options;
 	char *file_name = NULL;
 	int mode = MODE_UNSET;
-	//struct CRemoteBase *rmt = NULL;
 
 	parse_options(&options, &mode, &file_name, argc, argv);
 
@@ -883,10 +885,6 @@ int main(int argc, char *argv[])
 				break;
 			}
 			err = reset_remote();
-			//printf("This isn't supported yet.\n");
-			/*
-			 * FIXME: Implement this.
-			 */
 			break;
 
 		case MODE_DUMP_SAFEMODE:
@@ -932,14 +930,14 @@ cleanup:
 	}
 		
 #ifdef WIN32
-	// Shutdown WinSock
+	/* Shutdown WinSock */
 	WSACleanup();
 #endif
 
 #ifdef _DEBUG
 	printf("\nPress any key to exit");
 	getchar();
-#endif // debug
+#endif /* debug */
 
 	return err;
 }
