@@ -18,11 +18,10 @@
  */
 
 // Platform-agnostic includes
-#include "libconcord.h"
+#include <libconcord.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
 
 #ifdef WIN32
 // Windows includes
@@ -53,6 +52,7 @@ CONSOLE_SCREEN_BUFFER_INFO sbi;
 // *nix includes
 #include <getopt.h>
 #include <strings.h>
+#include <libgen.h>
 
 #endif
 
@@ -206,11 +206,11 @@ int upload_config(char *file_name, struct options_t *options,
 		if ((err = verify_xml_config(data, size)))
 			return LC_ERROR;
 
-		if ((err = find_binary_size(data, &binsize)))
+		if ((err = find_config_binary_size(data, &binsize)))
 			return LC_ERROR;
 
 		// We no longer need size, let it get munged...
-		if ((err = find_binary_start(&place_ptr, &size)))
+		if ((err = find_config_binary_start(&place_ptr, &size)))
 			return LC_ERROR;
 
 		if (size < binsize)
@@ -219,14 +219,6 @@ int upload_config(char *file_name, struct options_t *options,
 		if (!(*options).noweb)
 			post_preconfig(data);
 	}
-
-	/*
-	 * FIXME:
-	 * 	While having top-level functions like this is useful
-	 * 	we probably want to expose functions for invalidate,
-	 * 	read, write, etc., and then have this just be a short
-	 * 	cut for those.
-	 */
 
 	/*
 	 * We must invalidate flash before we erase and write so that
@@ -249,7 +241,7 @@ int upload_config(char *file_name, struct options_t *options,
 	}
 	printf("       done\n");
 
-	printf("Writing config:      ");
+	printf("Writing Config:      ");
 	if ((err = write_config_to_remote(place_ptr, binsize, cb,
 			(void *)1))) {
 		delete_blob(data);
@@ -322,6 +314,7 @@ int upload_firmware(char *file_name, struct options_t *options,
 	}
 
 	uint8_t *firmware = 0;
+	uint8_t *firmware_bin = 0;
 
 	if ((err = read_firmware_from_file(file_name, &firmware,
 			(*options).binary))) {
@@ -329,10 +322,17 @@ int upload_firmware(char *file_name, struct options_t *options,
 		return err;
 	}
 
+	if ((err = extract_binary_firmware(firmware, &firmware_bin))) {
+		delete_blob(firmware);
+		delete_blob(firmware_bin);
+		return err;
+	}
+
 	if (!(*options).direct) {
 		if ((err = prep_firmware())) {
 			printf("Failed to prepare remote for FW update\n");
 			delete_blob(firmware);
+			delete_blob(firmware_bin);
 			return err;
 		}
 	}
@@ -340,6 +340,7 @@ int upload_firmware(char *file_name, struct options_t *options,
 	printf("Invalidating Flash:  ");
 	if ((err = invalidate_flash())) {
 		delete_blob(firmware);
+		delete_blob(firmware_bin);
 		return err;
 	}
 	printf("                     done\n");
@@ -347,17 +348,21 @@ int upload_firmware(char *file_name, struct options_t *options,
 	printf("Erasing Flash:       ");
 	if ((err = erase_firmware((*options).direct, cb, (void *)0))) {
 		delete_blob(firmware);
+		delete_blob(firmware_bin);
 		return err;
 	}
 	printf("       done\n");
 
 	printf("Writing firmware:    ");
-	if ((err = write_firmware_to_remote(firmware, (*options).direct, cb,
+	if ((err = write_firmware_to_remote(firmware_bin, (*options).direct, cb,
 			cb_arg))) {
 		delete_blob(firmware);
 		return err;
 	}
 	printf("       done\n");
+
+	// Done with this...
+	delete_blob(firmware_bin);
 
 	if (!(*options).direct) {
 		if ((err = finish_firmware())) {
@@ -366,6 +371,16 @@ int upload_firmware(char *file_name, struct options_t *options,
 			return err;
 		}
 	}
+
+	if (!(*options).binary && !(*options).noweb) {
+		printf("Contacting website:  ");
+		if ((err = post_postfirmware(firmware))) {
+			delete_blob(firmware);
+			return err;
+		}
+		printf("                     done\n");
+	}
+
 	delete_blob(firmware);
 	return 0;
 }
@@ -824,7 +839,7 @@ int main(int argc, char *argv[])
 			if (!options.noweb)
 				printf("Contacting website:  ");
 				err = post_connect_test_success(file_name);
-				printf("       done\n");
+				printf("                     done\n");
 			break;
 
 		case MODE_DUMP_CONFIG:

@@ -201,7 +201,7 @@ int GetTag(const char *find, uint8_t*& pc, string *s=NULL)
 	return -1;
 }
 
-int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
+int Post(uint8_t *xml, const char *root, TRemoteInfo &ri, bool has_userid,
 	string *learn_seq = NULL, string *learn_key = NULL)
 {
 
@@ -218,44 +218,44 @@ int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
 		return err;
 	if ((err = GetTag("VALUE", x, &cookie)))
 		return err;
-	if ((err = GetTag("VALUE", x, &userid)))
-		return err;
-
-	cookie += ";CookieKeyValue=";
-	cookie += ri.serial1;
-	cookie += ri.serial2;
-	cookie += ri.serial3;
+	if (has_userid) {
+		if ((err = GetTag("VALUE", x, &userid)))
+			return err;
+	}
 
 #if _DEBUG
-	printf("Connecting to %s:", server.c_str());
-#endif
-
-#ifdef _DEBUG
-		printf("\nPath: %s\n", path.c_str());
-		printf("Cookie: %s\n", cookie.c_str());
-		printf("UserId: %s\n", userid.c_str());
+	printf("Connecting to: %s\n", server.c_str());
+	printf("Path: %s\n", path.c_str());
+	printf("Cookie: %s\n", cookie.c_str());
+	printf("UserId: %s\n", userid.c_str());
 #endif
 
 	string post;
-	if(learn_seq == NULL) {
+	if (learn_seq == NULL) {
 		char serial[144];
-		sprintf(serial, "%s%s%s", ri.serial1, ri.serial1, ri.serial2);
+		sprintf(serial, "%s%s%s", ri.serial1, ri.serial2, ri.serial3);
 		char post_data[2000];
 		sprintf(post_data, post_xml,
 			ri.fw_ver_major, ri.fw_ver_minor, ri.fw_type,
 			serial, ri.hw_ver_major, ri.hw_ver_minor,
 			ri.flash_mfg, ri.flash_id, ri.protocol,
 			ri.architecture, ri.skin);
-		//printf("\n%s\n",post_data);
+#ifdef _DEBUG
+		printf("DEBUG: post data: %s\n",post_data);
+#endif
 
 		string post_data_encoded;
 		UrlEncode(post_data, post_data_encoded);
 
-		post = "Data=" + post_data_encoded + "&UserId=" + userid;
+		post = "Data=" + post_data_encoded;
 	} else {
-		post = "IrSequence=" + *learn_seq + "&UserId=" + userid
-			+ "&KeyName=" + *learn_key;
+		post = "IrSequence=" + *learn_seq + "&KeyName=" + *learn_key;
 	}
+
+	if (has_userid) {
+		post += "&UserId=" + userid;
+	}
+
 #ifdef _DEBUG
 	printf("\n%s\n", post.c_str());
 #endif

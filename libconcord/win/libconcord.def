@@ -45,9 +45,8 @@ get_time_timezone
 
 ; HELPER FUNCTIONS
 ;
-lh_strerror
-find_binary_size
-find_binary_start
+lc_strerror
+delete_blob
 
 ; GENERAL REMOTE INTERACTIONS
 ;
@@ -60,6 +59,7 @@ set_time
 post_connect_test_success
 post_preconfig
 post_postconfig
+post_postfirmware
 invalidate_flash
 
 ; CONFIGURATION INTERACTIONS
@@ -71,6 +71,8 @@ write_config_to_file
 verify_xml_config
 verify_remote_config
 erase_config
+find_config_binary_size
+find_config_binary_start
 
 ; SAFEMODE FIRMWARE INTERACTIONS
 ;
@@ -82,6 +84,7 @@ read_safemode_from_file
 ; FIRMWARE INTERACTIONS
 ;
 is_fw_update_supported
+is_config_safe_after_fw
 prep_firmware
 finish_firmware
 erase_firmware
@@ -89,6 +92,7 @@ read_firmware_from_remote
 write_firmware_to_remote
 write_firmware_to_file
 read_firmware_from_file
+extract_firmware_binary
 
 ; IR-stuff
 ;

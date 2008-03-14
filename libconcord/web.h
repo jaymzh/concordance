@@ -21,7 +21,7 @@
 #define WEB_H
 
 int GetTag(const char *find, uint8_t*& pc, string *s=NULL);
-int Post(uint8_t *xml, const char *root, TRemoteInfo &ri,
+int Post(uint8_t *xml, const char *root, TRemoteInfo &ri, bool has_userid,
 	string *learn_seq=NULL, string *learn_key=NULL);
 
 #endif

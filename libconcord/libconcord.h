@@ -136,19 +136,6 @@ const char *get_time_timezone();
  */
 const char *lc_strerror(int err);
 /*
- * Get the value from the BINARYSIZE tag in the XML.
- */
-int find_binary_size(uint8_t *ptr, uint32_t *size);
-/*
- * Pass in a pointer to an array holding the read in config object (for
- * example, one you might get from read_config_from_remote()), and it'll
- * adjust that pointer to the beginning of the binary portion (aka skip
- * past the XML portion).
- * Size should be the size of the ptr, and it will be modified to account
- * for the the change in *ptr.
- */
-int find_binary_start(uint8_t **ptr, uint32_t *size);
-/*
  * Many functions require you to pass in a ptr which then gets pointed
  * to data that we allocate. You should then call this to clean that
  * data up when you are done with it.
@@ -209,6 +196,11 @@ int post_preconfig(uint8_t *data);
  */
 int post_postconfig(uint8_t *data);
 /*
+ * After writing a new firmware to the remote, this should be called to tell
+ * the members.harmonyremote.com website that it was successful.
+ */
+int post_postfirmware(uint8_t *data);
+/*
  * This sends the remote a command to tell it we're about to start
  * writing to it's flash area and that it shouldn't read from it.
  * This must be used before writing a config, firmware, or anything
@@ -248,6 +240,10 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
  * NOTE: The pointer *out should not point to anything useful. We will
  * allocate a char array and point your pointer at it. Use delete[] to
  * reclaim this memory.
+ *
+ * To actually get the binary data from the file for other functions,
+ * use find_binary_start() to move a pointer to the beginning of the binary
+ * data embedded in the file.
  */
 int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size);
 /*
@@ -274,6 +270,19 @@ int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
  * flash (to 1) in order to write the flash.
  */
 int erase_config(uint32_t size, lc_callback cb, void *cb_arg);
+/*
+ * Get the value from the BINARYSIZE tag in the XML.
+ */
+int find_config_binary_size(uint8_t *ptr, uint32_t *size);
+/*
+ * Pass in a pointer to an array holding the read in config object (for
+ * example, one you might get from read_config_from_remote()), and it'll
+ * adjust that pointer to the beginning of the binary portion (aka skip
+ * past the XML portion).
+ * Size should be the size of the ptr, and it will be modified to account
+ * for the the change in *ptr.
+ */
+int find_config_binary_start(uint8_t **ptr, uint32_t *size);
 
 /*
  * SAFEMODE FIRMWARE INTERACTIONS
@@ -348,20 +357,31 @@ int erase_firmware(int direct, lc_callback cb, void *cb_arg);
  */
 int read_firmware_from_remote(uint8_t **out, lc_callback cb,
 	void *cb_arg);
+/*
+ * Same as write_config_to_remote(), but with the firmware instead.
+ */
 int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 	void *cb_arg);
 /*
- * Same as write_config_to_remote(), but with the firmware instead. Note
+ * Same as write_config_to_file(), but with firmware instead. Note
  * that unless binary is specified, the firmware is broken into chunks
  * and written in ASCII-encoded HEX in XML <DATA> blocks, the way
  * the members.harmonyremote.com website delivers it.
  */
 int write_firmware_to_file(uint8_t *in, char *file_name, int binary);
 /*
- * Read firmware from file_name into out. NOTE: ONLY supported
- * in BINARY MODE!! Will return an error otherwise.
+ * Read firmware from file_name into out.
+ * Note that if you read the firmware from a file in non-binary mode,
+ * you must use extract_binary_firmware() to get the binary data out
+ * to pass to this function.
  */
 int read_firmware_from_file(char *file_name, uint8_t **out, int binary);
+/*
+ * Extract the binary firmware from a file read in with
+ * read_firmware_from_file(). Obviously this function isn't necessary in
+ * binary mode.
+ */
+int extract_binary_firmware(uint8_t *in, uint8_t **out);
 
 /*
  * IR-stuff. This stuff hasn't yet been cleaned up, you'll have to

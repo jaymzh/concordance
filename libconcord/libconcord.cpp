@@ -313,30 +313,6 @@ const char *lc_strerror(int err)
 	return "Unknown error";
 }
 
-int find_binary_size(uint8_t *ptr, uint32_t *size)
-{
-	string size_s;
-	int err = GetTag("BINARYDATASIZE", ptr, &size_s);
-	if (err == -1)
-		return LC_ERROR;
-
-	*size = (uint32_t)atoi(size_s.c_str());
-	return 0;
-}
-
-int find_binary_start(uint8_t **ptr, uint32_t *size)
-{
-	uint8_t *optr = *ptr;
-	int err = GetTag("/INFORMATION", *ptr);
-	if (err == -1)
-		return LC_ERROR;
-
-	*ptr += 2;
-	*size -= ((*ptr) - optr);
-
-	return 0;
-}
-
 int delete_blob(uint8_t *ptr)
 {
 	delete[] ptr;
@@ -451,13 +427,19 @@ int invalidate_flash()
 
 int post_preconfig(uint8_t *data)
 {
-	Post(data, "POSTOPTIONS", ri);
+	Post(data, "POSTOPTIONS", ri, true);
+	return 0;
+}
+
+int post_postfirmware(uint8_t *data)
+{
+	Post(data, "COMPLETEPOSTOPTIONS", ri, false);
 	return 0;
 }
 
 int post_postconfig(uint8_t *data)
 {
-	Post(data, "POSTOPTIONS", ri);
+	Post(data, "COMPLETEPOSTOPTIONS", ri, true);
 	return 0;
 }
 
@@ -478,7 +460,7 @@ int post_connect_test_success(char *file_name)
 	// Prevent GetTag() from going off the deep end
 	buf[size]=0;
 
-	Post(buf,"POSTOPTIONS", ri);
+	Post(buf,"POSTOPTIONS", ri, true);
 
 	if (file.close() != 0) {
 		return LC_ERROR_OS_FILE;
@@ -715,6 +697,31 @@ int erase_config(uint32_t size, lc_callback cb, void *cb_arg)
 
 	return 0;
 }
+
+int find_config_binary_size(uint8_t *ptr, uint32_t *size)
+{
+	string size_s;
+	int err = GetTag("BINARYDATASIZE", ptr, &size_s);
+	if (err == -1)
+		return LC_ERROR;
+
+	*size = (uint32_t)atoi(size_s.c_str());
+	return 0;
+}
+
+int find_config_binary_start(uint8_t **ptr, uint32_t *size)
+{
+	uint8_t *optr = *ptr;
+	int err = GetTag("/INFORMATION", *ptr);
+	if (err == -1)
+		return LC_ERROR;
+
+	*ptr += 2;
+	*size -= ((*ptr) - optr);
+
+	return 0;
+}
+
 
 /*
  * Private fuctions that the safemode and firmware functions use.
@@ -1046,6 +1053,18 @@ int convert_to_binary(string hex, uint8_t *&ptr)
 	return 0;
 }
 
+int extract_binary_firmware(uint8_t *in, uint8_t **out)
+{
+	string hex;
+	*out = new uint8_t[FIRMWARE_SIZE];
+	uint8_t *ptr = *out;
+	uint8_t *tmp = in;
+	while (GetTag("DATA", tmp, &hex) == 0) {
+		convert_to_binary(hex, ptr);
+	}
+	return 0;
+}
+	
 int read_firmware_from_file(char *file_name, uint8_t **out, int binary)
 {
 	binaryinfile file;
@@ -1057,22 +1076,13 @@ int read_firmware_from_file(char *file_name, uint8_t **out, int binary)
 		return LC_ERROR_OS_FILE;
 	}
 
-	uint32_t size = 0;
-	*out = new uint8_t[FIRMWARE_SIZE];
-
 	if (binary) {
-		size = FIRMWARE_SIZE;
+		*out = new uint8_t[FIRMWARE_SIZE];
 		file.read(*out, FIRMWARE_SIZE);
 	} else {
-		uint8_t *tmp = new uint8_t[file.getlength() + 1];
-		file.read(tmp, file.getlength());
-		tmp[file.getlength() + 1] = 0;
-	
-		string hex;
-		uint8_t *ptr = *out;
-		while (GetTag("DATA", tmp, &hex) == 0) {
-			convert_to_binary(hex, ptr);
-		}
+		*out = new uint8_t[file.getlength() + 1];
+		file.read(*out, file.getlength());
+		(*out)[file.getlength()] = 0;
 	}
 
 	if (file.close() != 0) {
@@ -1117,7 +1127,7 @@ int learn_ir_commands(char *file_name, int post)
 		//printf("%s\n",ls.c_str());
 
 		if (post)
-			Post(x, "POSTOPTIONS", ri, &ls, &keyname);
+			Post(x, "POSTOPTIONS", ri, true, &ls, &keyname);
 
 	} else {
 		rmt->LearnIR();
