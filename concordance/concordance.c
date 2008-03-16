@@ -825,7 +825,7 @@ int main(int argc, char *argv[])
 	 * near the beginning instead of the SWITCH below.
 	 */
 	if (mode == MODE_RESET) {
-		printf("Reseting...\n");
+		printf("Resetting...\n");
 		reset_remote();
 		goto cleanup;
 	}
@@ -874,6 +874,7 @@ int main(int argc, char *argv[])
 				cb_print_percent_status, NULL);
 			if (err != 0)
 				break;
+			printf("Resetting...\n");
 			err = reset_remote();
 			break;
 
@@ -897,6 +898,7 @@ int main(int argc, char *argv[])
 					lc_strerror(err));
 				break;
 			}
+			printf("Resetting...\n");
 			err = reset_remote();
 			break;
 
