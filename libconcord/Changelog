@@ -14,6 +14,7 @@ phil@ipom.com
   successfully from all remotes (thanks to linux@zachcarter.com)
 - fix the location and name of the license file (thanks to
   s-t-concordance@wwwdotorg.org)
+- Add CodingStyle and SubmittingPatches documentation
 
 s-t-harmony@wwwdotorg.org:
 - remove usage of ** where * is sufficient
