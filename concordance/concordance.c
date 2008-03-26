@@ -823,6 +823,10 @@ int main(int argc, char *argv[])
 	 * data from the device, but it may not even be fully functional, so
 	 * we probably want to do as little as possible. This we do this
 	 * near the beginning instead of the SWITCH below.
+	 *
+	 * Note that we don't look at or save the return value of reset_remote()
+	 * because the usb write for reset doesn't always return successful on
+	 * all remotes even though it works.
 	 */
 	if (mode == MODE_RESET) {
 		printf("Resetting...\n");
@@ -875,7 +879,7 @@ int main(int argc, char *argv[])
 			if (err != 0)
 				break;
 			printf("Resetting...\n");
-			err = reset_remote();
+			reset_remote();
 			break;
 
 		case MODE_DUMP_FIRMWARE:
@@ -899,7 +903,7 @@ int main(int argc, char *argv[])
 				break;
 			}
 			printf("Resetting...\n");
-			err = reset_remote();
+			reset_remote();
 			break;
 
 		case MODE_DUMP_SAFEMODE:
