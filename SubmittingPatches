@@ -1,0 +1,131 @@
+This is a guide to submitting patches to the concordance project.
+
+TABLE OF CONTENTS
+1. Preparing a change
+2. Generating patches
+3. Preparing and submitting your patch
+4. Additional notes for major changes
+5. A word on comments
+
+
+PREPARING A CHANGE
+
+If you would like to make a change to the codebase, you need to decide if this
+is a major change or a minor change. Major changes include anything that
+affects the API, ABI, anything that affects lots of files, adds/removes
+classes, etc.
+
+If your plan is to make a major change, then you should send a description of
+the changes you plan to make to the concordance-devel list FIRST. By doing
+this you give the developers a chance to comment on your plan and provide
+suggestions and guidance before you invest the time. This will save you time
+and effort and provide a much higher chance of your patch being accepted. Also
+see "ADDITIONAL NOTES FOR MAJOR CHANGES" below.
+
+If your plan is to make a minor change, you are still welcome to send an email
+before you start to the list, but it's not as big of a deal.
+
+
+GENERATING PATCHES
+
+After making your changes, you should always make sure you have done a 'cvs
+update' to ensure you'll be generating your patch against the latest CVS
+sources.
+
+Patches should always be generated via CVS's diff, and from top-level CVS
+directory. Additionally, they should always be in unified diff format ("-u"),
+should show new/removed files ("-N"), be recursive ("-R"), and use the -p flag
+to make sure the C function name is included for all changes. For example:
+
+   CVSTREE=~/cvs/concordance
+   cd $CVSTREE
+   vi libconcord/remote.cpp
+   cvs diff -NRup >/tmp/libconcord_remote.patch
+
+You should ALWAYS read your patch through after generating it to make sure it
+contains the changes you expect and ONLY the changes you expect.
+
+You should ensure the following:
+   1. You've maintained the same coding style. See the CodingStyle document
+      in this directory.
+   2. You should make sure that your code is properly commented.
+
+
+PREPARING AND SUBMITTING YOUR PATCH
+
+Your patch should be sent in as an attachement. Mail clients often wrap emails
+(and rightly so!) which can break a patch. Attach your patch to your email.
+
+The body of your email should have a good descriptiong of your patch. The more
+far-reaching your patch is, the more detailed your description should be.
+
+A good description includes justifying any ABI/API changes, an explanation of
+the goal and outcome of the patch, and a list of changes by file, where
+appropriate.
+
+The subject of an email SHOULD start with "PATCH: " and include a _useful_
+description of your patch. Where possible, include the component affected
+(concordance vs. libconcord) GOOD examples include:
+
+   PATCH: concordance: fix double-free bug
+   PATCH: libconcord: Add remote_info table entry for 4847 byte location
+
+BAD examples include:
+
+   PATCH: update
+   PATCH: libconcord fix
+   PATCH: new remote
+
+NOTE: PATCHES SHOULD ALWAYS BE SENT TO THE -devel LIST! Even if you are
+attaching a patch to a bug, you should still send it to the devel list if you
+want it committed.
+
+
+ADDITIONAL NOTES FOR MAJOR CHANGES
+
+As previously mentioned, all major changes should be mentioned on the list.
+Note, however, that changes to the ABI or API need to be justified. The API,
+in particular, should change as little as possible.
+
+If a change to the API is needed, remember that the API is *C* API even though
+the library itself is written in C++. Any changes to the API must ensure it's
+still C-compatible, and that all of the API is exported properly for C
+clients.
+
+In addition, once scripting-language bindings are introduced, all API changes
+must be added to the bindings as well.
+
+
+A WORD ON COMMENTS
+Comments should be immediately above the block of code they are explaining,
+NOT next to it. For example, we prefer this:
+
+   /*
+    * This special algorith for XXX does A, then B, then C, then D.
+    * It is necessary because of bar.
+    */
+   if (foo) {
+	...
+   }
+
+Not this:
+
+   if (foo) {
+	a = *(b+8);		// Some comment here
+
+In addition, comments should explain code, not just narrate it. A comments
+that says "skip the first byte" isn't useful, but a comment that says "the
+first byte is all 0 for Windows, so we skip it when not in Windows" is very
+useful.
+
+
+
+
+
+
+
+
+
+# for vim to text-wrap
+vim:textwidth=78:
+

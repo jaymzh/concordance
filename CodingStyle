@@ -1,0 +1,47 @@
+INDENTATION
+Concordance currently uses tab-character indentation. While 4- or 8-space
+indentation would be preferrable, it's not what we have now, so please keep
+the existing indentation.
+
+
+PAGE-WIDTH
+Page-width should not be wider than 80 characters. If they are, you've nested
+your functions too deep and you need to re-factor your code. There are
+occasional execptions to this where something like a static_cast of a variable
+with a long name to a type with a long name may cause one line to be too long
+while everything else is fine. But this should be the exception, not the rule.
+
+
+SPACING
+We follow the K&R coding style. You should familiarize yourself with it.
+Additional specifics follow.
+
+Spaces are important. All operators should be surrounded by a space on either
+side, such as "i == 2" instead of "i==2".
+
+Parynthesis and brackets do not need spaces inside them. In otherwords you
+should have:
+   if (i == 2) {
+
+and not:
+   if ( i == 2 ) {
+
+The same thing for i[2] as opposed to i[ 2 ].
+
+
+CROSS-PLATFORM NOTES
+Code MUST be portable and cross-platform. Our codebase works on Linux, Mac OS
+X, BSD, Windows, and possibly others. As such it is important ensure any
+patches are cross-platform.
+
+Contributors are not expected to be familiar with all supported platforms, but
+should be willing to modify and re-submit patches in response to feedback from
+developers and other contributors regarding cross-platform issues.
+
+
+
+
+
+# for vim to text-wrap
+vim:textwidth=78:
+
