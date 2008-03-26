@@ -10,15 +10,26 @@ phil@ipom.com
 - compilation fixes for Mac
 - kext for Mac
 - rename from harmony to concord
+- ignore return value from reset_remote() since it doesn't always return
+  successfully from all remotes (thanks to linux@zachcarter.com)
+- fix the location and name of the license file (thanks to
+  s-t-concordance@wwwdotorg.org)
 
 s-t-harmony@wwwdotorg.org:
 - remove usage of ** where * is sufficient
 - typedef our callback type
-- Project files, def file for DLL
 - API/type cleanups
+- implement the firmware checksum algorithm
+- fix includes for gcc 4.3.0
+- fix protocol.txt c&p error
 
 simon@budig.de
 - Fix sector calculation in EraseFlash() (bug#1910326)
+
+marco_bleich@gmx.do:
+- project files, def file for DLL
+- update Windows project files for library/cli split
+
 
 0.13
 Released: 02/29/08
