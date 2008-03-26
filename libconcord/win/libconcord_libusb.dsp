@@ -38,8 +38,8 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "Release"
-# PROP Intermediate_Dir "Release"
+# PROP Output_Dir "Release/libconcord_libusb"
+# PROP Intermediate_Dir "Release/libconcord_libusb"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "LIBCONCORD_LIBUSB_EXPORTS" /YX /FD /c
@@ -53,11 +53,11 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
-# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386 /out:"Release/libconcord.dll"
+# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386 /out:"Release/libconcord_libusb/libconcord.dll"
 # Begin Special Build Tool
 SOURCE="$(InputPath)"
 PostBuild_Desc=copying libconcord.dll (Release/libusb version)
-PostBuild_Cmds=copy .\Release\libconcord.lib ..\concordance\Release\libconcord.lib	copy .\Release\libconcord.dll ..\concordance\Release\libconcord.dll
+PostBuild_Cmds=mkdir ..\..\concordance\win\Release	copy .\Release\libconcord_libusb\libconcord.lib ..\..\concordance\win\Release\libconcord.lib	copy .\Release\libconcord_libusb\libconcord.dll ..\..\concordance\win\Release\libconcord.dll
 # End Special Build Tool
 
 !ELSEIF  "$(CFG)" == "libconcord_libusb - Win32 Debug"
@@ -69,8 +69,8 @@ PostBuild_Cmds=copy .\Release\libconcord.lib ..\concordance\Release\libconcord.l
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "Debug"
-# PROP Intermediate_Dir "Debug"
+# PROP Output_Dir "Debug/libconcord_libusb"
+# PROP Intermediate_Dir "Debug/libconcord_libusb"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "LIBCONCORD_LIBUSB_EXPORTS" /YX /FD /GZ /c
@@ -84,11 +84,11 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /out:"Debug/libconcord.dll" /pdbtype:sept
+# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /out:"Debug/libconcord_libusb/libconcord.dll" /pdbtype:sept
 # Begin Special Build Tool
 SOURCE="$(InputPath)"
 PostBuild_Desc=copying libconcord.dll (Debug/libusb version)
-PostBuild_Cmds=copy .\Debug\libconcord.lib ..\concordance\Debug\libconcord.lib	copy .\Debug\libconcord.dll ..\concordance\Debug\libconcord.dll
+PostBuild_Cmds=mkdir ..\..\concordance\win\Debug	copy .\Debug\libconcord_libusb\libconcord.lib ..\..\concordance\win\Debug\libconcord.lib	copy .\Debug\libconcord_libusb\libconcord.dll ..\..\concordance\win\Debug\libconcord.dll
 # End Special Build Tool
 
 !ENDIF 
