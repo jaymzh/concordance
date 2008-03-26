@@ -23,6 +23,8 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "libconcord.h"
 #include "concordance.h"
 #include "remote.h"

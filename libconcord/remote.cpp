@@ -17,6 +17,7 @@
  *  (C) Copyright Phil Dibowitz 2007
  */
 
+#include <string.h>
 #include "libconcord.h"
 #include "concordance.h"
 #include "hid.h"

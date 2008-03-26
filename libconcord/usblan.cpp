@@ -18,6 +18,7 @@
 
 #include "libconcord.h"
 #include "concordance.h"
+#include <string.h>
 #include <errno.h>
 
 #ifdef WIN32
