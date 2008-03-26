@@ -393,5 +393,5 @@ int learn_ir_commands(char *file_name, int post);
 }
 #endif
 
-#endif // LIBCONCORD_H
+#endif /* LIBCONCORD_H */
 

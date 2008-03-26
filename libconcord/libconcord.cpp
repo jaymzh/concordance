@@ -736,12 +736,12 @@ int _is_fw_update_supported(int direct)
 	 * fw_up_base (we know we have a fw_base from previous portion of if),
 	 * to know we're capable of doing it.
 	 *
-	 * IN ADDITION, remotes whose fw_base and fw_up_base are the same
-	 * require extra steps we don't yet support, so don't attempt them,
-	 * in live mode! Hence the last part.
+	 * Also, only allow architectures where we've figured out the
+	 * structure of the initial magic bytes.
 	 */
 	if (ri.arch->firmware_base == 0
-	    || (!direct && ri.arch->firmware_update_base == 0)) {
+	    || (!direct && ri.arch->firmware_update_base == 0)
+	    || (ri.arch->firmware_4847_offset == 0)) {
 		return 0;
 	}
 
@@ -959,43 +959,54 @@ int read_firmware_from_remote(uint8_t **out, lc_callback cb,
 }
 
 /*
- * The first 6 bytes of the firmware file we receive from the
+ * The first few bytes of the firmware file we receive from the
  * website will be blanked out (0xFF), and we need to fill them
- * in with the magic 6 bytes from the existing firmware.
+ * by calculating appropriate content.
  *
  * So why don't we always do this? If the user has a dump from us,
- * it already has the right first 6 bytes... and if somehow the
+ * it already has the right initial bytes... and if somehow the
  * firmware on the device is messed up, we don't want to ignore
  * that useful data in the file.
  *
- * So we only retreive it from the remote if it isn't given to us.
+ * So we only overwrite the initial bytes if they are missing.
  * For most users, that will be all the time.
  *
  *   - Phil Dibowitz    Tue Mar 11 23:17:53 PDT 2008
  */
-int _fix_six_magic_bytes(uint8_t *in)
+int _fix_magic_bytes(uint8_t *in)
 {
-	int err = 0;
-
 	if (in[0] == 0xFF && in[1] == 0xFF) {
 		/*
-		 * FIXME: This is HORRIBLE and will only work
-		 * 	for the LATEST firmware (at time of writing)
-		 * 	but it's simply a place holder. These two
-		 * 	bytes are some magic "value" - perhaps
-		 * 	a checksum, perhaps something else. Until
-		 * 	we figure it out, we'll hardcode the latest.
+		 * There are "always" two bytes at some location that
+		 * contain 0x48 and 0x47.
+		 *
+		 * Note: For some arch's (10 currently) we haven't
+		 * investigated where these go, hence the check for
+		 * a valid location in _is_fw_update_supported.
+		 *
+		 * Note: Arch 2 may be an exception to rule, and needs
+		 * more investigation.
 		 */
-		in[0] = 0xFB;
-		in[1] = 0x85;
+		in[ri.arch->firmware_4847_offset] = 0x48;
+		in[ri.arch->firmware_4847_offset + 1] = 0x47;
 
 		/*
-		 * These two bytes are "always" 0x48 and 0x47, at least
-		 * for architecture 8, which is all we've thus-far figured
-		 * out definitively.
+		 * The first 2 bytes are a simple 16-bit checksum, computed
+		 * beginning at the location of the hard-coded 0x48/0x47
+		 * bytes through the end of the firmware.
 		 */
-		in[4] = 0x48;
-		in[5] = 0x47;
+		uint8_t suma = 0x21;
+		uint8_t sumb = 0x43;
+		for (
+			uint32_t index = ri.arch->firmware_4847_offset;
+			index < FIRMWARE_SIZE;
+			index += 2
+		) {
+			suma ^= in[index];
+			sumb ^= in[index + 1];
+		}
+		in[0] = suma;
+		in[1] = sumb;
 	}
 
 	return 0;
@@ -1018,7 +1029,7 @@ int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 		addr = ri.arch->firmware_base;
 	}
 
-	if ((err = _fix_six_magic_bytes(in))) {
+	if ((err = _fix_magic_bytes(in))) {
 		return LC_ERROR_READ;
 	}
 

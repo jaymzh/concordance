@@ -68,6 +68,7 @@ struct TArchInfo {
 	uint32_t	firmware_base;
 	uint32_t	config_base;
 	uint32_t	firmware_update_base;
+	uint32_t	firmware_4847_offset;
 	uint32_t	cookie;
 	uint32_t	cookie_size;
 	uint32_t	end_vector;
