@@ -17,7 +17,6 @@
  */
 
 #include <string.h>
-#include <strings.h>
 #include "libconcord.h"
 #include "concordance.h"
 #include "hid.h"
@@ -26,7 +25,8 @@
 
 #ifdef WIN32
 #include <winsock.h>
-#else
+#else /* non WIN32 */
+#include <strings.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #define closesocket close
