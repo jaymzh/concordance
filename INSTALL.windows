@@ -13,16 +13,16 @@ c) Micosoft Visual Studio 2008 (9.0) - Express Edition
 Open the Project tree in your Development-System, by (letters here correspond
 to development environment above - pick one):
 
-a) Open the Workspace-File '.\win\concordance.dsw' or
-b) Open the Workspace-File and convert it to the VS2005 format
-(its done automatically by the conversion wizard)
-or
-c) Open the Solution file '.\win\concordance.sln'.
+a) Open the Workspace-File for Visual C++ 6.0 '.\win\concordance.dsw'
+b) Open the Solution file for Visual Studio 2005 '.\win\concordance.sln'.
+c) Open the Solution file for Visual Studio 2008 '.\win\concordance.sln'
+   (the 2005 sln-file format will be converted to the new (2008) format
+    automatically the first time you open the project tree.)
 
-Now you should see five Projects in your Workspace/Solution-Tree
+Now you should see four Projects in your Workspace/Solution-Tree
 
-- libconcord_libusb: a static link library using the libusb package (see note 1)
-- libconcord_winhid: a static link library using native win-usb support
+- libconcord_libusb: a dynamic link library using the libusb package (see note 1)
+- libconcord_winhid: a dynamic link library using native win-usb support
 
 - concordance: a cli that utilizes the library
 
