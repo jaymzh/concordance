@@ -88,7 +88,8 @@ enum {
 	MODE_RESET,
 	MODE_GET_TIME,
 	MODE_SET_TIME,
-	MODE_PRINT_INFO
+	MODE_PRINT_INFO,
+	MODE_VERSION
 };
 
 /*
@@ -436,6 +437,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 		{"get-time", no_argument, 0, 'k' },
 		{"set-time", no_argument, 0, 'K' },
 		{"verbose", no_argument, 0, 'v'},
+		{"version", no_argument, 0, 'V'},
 		{"no-web", no_argument, 0, 'w'},
 		{0,0,0,0} /* terminating null entry */
 	};
@@ -449,7 +451,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 
 	tmpint = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvw",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVw",
 				long_options, NULL)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -530,6 +532,9 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			break;
 		case 'v':
 			(*options).verbose = 1;
+			break;
+		case 'V':
+			set_mode(mode, MODE_VERSION);
 			break;
 		case 'w':
 			(*options).noweb = 1;
@@ -620,28 +625,30 @@ void help()
 	printf("   -F, --write-firmware <filename>\n");
 	printf("\tRead firmware from <filename> and write it to the");
 	printf(" remote\n\n");
+	printf("   -h, --help\n");
+	printf("\tPrint this help message and exit.\n\n");
 	printf("   -i, --print-remote-info\n");
 	printf("\tPrint information about the remote. Additional");
 	printf(" information will\n\tbe printed if -v is also used.\n\n");
+	printf("   -k, --get-time\n");
+	printf("\t Get time from the remote\n\n");
+	printf("   -K, --set-time\n");
+	printf("\t Set the remote's time clock\n\n");
+	printf("   -l, --learn-ir <filename>\n");
+	printf("\t Learn IR from other remotes. Use <filename>.\n\n");
+	printf("   -r, --reset\n");
+	printf("\tReset (power-cycle) the remote control\n\n");
 	printf("   -s, --dump-safemode [<filename>]\n");
 	printf("\tRead the safemode firmware from the remote and write it");
 	printf(" to a file.\n\tIf no filename is psecified, safe.bin is");
 	printf(" used.\n\n");
 	printf("   -t, --connectivity-test <filename>\n");
 	printf("\tDo a connectivity test using <filename>\n\n");
-	printf("   -r, --reset\n");
-	printf("\tReset (power-cycle) the remote control\n\n");
-	printf("   -h, --help\n");
-	printf("\tPrint this help message and exit.\n\n");
-	printf("   -l, --learn-ir <filename>\n");
-	printf("\t Learn IR from other remotes. Use <filename>.\n\n");
-	printf("   -k, --get-time\n");
-	printf("\t Get time from the remote\n\n");
-	printf("   -K, --set-time\n");
-	printf("\t Set the remote's time clock\n\n");
+	printf("   -V, --version\n");
+	printf("\t Print the version and exit\n\n");
 
 	printf("NOTE: If using the short options (e.g. -c), then *optional*");
-	printf(" arguements\nmust be adjacent: -c/path/to/file.");
+	printf(" arguments\nmust be adjacent: -c/path/to/file.");
 	printf(" Required arguments don't have this\nlimitation, and can");
 	printf(" be specified -C /path/to/file or -C/path/to/file.\n\n");
 
@@ -791,6 +798,14 @@ int main(int argc, char *argv[])
 	if (mode == MODE_UNSET) {
 		printf("No mode requested. No work to do.\n");
 		exit(1);
+	}
+
+	/*
+ 	 * If we're in "version" mode, we already printed the version,
+ 	 * just exit.
+ 	 */
+	if (mode == MODE_VERSION) {
+		exit(0);
 	}
 
 	/*

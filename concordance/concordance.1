@@ -30,10 +30,10 @@ concordance <options>
 .SH DESCRIPTION
 This software supports programming Logitech Harmony remote controls.  This software uses libusb, which requires the RAWIO capability. That means you probably need root to use it.
 .TP
-This software can be run in one of two modes. If you run it in automatic mode, the software will use the filename to determine what to do with it. If the filename is not *exactly* as the website sends it, then concordance will not know what to do with it, and you should use the non-automatic mode.
+This software can be run in one of two modes. If you run it in automatic mode, the software will use the filename to determine what to do with it. If the filename is not *exactly* as the website sends it, then concordance will not know what to do with it, and you should use the manual mode.
 .TP
-In command-line mode, you specify what you want to do. For any command-line option that requires updating the remote, a filename is required.
-.SH OPTIONS
+In manual mode, you specify what you want to do. For any command-line option that requires updating the remote, a filename is required. In manual mode, you must first choose a mode (and only one):
+.SH MODE-SETTING OPTIONS
 .TP
 .B \-c, \-\-dump\-config [<filename>]
 Read the config from the remote and write it to a file.  If no filename is specified, config.EZHex is used.
@@ -70,6 +70,23 @@ Read the safemode firmware from the remote and write it to a file.  If no filena
 .TP
 .B \-t, \-\-connectivity\-test <filename>
 Do a connectivity test using <filename>
+.TP
+.B \-V, \-\-version
+Print the version and exit
+.TP
+\fBNOTE\fP: If using the short options (e.g. -c), then *optional* arguments must be adjacent: -c/path/to/file. Required arguments don't have this limitation, and can be specified -C /path/to/file or -C/path/to/file.
+.TP
+Additionally, you can specify options to adjust the behavior of the software:
+.SH OTHER OPTIONS
+.TP
+.B \-b, \-\-binary\-only
+When dumping a config or firmware, this specifies to dump only the binary portion. When use without a specific filename, the default filename's extension is changed to .bin. When writing a config or firmware, this specifies the filename passed in has just the binary blob, not the XML.
+.TP
+.B \-v, \-\-verbose
+Enable verbose output.
+.TP
+.B \-w, \-\-no\-web
+Do not attempt to talk to the website. This is useful for re-programming the remote from a saved file, or for debugging.
 .SH BUGS
 None known at time of release, but check the website.
 .SH BUG REPORTS
