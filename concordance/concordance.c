@@ -595,6 +595,8 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 				*mode = MODE_WRITE_CONFIG;
 			} else if (!strcasecmp(file, "learnir.eztut")) {
 				*mode = MODE_LEARN_IR;
+			} else if (!strcasecmp(file, "latestfirmware.ezup")) {
+				*mode = MODE_WRITE_FIRMWARE;
 			} else {
 				fprintf(stderr,
 					"Don't know what to do with %s\n",
