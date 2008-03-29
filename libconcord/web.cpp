@@ -151,77 +151,96 @@ static int Zap(string &server, const char *s1, const char *s2)
 	return 0;
 }
 
-int GetTag(const char *find, uint8_t*& pc, string *s=NULL)
+int GetTag(const char *find, uint8_t* data, uint32_t data_size,
+	uint8_t *&found, string *s=NULL)
 {
-	const size_t len = strlen(find);
-	do {
-		/*
-		 * Advance pointer until beginning of a tag, and then
-		 * one more.
-		 */
-		while(*pc != '<' && *pc++);
+	const size_t find_len = strlen(find);
+	uint8_t * search = data;
 
-		// Make sure we still have a valid pointer
-		if (!pc)
+	// Consume tags until there aren't any left
+	while (1) {
+		// Loop searching for start of tag character
+		while (1) {
+			if (*search == '<') {
+				break;
+			}
+			if (search - data >= data_size) {
+				return -1;
+			}
+			search++;
+		}
+		// Validate there's enough string left to hold the tag name
+		uint32_t needed_len = find_len + 2;
+		uint32_t left_len = data_size - (search - data);
+		if (left_len < needed_len) {
 			return -1;
-
+		}
+		// Point past <, at tag name
+		search++;
 		// Check to see if this is the tag we want
-		if (*++pc == *find && pc[len]=='>'
-		   && !strnicmp(find, reinterpret_cast<const char*>(pc), len)) {
-			pc += strlen(find) + 1;
+		if (search[find_len] == '>'
+		   && !strnicmp(find, reinterpret_cast<const char*>(search), find_len)) {
+			// Point past >, at tag content
+			search += find_len + 1;
+
+			if (found) {
+				found = search;
+			}
 
 			/*
  			 * If a string pointer was passed in, then add the
  			 * contents of this entire tag to the string
  			 */
 			if (s) {
-				const uint8_t *p=pc;
 				*s = "";
 				/*
 				 * Here we keep adding chars until the next tag
 				 * which, in theory, should be the end-tag.
 				 */
-				while (*p != '<' && *p) {
-					*s+=*p;
-					++p;
+				while (*search && *search != '<') {
+					*s += *search;
+					search++;
+					if (search - data >= data_size) {
+						break;
+					}
 				}
 			}
 			return 0;
 		}
-		/*
-		 * Advance until we get to the closing bracket of the end-tag
-		 * we just found, and advance on more.
-		 */
-		while (*pc != '>' && *pc++);
-	/*
-	 * If we found it, we'd have returned above, so keep looping until
-	 * we do.
-	 */
-	} while(*pc++);
 
-	// GACK! We didn't find it.
-	return -1;
+		// Loop searching for end of tag character
+		while (1) {
+			if (*search == '>') {
+				break;
+			}
+			if (search - data >= data_size) {
+				return -1;
+			}
+			search++;
+		}
+	}
 }
 
-int Post(uint8_t *xml, const char *root, TRemoteInfo &ri, bool has_userid,
-	string *learn_seq = NULL, string *learn_key = NULL)
+int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
+	bool has_userid, string *learn_seq = NULL, string *learn_key = NULL)
 {
 
 	uint8_t *x = xml;
 	int err;
-	if ((err = GetTag(root,x)))
+	if ((err = GetTag(root, x, xml_size - (x - xml), x)))
 		return err;
 
 	string server, path, cookie, userid;
 
-	if ((err = GetTag("SERVER", x, &server)))
+	if ((err = GetTag("SERVER", x, xml_size - (x - xml), x, &server)))
 		return err;
-	if ((err = GetTag("PATH", x, &path)))
+	if ((err = GetTag("PATH", x, xml_size - (x - xml), x, &path)))
 		return err;
-	if ((err = GetTag("VALUE", x, &cookie)))
+	if ((err = GetTag("VALUE", x, xml_size - (x - xml), x, &cookie)))
 		return err;
 	if (has_userid) {
-		if ((err = GetTag("VALUE", x, &userid)))
+		uint8_t *n = 0;
+		if ((err = GetTag("VALUE", x, xml_size - (x - xml), n, &userid)))
 			return err;
 	}
 

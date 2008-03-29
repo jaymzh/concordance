@@ -158,7 +158,7 @@ int dump_config(struct options_t *options, char *file_name,
 		return err;
 	}
 
-	if ((err = write_config_to_file(config, file_name, size,
+	if ((err = write_config_to_file(config, size, file_name,
 			(*options).binary))) {
 		return err;
 	}
@@ -197,31 +197,20 @@ int upload_config(char *file_name, struct options_t *options,
 
 	uint8_t *data;
 	uint32_t size = 0;
-	uint8_t *place_ptr;
-	uint32_t binsize;
+	uint8_t *binary_data;
+	uint32_t binary_size;
 
 	read_config_from_file(file_name, &data, &size);
 
-	place_ptr = data;
-	binsize = size;
+	binary_data = data;
+	binary_size = size;
 
 	if (!(*options).binary) {
-
-		if ((err = verify_xml_config(data, size)))
-			return LC_ERROR;
-
-		if ((err = find_config_binary_size(data, &binsize)))
-			return LC_ERROR;
-
-		/* We no longer need size, let it get munged... */
-		if ((err = find_config_binary_start(&place_ptr, &size)))
-			return LC_ERROR;
-
-		if (size < binsize)
+		if ((err = find_config_binary(data, size, &binary_data, &binary_size)))
 			return LC_ERROR;
 
 		if (!(*options).noweb)
-			post_preconfig(data);
+			post_preconfig(data, size);
 	}
 
 	/*
@@ -239,14 +228,14 @@ int upload_config(char *file_name, struct options_t *options,
 	 * erase the flash (to 1) in order to write the flash.
 	 */
 	printf("Erasing Flash:       ");
-	if ((err = erase_config(binsize, cb, (void *)0))) {
+	if ((err = erase_config(binary_size, cb, (void *)0))) {
 		delete_blob(data);
 		return err;
 	}
 	printf("       done\n");
 
 	printf("Writing Config:      ");
-	if ((err = write_config_to_remote(place_ptr, binsize, cb,
+	if ((err = write_config_to_remote(binary_data, binary_size, cb,
 			(void *)1))) {
 		delete_blob(data);
 		return err;
@@ -254,7 +243,7 @@ int upload_config(char *file_name, struct options_t *options,
 	printf("       done\n");
 
 	printf("Verifying Config:    ");
-	if ((err = verify_remote_config(place_ptr, binsize, cb, (void *)1))) {
+	if ((err = verify_remote_config(binary_data, binary_size, cb, (void *)1))) {
 		delete_blob(data);
 		return err;
 	}
@@ -262,7 +251,7 @@ int upload_config(char *file_name, struct options_t *options,
 
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
-		if ((err = post_postconfig(data))) {
+		if ((err = post_postconfig(data, size))) {
 			delete_blob(data);
 			return err;
 		}
@@ -277,14 +266,16 @@ int upload_config(char *file_name, struct options_t *options,
 int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 {
 	uint8_t * safe = 0;
+	uint32_t safe_size;
 	int err = 0;
 
-	if ((err = read_safemode_from_remote(&safe, cb, cb_arg))) {
+	if ((err = read_safemode_from_remote(&safe, &safe_size, cb,
+			cb_arg))) {
 		delete_blob(safe);
 		return err;
 	}
 
-	if ((err = write_safemode_to_file(safe, file_name))) {
+	if ((err = write_safemode_to_file(safe, safe_size, file_name))) {
 		delete_blob(safe);
 		return err;
 	}
@@ -298,7 +289,9 @@ int upload_firmware(char *file_name, struct options_t *options,
 {
 	int err;
 	uint8_t *firmware;
+	uint32_t firmware_size;
 	uint8_t *firmware_bin;
+	uint32_t firmware_bin_size;
 
 	err = 0;
 	firmware = firmware_bin = 0;
@@ -323,52 +316,69 @@ int upload_firmware(char *file_name, struct options_t *options,
 	}
 
 	if ((err = read_firmware_from_file(file_name, &firmware,
-			(*options).binary))) {
+			&firmware_size, (*options).binary))) {
 		delete_blob(firmware);
 		return err;
 	}
 
-	if ((err = extract_firmware_binary(firmware, &firmware_bin))) {
-		delete_blob(firmware);
-		delete_blob(firmware_bin);
-		return err;
+	if ((*options).binary) {
+		firmware_bin = firmware;
+		firmware_bin_size = firmware_size;
+	} else {
+		if ((err = extract_firmware_binary(firmware, firmware_size,
+				&firmware_bin, &firmware_bin_size))) {
+			delete_blob(firmware_bin);
+			delete_blob(firmware);
+			return err;
+		}
 	}
 
 	if (!(*options).direct) {
 		if ((err = prep_firmware())) {
 			printf("Failed to prepare remote for FW update\n");
+			if (firmware_bin != firmware) {
+				delete_blob(firmware_bin);
+			}
 			delete_blob(firmware);
-			delete_blob(firmware_bin);
 			return err;
 		}
 	}
 
 	printf("Invalidating Flash:  ");
 	if ((err = invalidate_flash())) {
+		if (firmware_bin != firmware) {
+			delete_blob(firmware_bin);
+		}
 		delete_blob(firmware);
-		delete_blob(firmware_bin);
 		return err;
 	}
 	printf("                     done\n");
 
 	printf("Erasing Flash:       ");
 	if ((err = erase_firmware((*options).direct, cb, (void *)0))) {
+		if (firmware_bin != firmware) {
+			delete_blob(firmware_bin);
+		}
 		delete_blob(firmware);
-		delete_blob(firmware_bin);
 		return err;
 	}
 	printf("       done\n");
 
 	printf("Writing firmware:    ");
-	if ((err = write_firmware_to_remote(firmware_bin, (*options).direct, cb,
-			cb_arg))) {
+	if ((err = write_firmware_to_remote(firmware_bin, firmware_bin_size,
+			(*options).direct, cb, cb_arg))) {
+		if (firmware_bin != firmware) {
+			delete_blob(firmware_bin);
+		}
 		delete_blob(firmware);
 		return err;
 	}
 	printf("       done\n");
 
 	/* Done with this... */
-	delete_blob(firmware_bin);
+	if (firmware_bin != firmware) {
+		delete_blob(firmware_bin);
+	}
 
 	if (!(*options).direct) {
 		if ((err = finish_firmware())) {
@@ -380,7 +390,7 @@ int upload_firmware(char *file_name, struct options_t *options,
 
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
-		if ((err = post_postfirmware(firmware))) {
+		if ((err = post_postfirmware(firmware, firmware_size))) {
 			delete_blob(firmware);
 			return err;
 		}
@@ -396,13 +406,15 @@ int dump_firmware(struct options_t *options, char *file_name,
 {
 	int err = 0;
 	uint8_t *firmware = 0;
+	uint32_t firmware_size;
 
-	if ((err = read_firmware_from_remote(&firmware, cb, cb_arg))) {
+	if ((err = read_firmware_from_remote(&firmware, &firmware_size, cb,
+			cb_arg))) {
 		delete_blob(firmware);
 		return err;
 	}
 
-	if ((err = write_firmware_to_file(firmware, file_name,
+	if ((err = write_firmware_to_file(firmware, firmware_size, file_name,
 			(*options).binary))) {
 		delete_blob(firmware);
 		return err;
@@ -566,7 +578,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			 * FIXME: We'll attempt to figure out what to
 			 *        do based on filename. This is fragile
 			 *        and should be done based on some
-			 *        metadata int he file... but this will
+			 *        metadata in the file... but this will
 			 *        do for now.
 			 */
 
@@ -577,11 +589,11 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			file_name_copy = (char *)strdup(*file_name);
 			file = basename(file_name_copy);
 
-			if (!strcasecmp(file,"connectivity.ezhex")) {
+			if (!strcasecmp(file, "connectivity.ezhex")) {
 				*mode = MODE_CONNECTIVITY;
-			} else if (!strcasecmp(file,"update.ezhex")) {
+			} else if (!strcasecmp(file, "update.ezhex")) {
 				*mode = MODE_WRITE_CONFIG;
-			} else if (!strcasecmp(file,"learnir.eztut")) {
+			} else if (!strcasecmp(file, "learnir.eztut")) {
 				*mode = MODE_LEARN_IR;
 			} else {
 				fprintf(stderr,

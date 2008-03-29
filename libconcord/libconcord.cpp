@@ -39,7 +39,7 @@
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
 
-#define FIRMWARE_SIZE 64*1024
+#define FIRMWARE_MAX_SIZE 64*1024
 
 static class CRemoteBase *rmt;
 static struct TRemoteInfo ri;
@@ -315,10 +315,9 @@ const char *lc_strerror(int err)
 	return "Unknown error";
 }
 
-int delete_blob(uint8_t *ptr)
+void delete_blob(uint8_t *ptr)
 {
 	delete[] ptr;
-	return 1;
 }
 
 
@@ -427,21 +426,21 @@ int invalidate_flash()
 	return 0;
 }
 
-int post_preconfig(uint8_t *data)
+int post_preconfig(uint8_t *data, uint32_t size)
 {
-	Post(data, "POSTOPTIONS", ri, true);
+	Post(data, size, "POSTOPTIONS", ri, true);
 	return 0;
 }
 
-int post_postfirmware(uint8_t *data)
+int post_postfirmware(uint8_t *data, uint32_t size)
 {
-	Post(data, "COMPLETEPOSTOPTIONS", ri, false);
+	Post(data, size, "COMPLETEPOSTOPTIONS", ri, false);
 	return 0;
 }
 
-int post_postconfig(uint8_t *data)
+int post_postconfig(uint8_t *data, uint32_t size)
 {
-	Post(data, "COMPLETEPOSTOPTIONS", ri, true);
+	Post(data, size, "COMPLETEPOSTOPTIONS", ri, true);
 	return 0;
 }
 
@@ -457,12 +456,10 @@ int post_connect_test_success(char *file_name)
 	}
 
 	const uint32_t size = file.getlength();
-	uint8_t * const buf = new uint8_t[size+1];
-	file.read(buf,size);
-	// Prevent GetTag() from going off the deep end
-	buf[size]=0;
+	uint8_t * const buf = new uint8_t[size];
+	file.read(buf, size);
 
-	Post(buf,"POSTOPTIONS", ri, true);
+	Post(buf, size, "POSTOPTIONS", ri, true);
 
 	if (file.close() != 0) {
 		return LC_ERROR_OS_FILE;
@@ -559,7 +556,7 @@ int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
 	}
 
 	*size = file.getlength();
-	*out = new uint8_t[(*size) + 1];
+	*out = new uint8_t[*size];
 	file.read(*out, *size);
 
 	if (file.close() != 0) {
@@ -569,16 +566,10 @@ int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
 		return LC_ERROR_OS_FILE;
 	}
 
-	/*
-	 * Prevent GetTag() from going off the deep end
-	 *   FIXME: Should probably be a \0, not a 0
-	 */
-	(*out)[*size] = 0;
-
 	return 0;
 }
 
-int write_config_to_file(uint8_t *in, char *file_name, uint32_t size,
+int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 	int binary)
 {
 	binaryoutfile of;
@@ -628,53 +619,6 @@ int write_config_to_file(uint8_t *in, char *file_name, uint32_t size,
 	return 0;
 }
 
-int verify_xml_config(uint8_t *data, uint32_t size)
-{
-
-	uint8_t *ptr = data;
-	string s;
-
-	GetTag("BINARYDATASIZE", ptr, &s);
-	uint32_t data_size = atoi(s.c_str());
-
-	GetTag("CHECKSUM", ptr, &s);
-	const uint8_t checksum = atoi(s.c_str());
-
-	// Calculate size by moving pointer to end of XML
-	GetTag("/INFORMATION", ptr);
-	ptr += 2;
-	size -= (ptr - data);
-
-#ifdef _DEBUG
-	printf("reported data size %i\n", data_size);
-	printf("checksum %i\n", checksum);
-	printf("actual data size %i\n", size);
-#endif
-
-	if (size != data_size) {
-#ifdef _DEBUG
-		printf("Data size mismatch %i %i\n", size, data_size);
-#endif
-		return LC_ERROR;
-	}
-
-	// Calculate checksum
-	uint32_t u = size;
-	uint8_t chk = 0x69;
-	uint8_t *pc = ptr;
-	while (u--)
-		chk ^= *pc++;
-
-	if (chk != checksum) {
-#ifdef _DEBUG
-		printf("Bad checksum %02X %02X\n",chk, checksum);
-#endif
-		return LC_ERROR;
-	}
-
-	return 0;
-}
-
 int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
 	void *cb_arg)
 {
@@ -700,26 +644,65 @@ int erase_config(uint32_t size, lc_callback cb, void *cb_arg)
 	return 0;
 }
 
-int find_config_binary_size(uint8_t *ptr, uint32_t *size)
+int find_config_binary(uint8_t *config, uint32_t config_size,
+	uint8_t **binary_ptr, uint32_t *binary_size)
 {
-	string size_s;
-	int err = GetTag("BINARYDATASIZE", ptr, &size_s);
+	int err;
+
+        err = GetTag("/INFORMATION", config, config_size, *binary_ptr);
 	if (err == -1)
 		return LC_ERROR;
 
-	*size = (uint32_t)atoi(size_s.c_str());
-	return 0;
-}
+	*binary_ptr += 2;
+	*binary_size = config_size - (*binary_ptr - config);
 
-int find_config_binary_start(uint8_t **ptr, uint32_t *size)
-{
-	uint8_t *optr = *ptr;
-	int err = GetTag("/INFORMATION", *ptr);
+        // Limit tag searches to XML portion
+        config_size -= *binary_size;
+
+	string binary_tag_size_s;
+	uint8_t *n = 0;
+	err = GetTag("BINARYDATASIZE", config, config_size, n,
+		&binary_tag_size_s);
 	if (err == -1)
 		return LC_ERROR;
+        uint32_t binary_tag_size = (uint32_t)atoi(binary_tag_size_s.c_str());
 
-	*ptr += 2;
-	*size -= ((*ptr) - optr);
+#ifdef _DEBUG
+	printf("actual data size %i\n", *binary_size);
+	printf("reported data size %i\n", binary_tag_size);
+#endif
+
+	if (*binary_size != binary_tag_size) {
+#ifdef _DEBUG
+		printf("Config data size mismatch\n");
+#endif
+		return LC_ERROR;
+	}
+
+	string s;
+	err = GetTag("CHECKSUM", config, config_size, n, &s);
+	if (err != 0)
+		return err;
+	const uint8_t checksum = atoi(s.c_str());
+
+	// Calculate checksum
+	uint32_t u = *binary_size;
+	uint8_t calc_checksum = 0x69;
+	uint8_t *pc = *binary_ptr;
+	while (u--)
+		calc_checksum ^= *pc++;
+
+#ifdef _DEBUG
+	printf("reported checksum %i %02x\n", checksum, checksum);
+	printf("actual checksum %i %02x\n", calc_checksum, calc_checksum);
+#endif
+
+	if (calc_checksum != checksum) {
+#ifdef _DEBUG
+		printf("Config checksum mismatch\n");
+#endif
+		return LC_ERROR;
+	}
 
 	return 0;
 }
@@ -750,29 +733,29 @@ int _is_fw_update_supported(int direct)
 	return 1;
 }
 
-int _write_fw_to_remote(uint8_t *in, uint32_t addr, lc_callback cb,
-	void *cb_arg)
+int _write_fw_to_remote(uint8_t *in, uint32_t size, uint32_t addr,
+	lc_callback cb,	void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->WriteFlash(addr, FIRMWARE_SIZE, in,
+	if ((err = rmt->WriteFlash(addr, size, in,
 			ri.protocol, cb, cb_arg))) {
 		return LC_ERROR_WRITE;
 	}
 	return 0;
 }
 
-int _read_fw_from_remote(uint8_t *&out, uint32_t addr, lc_callback cb,
-	void *cb_arg)
+int _read_fw_from_remote(uint8_t *&out, uint32_t size, uint32_t addr,
+	lc_callback cb,	void *cb_arg)
 {
-	out = new uint8_t[FIRMWARE_SIZE];
+	out = new uint8_t[size];
 	int err = 0;
 
 	if (!cb_arg) {
 		cb_arg = (void *)true;
 	}
 
-	if ((err = rmt->ReadFlash(addr, FIRMWARE_SIZE, out,
+	if ((err = rmt->ReadFlash(addr, size, out,
 				ri.protocol, false, cb, cb_arg))) {
 		return LC_ERROR_READ;
 	}
@@ -787,7 +770,7 @@ int erase_safemode(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->EraseFlash(ri.arch->flash_base, FIRMWARE_SIZE, ri,
+	if ((err = rmt->EraseFlash(ri.arch->flash_base, FIRMWARE_MAX_SIZE, ri,
 			cb, cb_arg))) {
 		return LC_ERROR_ERASE;
 	}
@@ -795,13 +778,15 @@ int erase_safemode(lc_callback cb, void *cb_arg)
 	return 0;
 }
 
-int read_safemode_from_remote(uint8_t **out, lc_callback cb,
+int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 	void *cb_arg)
 {
-	return _read_fw_from_remote(*out, ri.arch->flash_base, cb, cb_arg);
+	*size = FIRMWARE_MAX_SIZE;
+	return _read_fw_from_remote(*out, *size, ri.arch->flash_base, cb,
+		cb_arg);
 }
 
-int write_safemode_to_file(uint8_t *in, char *file_name)
+int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
 {
 	binaryoutfile of;
 
@@ -809,7 +794,7 @@ int write_safemode_to_file(uint8_t *in, char *file_name)
 		return LC_ERROR_OS_FILE;
 	}
 
-	of.write(in, FIRMWARE_SIZE);
+	of.write(in, size);
 
 	if (of.close() != 0) {
 		return LC_ERROR_OS_FILE;
@@ -818,7 +803,7 @@ int write_safemode_to_file(uint8_t *in, char *file_name)
 	return 0;
 }
 
-int read_safemode_from_file(char *file_name, uint8_t **out)
+int read_safemode_from_file(char *file_name, uint8_t **out, uint32_t *size)
 {
 	binaryinfile file;
 
@@ -829,8 +814,9 @@ int read_safemode_from_file(char *file_name, uint8_t **out)
 		return LC_ERROR_OS_FILE;
 	}
 
-	*out = new uint8_t[FIRMWARE_SIZE];
-	file.read(*out, FIRMWARE_SIZE);
+	*size = file.getlength();
+	*out = new uint8_t[*size];
+	file.read(*out, *size);
 
 	if (file.close() != 0) {
 #ifdef _DEBUG
@@ -947,17 +933,19 @@ int erase_firmware(int direct, lc_callback cb, void *cb_arg)
 		addr = ri.arch->firmware_base;
 	}
 
-	if ((err = rmt->EraseFlash(addr, FIRMWARE_SIZE, ri, cb, cb_arg))) {
+	if ((err = rmt->EraseFlash(addr, FIRMWARE_MAX_SIZE, ri, cb, cb_arg))) {
 		return LC_ERROR_ERASE;
 	}
 
 	return 0;
 }
 
-int read_firmware_from_remote(uint8_t **out, lc_callback cb,
+int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 	void *cb_arg)
 {
-	return _read_fw_from_remote(*out, ri.arch->firmware_base, cb, cb_arg);
+	*size = FIRMWARE_MAX_SIZE;
+	return _read_fw_from_remote(*out, *size, ri.arch->firmware_base, cb,
+		cb_arg);
 }
 
 /*
@@ -975,8 +963,12 @@ int read_firmware_from_remote(uint8_t **out, lc_callback cb,
  *
  *   - Phil Dibowitz    Tue Mar 11 23:17:53 PDT 2008
  */
-int _fix_magic_bytes(uint8_t *in)
+int _fix_magic_bytes(uint8_t *in, uint32_t size)
 {
+	if (size < (ri.arch->firmware_4847_offset + 2)) {
+		return LC_ERROR;
+	}
+
 	if (in[0] == 0xFF && in[1] == 0xFF) {
 		/*
 		 * There are "always" two bytes at some location that
@@ -1001,7 +993,7 @@ int _fix_magic_bytes(uint8_t *in)
 		uint8_t sumb = 0x43;
 		for (
 			uint32_t index = ri.arch->firmware_4847_offset;
-			index < FIRMWARE_SIZE;
+			index < FIRMWARE_MAX_SIZE;
 			index += 2
 		) {
 			suma ^= in[index];
@@ -1014,14 +1006,18 @@ int _fix_magic_bytes(uint8_t *in)
 	return 0;
 }
 
-int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
-	void *cb_arg)
+int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
+	lc_callback cb,	void *cb_arg)
 {
 	uint32_t addr = ri.arch->firmware_update_base;
 	int err = 0;
 
 	if (!_is_fw_update_supported(direct)) {
 		return LC_ERROR_UNSUPP;
+	}
+
+	if (size > FIRMWARE_MAX_SIZE) {
+		return LC_ERROR;
 	}
 
 	if (direct) {
@@ -1031,14 +1027,15 @@ int write_firmware_to_remote(uint8_t *in, int direct, lc_callback cb,
 		addr = ri.arch->firmware_base;
 	}
 
-	if ((err = _fix_magic_bytes(in))) {
+	if ((err = _fix_magic_bytes(in, size))) {
 		return LC_ERROR_READ;
 	}
 
-	return _write_fw_to_remote(in, addr, cb, cb_arg);
+	return _write_fw_to_remote(in, size, addr, cb, cb_arg);
 }
 
-int write_firmware_to_file(uint8_t *in, char *file_name, int binary)
+int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
+	int binary)
 {
 	binaryoutfile of;
 	if (of.open(file_name) != 0) {
@@ -1046,8 +1043,9 @@ int write_firmware_to_file(uint8_t *in, char *file_name, int binary)
 	}
 
 	if (binary) {
-		of.write(in, FIRMWARE_SIZE);
+		of.write(in, size);
 	} else {
+#ifdef _DEBUG
 		/// todo: file header
 		uint16_t *pw =
 		   reinterpret_cast<uint16_t*>(in);
@@ -1060,24 +1058,22 @@ int write_firmware_to_file(uint8_t *in, char *file_name, int binary)
 		while (n--)
 			wc ^= *pw++;
 		//TRACE1("Checksum: %04X\n",wc);
-
-		/*
-		 * Kevin saw Harmony do this somewhere,
-		 * but it bricks the firmware every time,
-		 * so I'm nuking it.
-		 */
-		//in[0] = in[1] = in[2] = in[3] = 0xFF;
+#endif
 
 		uint8_t *pf = in;
-		const uint8_t *fwend = in + FIRMWARE_SIZE;
+		const uint8_t *fwend = in + size;
 		do {
 			of.write("\t\t\t<DATA>");
 			char hex[16];
 			int u = 32;
+			if (u > size) {
+				u = size;
+			}
 			while (u--) {
 				// convert to hex
 				sprintf(hex, "%02X", *pf++);
 				of.write(hex);
+				size--;
 			}
 			of.write("</DATA>\n");
 		} while (pf < fwend);
@@ -1099,26 +1095,42 @@ int convert_to_binary(string hex, uint8_t *&ptr)
 	size_t size = hex.length();
 	for (size_t i = 0; i < size; i += 2) {
 		char tmp[6];
-		sprintf(tmp, "0x%s ", hex.substr(i,2).c_str());
+		sprintf(tmp, "0x%s ", hex.substr(i, 2).c_str());
 		ptr[0] = (uint8_t)strtoul(tmp, NULL, 16);
 		ptr++;
 	}
 	return 0;
 }
 
-int extract_firmware_binary(uint8_t *in, uint8_t **out)
+int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
+	uint32_t *size)
 {
+	uint32_t o_size = FIRMWARE_MAX_SIZE;
+	*out = new uint8_t[o_size];
+	uint8_t *o = *out;
+
+	uint8_t *x = xml;
+	uint32_t x_size = xml_size;
+
 	string hex;
-	*out = new uint8_t[FIRMWARE_SIZE];
-	uint8_t *ptr = *out;
-	uint8_t *tmp = in;
-	while (GetTag("DATA", tmp, &hex) == 0) {
-		convert_to_binary(hex, ptr);
+	while (GetTag("DATA", x, x_size, x, &hex) == 0) {
+		uint32_t hex_size = hex.length() / 2;
+		if (hex_size > o_size) {
+			return LC_ERROR;
+		}
+
+		convert_to_binary(hex, o);
+
+		x_size = xml_size - (x - xml);
+		o_size -= hex_size;
 	}
+
+	*size = o - *out;
+
 	return 0;
 }
 	
-int read_firmware_from_file(char *file_name, uint8_t **out, int binary)
+int read_firmware_from_file(char *file_name, uint8_t **out, uint32_t *size, int binary)
 {
 	binaryinfile file;
 
@@ -1129,14 +1141,9 @@ int read_firmware_from_file(char *file_name, uint8_t **out, int binary)
 		return LC_ERROR_OS_FILE;
 	}
 
-	if (binary) {
-		*out = new uint8_t[FIRMWARE_SIZE];
-		file.read(*out, FIRMWARE_SIZE);
-	} else {
-		*out = new uint8_t[file.getlength() + 1];
-		file.read(*out, file.getlength());
-		(*out)[file.getlength()] = 0;
-	}
+	*size = file.getlength();
+	*out = new uint8_t[*size];
+	file.read(*out, *size);
 
 	if (file.close() != 0) {
 #ifdef _DEBUG
@@ -1153,26 +1160,33 @@ int read_firmware_from_file(char *file_name, uint8_t **out, int binary)
  */
 int learn_ir_commands(char *file_name, int post)
 {
+	int err;
+
 	if (file_name) {
 		binaryinfile file;
 		if (file.open(file_name)) {
 			return LC_ERROR_OS_FILE;
 		}
 		uint32_t size=file.getlength();
-		uint8_t * const x=new uint8_t[size+1];
+		uint8_t * const x=new uint8_t[size];
 		file.read(x,size);
 		if (file.close() != 0) {
 			return LC_ERROR_OS_FILE;
 		}
-		// Prevent GetTag() from going off the deep end
-		x[size]=0;
 
 		uint8_t *t=x;
 		string keyname;
 		do {
-			GetTag("KEY",t,&keyname);
-		} while (*t && keyname!="KeyName");
-		GetTag("VALUE",t,&keyname);
+			err = GetTag("KEY", t, size - (t - x), t, &keyname);
+			if (err != 0) {
+				return err;
+			}
+		} while (keyname!="KeyName");
+		uint8_t *n = 0;
+		err = GetTag("VALUE", t, size, n, &keyname);
+		if (err != 0) {
+			return err;
+		}
 		printf("Key Name: %s\n",keyname.c_str());
 
 		string ls;
@@ -1180,8 +1194,7 @@ int learn_ir_commands(char *file_name, int post)
 		//printf("%s\n",ls.c_str());
 
 		if (post)
-			Post(x, "POSTOPTIONS", ri, true, &ls, &keyname);
-
+			Post(x, size, "POSTOPTIONS", ri, true, &ls, &keyname);
 	} else {
 		rmt->LearnIR();
 	}

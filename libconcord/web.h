@@ -20,8 +20,9 @@
 #ifndef WEB_H
 #define WEB_H
 
-int GetTag(const char *find, uint8_t*& pc, string *s=NULL);
-int Post(uint8_t *xml, const char *root, TRemoteInfo &ri, bool has_userid,
-	string *learn_seq=NULL, string *learn_key=NULL);
+int GetTag(const char *find, uint8_t* data, uint32_t data_size,
+	uint8_t *&found, string *s=NULL);
+int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
+	bool has_userid, string *learn_seq=NULL, string *learn_key=NULL);
 
 #endif
