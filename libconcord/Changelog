@@ -16,13 +16,14 @@ phil@ipom.com
   s-t-concordance@wwwdotorg.org)
 - Add CodingStyle and SubmittingPatches documentation
 
-s-t-harmony@wwwdotorg.org:
+s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
 - typedef our callback type
 - API/type cleanups
 - implement the firmware checksum algorithm
 - fix includes for gcc 4.3.0
 - fix protocol.txt c&p error
+- Add "size" to all APIs dealing with byte-arrays
 
 simon@budig.de
 - Fix sector calculation in EraseFlash() (bug#1910326)
