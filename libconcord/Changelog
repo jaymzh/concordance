@@ -15,6 +15,7 @@ phil@ipom.com
 - fix the location and name of the license file (thanks to
   s-t-concordance@wwwdotorg.org)
 - Add CodingStyle and SubmittingPatches documentation
+- Update auto-mode to understand firmware updates
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
