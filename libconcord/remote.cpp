@@ -642,6 +642,19 @@ int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
 		for (unsigned int u = 2; u < len; u += 2) {
 			const unsigned int t = rsp[1+u] << 8 | rsp[2+u];
 			if (ir_word > 2) {
+				/*
+				 * For ODD words, t is the total time, we'll
+				 * update the total OFF time and be done.
+				 *
+				 * For EVEN words, t is just the ON time
+				 * -- IF we have any ON time, then we go ahead
+				 * and record the off and on times we should
+				 * have now gathered.
+				 *
+				 * Why do we differentiate between even/odd?
+				 * Perhaps just to make sure we've had two
+				 * cycles, and thus have off/on?
+				 */
 				if (ir_word & 1) {
 					// t == on + off time
 					if (t_on)
@@ -652,12 +665,12 @@ int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
 					// t == on time
 					t_on = t;
 					if (t_on) {
-						printf("-%i\n", t_off);
+						debug("-%i\n", t_off);
 						if (pulse_count <
 								MAX_PULSE_COUNT)
 							pulses[pulse_count++] =
 								t_off;
-						printf("+%i\n", t_on);
+						debug("+%i\n", t_on);
 						if (pulse_count <
 								MAX_PULSE_COUNT)
 							pulses[pulse_count++] =
@@ -665,6 +678,15 @@ int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
 					}
 				}
 			} else {
+				/*
+				 * For the first 3 words...
+				 *    the first one, we ignore, apparently
+				 *    the second one, we start keeping track
+				 *      of ON time
+				 *    the third one, we have enough data to
+				 *    	calculate the frequency and record
+				 *    	the on time we've calculated
+				 */
 				switch (ir_word) {
 					case 0:
 						// ???
@@ -679,8 +701,8 @@ int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
 						// first burst
 						if (t_on) {
 							freq = static_cast<unsigned int>(static_cast<uint64_t>(t)*1000000/t_on);
-							printf("%i Hz\n",freq);
-							printf("+%i\n",t_on);
+							debug("%i Hz",freq);
+							debug("+%i",t_on);
 							pulses[pulse_count++] =
 								t_on;
 						}
@@ -705,25 +727,38 @@ int CRemote::LearnIR(string *learn_string)
 		return err;
 
 	uint8_t seq = 0;
+	// Count of how man IR words we've received.
 	unsigned int ir_word = 0;
+	// Time button is on and off
 	unsigned int t_on = 0;
 	unsigned int t_off = 0;
 
+	// Frequency button emits
 	unsigned int freq = 0;
+	// Pulse map
 	unsigned int *pulses = new unsigned int[MAX_PULSE_COUNT];
 	unsigned int pulse_count = 0;
 
-	do {
+	/*
+	 * Loop while we have no error and we haven't had 500,000us of
+	 * any pulses
+	 */
+	while (err == 0 && t_off < 500000) {
 		uint8_t rsp[68];
-		if ((err = HID_ReadReport(rsp,ir_word ? 500 : 4000)))
+		if ((err = HID_ReadReport(rsp, ir_word ? 500 : 4000)))
 			break;
-		const uint8_t r=rsp[1]&COMMAND_MASK;
+		const uint8_t r = rsp[1] & COMMAND_MASK;
 		if (r == RESPONSE_IRCAP_DATA) {
 			if (!check_seq(rsp[2], seq)) {
 				err = 1;
 				break;
  			}
 			seq += 0x10;
+			/*
+			 * This will handle the IR response including updating
+			 * t_off so we can exit the loop if long enough time
+			 * goes by without action.
+			 */
 			err = handle_ir_response(rsp, ir_word, t_on, t_off,
 				pulse_count, pulses, freq);
 			if (err != 0) {
@@ -732,19 +767,24 @@ int CRemote::LearnIR(string *learn_string)
 		} else if (r == RESPONSE_DONE) {
 			break;
 		} else {
-			printf("\nInvalid response [%02X]\n", rsp[1]);
+			debug("Invalid response [%02X]", rsp[1]);
 			err = 1;
 		}
-	} while (err == 0 && t_off < 500000);
+	}
 
 	if (t_off)
-		printf("-%i\n",t_off);
+		debug("-%i", t_off);
+
+	/* make sure we record a final off? */
 	if (pulse_count < MAX_PULSE_COUNT)
 		pulses[pulse_count++] = t_off;
 
 	const static uint8_t stop_ir_learn[] = { 0x00, COMMAND_STOP_IRCAP };
 	HID_WriteReport(stop_ir_learn);
 
+	/*
+	 * Encode our pulses into string
+	 */
 	if (err == 0 && learn_string != NULL) {
 		char s[32];
 		sprintf(s, "F%04X", freq);

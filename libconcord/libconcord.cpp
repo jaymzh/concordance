@@ -1137,21 +1137,21 @@ int learn_ir_commands(char *file_name, int post)
 		if (file.open(file_name)) {
 			return LC_ERROR_OS_FILE;
 		}
-		uint32_t size=file.getlength();
-		uint8_t * const x=new uint8_t[size];
-		file.read(x,size);
+		uint32_t size = file.getlength();
+		uint8_t * const x = new uint8_t[size];
+		file.read(x, size);
 		if (file.close() != 0) {
 			return LC_ERROR_OS_FILE;
 		}
 
-		uint8_t *t=x;
+		uint8_t *t = x;
 		string keyname;
 		do {
 			err = GetTag("KEY", t, size - (t - x), t, &keyname);
 			if (err != 0) {
 				return err;
 			}
-		} while (keyname!="KeyName");
+		} while (keyname != "KeyName");
 		uint8_t *n = 0;
 		err = GetTag("VALUE", t, size, n, &keyname);
 		if (err != 0) {
