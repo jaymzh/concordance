@@ -16,6 +16,8 @@ phil@ipom.com
   s-t-concordance@wwwdotorg.org)
 - Add CodingStyle and SubmittingPatches documentation
 - Update auto-mode to understand firmware updates
+- Make concordance be able to handle the remote having an invalid config
+  so that we can fix it
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
@@ -25,6 +27,7 @@ s-t-concordance@wwwdotorg.org:
 - fix includes for gcc 4.3.0
 - fix protocol.txt c&p error
 - Add "size" to all APIs dealing with byte-arrays
+- Remove dependence on windows ODBC libraries in win project files
 
 simon@budig.de
 - Fix sector calculation in EraseFlash() (bug#1910326)
