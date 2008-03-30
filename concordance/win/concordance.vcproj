@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="./Release/libconcord.lib ws2_32.lib odbc32.lib odbccp32.lib"
+				AdditionalDependencies="./Release/libconcord.lib ws2_32.lib"
 				OutputFile=".\Release/concordance.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -160,7 +160,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="./Debug/libconcord.lib ws2_32.lib odbc32.lib odbccp32.lib"
+				AdditionalDependencies="./Debug/libconcord.lib ws2_32.lib"
 				OutputFile=".\Debug/concordance.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
