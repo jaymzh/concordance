@@ -68,11 +68,9 @@ read_config_from_remote
 write_config_to_remote
 read_config_from_file
 write_config_to_file
-verify_xml_config
 verify_remote_config
 erase_config
-find_config_binary_size
-find_config_binary_start
+find_config_binary
 
 ; SAFEMODE FIRMWARE INTERACTIONS
 ;
