@@ -183,9 +183,7 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 			// Point past >, at tag content
 			search += find_len + 1;
 
-			if (found) {
-				found = search;
-			}
+			found = search;
 
 			/*
  			 * If a string pointer was passed in, then add the
