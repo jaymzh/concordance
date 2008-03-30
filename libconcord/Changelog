@@ -18,6 +18,8 @@ phil@ipom.com
 - Update auto-mode to understand firmware updates
 - Make concordance be able to handle the remote having an invalid config
   so that we can fix it
+- Implement new libconcord debug() macro and unify the code to use that
+  instead of tons of #ifdefs
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
