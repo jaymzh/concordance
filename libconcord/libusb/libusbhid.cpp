@@ -62,11 +62,10 @@ void ShutdownUSB()
 
 void check_ep(usb_endpoint_descriptor &ued)
 {
-#ifdef _DEBUG
-	printf("address %02X attrib %02X max_length %i\n",
+	debug("address %02X attrib %02X max_length %i",
 		ued.bEndpointAddress, ued.bmAttributes,
 		ued.wMaxPacketSize);
-#endif
+
 	if ((ued.bmAttributes & USB_ENDPOINT_TYPE_MASK) ==
 	    USB_ENDPOINT_TYPE_INTERRUPT) {
 		if (ued.bEndpointAddress & USB_ENDPOINT_DIR_MASK) {
@@ -125,10 +124,8 @@ int FindRemote(THIDINFO &hid_info)
 		h_hid = usb_open(h_dev);
 	}
 	if (!h_hid) {
-#ifdef _DEBUG
-		printf("Failed to establish communication with remote: %s\n",
+		debug("Failed to establish communication with remote: %s",
 			usb_strerror());
-#endif
 		return LC_ERROR_CONNECT;
 	}
 
@@ -145,18 +142,14 @@ int FindRemote(THIDINFO &hid_info)
 
 	int err;
 	if ((err = usb_set_configuration(h_hid, 1))) {
-#ifdef _DEBUG
-		printf("Failed to set device configuration: %d (%s)\n", err,
+		debug("Failed to set device configuration: %d (%s)", err,
 			usb_strerror());
-#endif
 		return err;
 	}
 
 	if ((err=usb_claim_interface(h_hid, 0))) {
-#ifdef _DEBUG
-		printf("Failed to claim interface: %d (%s)\n", err,
+		debug("Failed to claim interface: %d (%s)", err,
 			usb_strerror());
-#endif
 		return err;
 	}
 
@@ -170,10 +163,9 @@ int FindRemote(THIDINFO &hid_info)
 			for (unsigned char l = 0; l < maxalt; ++l) {
 				usb_interface_descriptor &uid =
 					ui.altsetting[l];
-#ifdef _DEBUG
-					printf("bNumEndpoints %i\n",
+
+					debug("bNumEndpoints %i",
 						uid.bNumEndpoints);
-#endif
 				unsigned char maxep = uid.bNumEndpoints;
 				for (unsigned char n = 0; n < maxep; ++n) {
 					check_ep(uid.endpoint[n]);
@@ -215,10 +207,8 @@ int HID_WriteReport(const uint8_t *data)
 		orl, 500);
 
 	if (err < 0) {
-#ifdef _DEBUG
-		printf("Failed to write to device: %d (%s)\n", err,
+		debug("Failed to write to device: %d (%s)", err,
 			usb_strerror());
-#endif
 		return err;
 	}
 
@@ -231,10 +221,8 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
 		reinterpret_cast<char *>(data+1), irl, timeout);
 
 	if (err < 0) {
-#ifdef _DEBUG
-		printf("Failed to read from device: %d (%s)\n", err,
+		debug("Failed to read from device: %d (%s)", err,
 			usb_strerror());
-#endif
 		return err;
 	}
 

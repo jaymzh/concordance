@@ -37,9 +37,7 @@ HANDLE h_hid=NULL;
 
 int InitUSB()
 {
-#ifdef _DEBUG
-	printf("Using Windows HID stack\n");
-#endif
+	debug("Using Windows HID stack");
 
 	ol.Offset=ol.OffsetHigh=0;
 	ol.hEvent=CreateEvent(NULL,FALSE,FALSE,NULL);
@@ -230,9 +228,7 @@ int HID_WriteReport(const uint8_t *data)
 	if (!WriteFile(h_hid,data,caps.OutputReportByteLength,&dw,&ol)) {
 		err = GetLastError();
 		if (err != ERROR_IO_PENDING) {
-#ifdef _DEBUG
-			printf("WriteFile() failed with error %i\n",err);
-#endif
+			debug("WriteFile() failed with error %i", err);
 			return err;
 		}
 	}
@@ -240,15 +236,11 @@ int HID_WriteReport(const uint8_t *data)
 	const DWORD ws=WaitForSingleObject(ol.hEvent,500);
 
 	if (ws==WAIT_TIMEOUT) {
-#ifdef _DEBUG
-		printf("Write failed to complete within alloted time\n");
-#endif
+		debug("Write failed to complete within alloted time");
 		CancelIo(h_hid);
 		err=1;
 	} else if(ws!=WAIT_OBJECT_0) {
-#ifdef _DEBUG
-		printf("Wait failed with code %i\n",ws);
-#endif
+		debug("Wait failed with code %i", ws);
 		err=2;
 	} else {
 		err=0;
@@ -263,9 +255,7 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
 	if(!ReadFile(h_hid,data,caps.InputReportByteLength,&dw,&ol)) {
 		err=GetLastError();
 		if(err!=ERROR_IO_PENDING) {
-#ifdef _DEBUG
-			printf("ReadFile() failed with error %i\n",err);
-#endif
+			debug("ReadFile() failed with error %i", err);
 			return err;
 		}
 	}
@@ -273,15 +263,11 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
 	const DWORD ws=WaitForSingleObject(ol.hEvent,timeout);
 
 	if(ws==WAIT_TIMEOUT) {
-#ifdef _DEBUG
-		printf("No response from remote\n");
-#endif
+		debug("No response from remote");
 		CancelIo(h_hid);
 		err=1;
 	} else if(ws!=WAIT_OBJECT_0) {
-#ifdef _DEBUG
-		printf("Wait failed with code %i\n",ws);
-#endif
+		debug("Wait failed with code %i", ws);
 		err=2;
 	} else {
 		err=0;

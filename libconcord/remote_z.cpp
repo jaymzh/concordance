@@ -176,10 +176,10 @@ int CRemoteZ_TCP::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 		++i;
 		pl.p[n++] = data+i;
 #ifdef _DEBUG
-		printf("%3i:", param_len);
+		fprintf(stderr, "DEBUG (%s): %3i:", __FUNCTION__, param_len);
 		for(unsigned int j = 0; j < param_len; ++j)
-			printf(" %02X",data[i+j]);
-		printf("\n");
+			fprintf(stderr, " %02X",data[i+j]);
+		fprintf(stderr, "\n");
 #endif
 		i += param_len;
 	}

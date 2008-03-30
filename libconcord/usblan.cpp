@@ -84,9 +84,7 @@ int FindUsbLanRemote(void)
 		return LC_ERROR_OS_NET;
 	}
 
-#ifdef _DEBUG
-	printf("\nConnected to USB LAN driver!\n\n");
-#endif
+	debug("Connected to USB LAN driver!");
 
 	return 0;
 }
@@ -100,9 +98,7 @@ int UsbLan_Write(unsigned int len, uint8_t *data)
 		return LC_ERROR_OS_NET;
 	}
 
-#ifdef _DEBUG
-	printf("%i bytes sent\n", err);
-#endif
+	debug("%i bytes sent", err);
 
 	return 0;
 }
@@ -119,9 +115,7 @@ int UsbLan_Read(unsigned int &len, uint8_t *data)
 	} 
 
 	len = static_cast<unsigned int>(err);
-#ifdef _DEBUG
-	printf("%i bytes received\n", len);
-#endif
+	debug("%i bytes received", len);
 
 	return 0;
 }

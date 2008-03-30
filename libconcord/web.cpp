@@ -100,9 +100,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 		return LC_ERROR_OS_NET;
 	}
 
-#ifdef _DEBUG
-	printf("Connected!\n");
-#endif
+	debug("Connected!");
 
 	err = send(sock, s1, strlen(s1), 0);
 	if (err == SOCKET_ERROR) {
@@ -110,9 +108,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 		return LC_ERROR_OS_NET;
 	}
 
-#ifdef _DEBUG
-		printf("%i bytes sent\n", err);
-#endif
+	debug("%i bytes sent", err);
 
 	err = send(sock, s2, strlen(s2), 0);
 	if (err == SOCKET_ERROR) {
@@ -120,9 +116,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 		return LC_ERROR_OS_NET;
 	}
 
-#ifdef _DEBUG
-		printf("%i bytes sent\n", err);
-#endif
+	printf("%i bytes sent", err);
 
 	char buf[1000];
 	err = recv(sock,buf,999,0);
@@ -134,9 +128,8 @@ static int Zap(string &server, const char *s1, const char *s2)
 
 	// Show the received received data
 	buf[err]=0;
-#if _DEBUG
-	printf("Received: %s\n", buf);
-#endif
+
+	debug("Received: %s", buf);
 
 	// Close the socket
 	if ((err = closesocket(sock))) {
@@ -144,9 +137,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 		return LC_ERROR_OS_NET;
 	}
 
-#if _DEBUG
-	printf(" done\n");
-#endif
+	debug("done with web post");
 	
 	return 0;
 }
@@ -242,12 +233,10 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 			return err;
 	}
 
-#if _DEBUG
-	printf("Connecting to: %s\n", server.c_str());
-	printf("Path: %s\n", path.c_str());
-	printf("Cookie: %s\n", cookie.c_str());
-	printf("UserId: %s\n", userid.c_str());
-#endif
+	debug("Connecting to: %s", server.c_str());
+	debug("Path: %s", path.c_str());
+	debug("Cookie: %s", cookie.c_str());
+	debug("UserId: %s", userid.c_str());
 
 	string post;
 	if (learn_seq == NULL) {
@@ -259,9 +248,8 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 			serial, ri.hw_ver_major, ri.hw_ver_minor,
 			ri.flash_mfg, ri.flash_id, ri.protocol,
 			ri.architecture, ri.skin);
-#ifdef _DEBUG
-		printf("DEBUG: post data: %s\n",post_data);
-#endif
+
+		debug("post data: %s",post_data);
 
 		string post_data_encoded;
 		UrlEncode(post_data, post_data_encoded);
@@ -275,16 +263,13 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 		post += "&UserId=" + userid;
 	}
 
-#ifdef _DEBUG
-	printf("\n%s\n", post.c_str());
-#endif
+	debug("%s", post.c_str());
 
 	char http_header[1000];
 	sprintf(http_header, post_header, path.c_str(), server.c_str(),
 		cookie.c_str(), post.length());
-#ifdef _DEBUG
-	printf("\n%s\n", http_header);
-#endif
+
+	debug("%s", http_header);
 
 	return Zap(server, http_header,post.c_str());
 }

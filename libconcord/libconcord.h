@@ -20,6 +20,8 @@
 #ifndef LIBCONCORD_H
 #define LIBCONCORD_H
 
+#include <stdio.h>
+
 #ifdef WIN32
 typedef unsigned char uint8_t;
 typedef signed short int16_t;
@@ -36,6 +38,13 @@ typedef unsigned __int64 uint64_t;
 
 #else
 #include <stdint.h>
+#endif /* end if win32/else */
+
+#ifdef _DEBUG
+#define debug(FMT,...) fprintf(stderr, "DEBUG (%s): "FMT"\n", __FUNCTION__,\
+	 ##__VA_ARGS__);
+#else
+static inline void debug(const char *str) {}
 #endif
 
 #define LC_ERROR 1

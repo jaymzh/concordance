@@ -987,7 +987,7 @@ cleanup:
 #endif
 
 #ifdef _DEBUG
-	printf("\nPress any key to exit");
+	printf("Press <enter> key to exit\n");
 	getchar();
 #endif /* debug */
 

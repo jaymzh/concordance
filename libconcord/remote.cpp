@@ -83,13 +83,13 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	const uint8_t qid[] = { 0x00, COMMAND_GET_VERSION };
 
 	if ((err = HID_WriteReport(qid))) {
-		cerr << "Failed to talk to remote\n";
+		debug("Failed to write to remote");
 		return 1;
 	}
 
 	uint8_t rsp[68];
 	if ((err = HID_ReadReport(rsp))) {
-		cerr << "Failed to talk to remote\n";
+		debug("Failed to read from remote");
 		return 1;
 	}
 
@@ -100,9 +100,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 	if ((rsp[1] & 0xF0) != RESPONSE_VERSION_DATA ||
 	    (rx_len != 7 && rx_len != 5)) {
-#ifdef _DEBUG
-		printf("Bogus ident response: %02X\n", rsp[1]);
-#endif
+		debug("Bogus ident response: %02X", rsp[1]);
 		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
 	}
 
@@ -228,10 +226,8 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 			if (r == RESPONSE_READ_FLASH_DATA) {
 				if (seq != rsp[2]) {
 					err = LC_ERROR;
-#ifdef _DEBUG
-					printf("\nInvalid sequence %02X %02x\n",
+					debug("Invalid sequence %02X %02x",
 						seq, rsp[2]);
-#endif
 					break;
 				}
 				seq+=0x11;
@@ -253,9 +249,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 			} else if (r == RESPONSE_DONE) {
 				break;
 			} else {
-#ifdef _DEBUG
-				printf("\nInvalid response [%02X]\n", rsp[1]);
-#endif
+				debug("Invalid response [%02X]", rsp[1]);
 				err = LC_ERROR;
 			}
 		} while (err == 0);
@@ -337,10 +331,8 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 		if (cb) {
 			cb(i, i+1, num_sectors, arg);
 		}
-#ifdef _DEBUG
-		printf("erase sector %2i: %06X - %06X\n", n, sector_begin,
+		debug("erase sector %2i: %06X - %06X", n, sector_begin,
 			sector_end);
-#endif
 		sector_begin = sector_end;
 		sector_end = sectors[++n] + flash_base;
 	}
@@ -631,16 +623,12 @@ bool check_seq(int received_seq, uint8_t &expected_seq)
 		 * Does this indicate a bad learn???
 		 * Needs more testing
 		 */
-#ifdef _DEBUG
-		printf("sequence glitch!\n");
-#endif
+		debug("sequence glitch!");
 		expected_seq += 0x0F;
 		return true;
 	} else {
-#ifdef _DEBUG
-		printf("\nInvalid sequence %02X %02x\n",
-			expected_seq, received_seq);
-#endif
+		debug("\nInvalid sequence %02X %02x", expected_seq,
+			received_seq);
 		return false;
 	}
 }

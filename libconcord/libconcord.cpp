@@ -334,9 +334,7 @@ int init_concord()
 	WSADATA wsainfo;
 	int error = WSAStartup(1*256 + 1, &wsainfo);
 	if (error) {
-#ifdef _DEBUG
-		printf("WSAStartup() Error: %i\n", error);
-#endif
+		debug("WSAStartup() Error: %i", error);
 		return LC_ERROR_OS_NET;
 	}
 #endif
@@ -549,9 +547,7 @@ int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
 	binaryinfile file;
 
 	if (file.open(file_name) != 0) {
-#ifdef _DEBUG
-		printf("Failed to open %s\n", file_name);
-#endif
+		debug("Failed to open %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -560,9 +556,7 @@ int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
 	file.read(*out, *size);
 
 	if (file.close() != 0) {
-#ifdef _DEBUG
-		printf("Failed to close %s\n", file_name);
-#endif
+		debug("Failed to close %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -575,9 +569,7 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 	binaryoutfile of;
 
 	if (of.open(file_name) != 0) {
-#ifdef _DEBUG
-		printf("Failed to open %s\n", file_name);
-#endif
+		debug("Failed to open %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -610,9 +602,7 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 	of.write(in, ri.config_bytes_used);
 
 	if (of.close() != 0) {
-#ifdef _DEBUG
-		printf("Failed to close %s\n", file_name);
-#endif
+		debug("Failed to close %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -667,15 +657,11 @@ int find_config_binary(uint8_t *config, uint32_t config_size,
 		return LC_ERROR;
         uint32_t binary_tag_size = (uint32_t)atoi(binary_tag_size_s.c_str());
 
-#ifdef _DEBUG
-	printf("actual data size %i\n", *binary_size);
-	printf("reported data size %i\n", binary_tag_size);
-#endif
+	debug("actual data size %i", *binary_size);
+	debug("reported data size %i", binary_tag_size);
 
 	if (*binary_size != binary_tag_size) {
-#ifdef _DEBUG
-		printf("Config data size mismatch\n");
-#endif
+		debug("Config data size mismatch");
 		return LC_ERROR;
 	}
 
@@ -692,15 +678,11 @@ int find_config_binary(uint8_t *config, uint32_t config_size,
 	while (u--)
 		calc_checksum ^= *pc++;
 
-#ifdef _DEBUG
-	printf("reported checksum %i %02x\n", checksum, checksum);
-	printf("actual checksum %i %02x\n", calc_checksum, calc_checksum);
-#endif
+	debug("reported checksum %i %02x", checksum, checksum);
+	debug("actual checksum %i %02x", calc_checksum, calc_checksum);
 
 	if (calc_checksum != checksum) {
-#ifdef _DEBUG
-		printf("Config checksum mismatch\n");
-#endif
+		debug("Config checksum mismatch");
 		return LC_ERROR;
 	}
 
@@ -808,9 +790,7 @@ int read_safemode_from_file(char *file_name, uint8_t **out, uint32_t *size)
 	binaryinfile file;
 
 	if (file.open(file_name) != 0) {
-#ifdef _DEBUG
-		printf("Failed to open %s\n", file_name);
-#endif
+		debug("Failed to open %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -819,9 +799,7 @@ int read_safemode_from_file(char *file_name, uint8_t **out, uint32_t *size)
 	file.read(*out, *size);
 
 	if (file.close() != 0) {
-#ifdef _DEBUG
-		printf("Failed to close %s\n", file_name);
-#endif
+		debug("Failed to close %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -927,9 +905,7 @@ int erase_firmware(int direct, lc_callback cb, void *cb_arg)
 
 	uint32_t addr = ri.arch->firmware_update_base;
 	if (direct) {
-#ifdef _DEBUG
-		printf("WARNING: Writing direct\n");
-#endif
+		debug("Writing direct");
 		addr = ri.arch->firmware_base;
 	}
 
@@ -1021,9 +997,7 @@ int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
 	}
 
 	if (direct) {
-#ifdef _DEBUG
-		printf("WARNING: Writing direct\n");
-#endif
+		debug("Writing direct");
 		addr = ri.arch->firmware_base;
 	}
 
@@ -1057,7 +1031,7 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 		uint32_t n = 32*1024;
 		while (n--)
 			wc ^= *pw++;
-		//TRACE1("Checksum: %04X\n",wc);
+		debug("Checksum: %04X", wc);
 #endif
 
 		uint8_t *pf = in;
@@ -1135,9 +1109,7 @@ int read_firmware_from_file(char *file_name, uint8_t **out, uint32_t *size, int 
 	binaryinfile file;
 
 	if (file.open(file_name) != 0) {
-#ifdef _DEBUG
-		printf("Failed to open %s\n", file_name);
-#endif
+		debug("Failed to open %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -1146,9 +1118,7 @@ int read_firmware_from_file(char *file_name, uint8_t **out, uint32_t *size, int 
 	file.read(*out, *size);
 
 	if (file.close() != 0) {
-#ifdef _DEBUG
-		printf("Failed to close %s\n", file_name);
-#endif
+		debug("Failed to close %s", file_name);
 		return LC_ERROR_OS_FILE;
 	}
 
@@ -1212,13 +1182,9 @@ void report_net_error(const char *msg)
 	int err;
 #ifdef WIN32
 	err = WSAGetLastError();
-#   ifdef _DEBUG
-	printf("Net error: %s failed with error %i\n", msg, err);
-#   endif
+	debug("Net error: %s failed with error %i", msg, err);
 #else
-#   ifdef _DEBUG
-	printf("Net error: %s failed with error %s\n", msg, strerror(errno));
-#   endif
+	debug("Net error: %s failed with error %s", msg, strerror(errno));
 #endif
 }
 
