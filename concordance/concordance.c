@@ -868,11 +868,15 @@ int main(int argc, char *argv[])
 	 */
 
 	printf("Requesting Identity: ");
-	if (get_identity(cb_print_percent_status, NULL) != 0) {
+	err = get_identity(cb_print_percent_status, NULL);
+	if (err != 0 && err != LC_ERROR_INVALID_CONFIG) {
 		printf("Error requesting identity\n");
 		goto cleanup;
 	}
 	printf("       done\n");
+	if (err == LC_ERROR_INVALID_CONFIG) {
+		printf("WARNING: Invalid config found\n");
+	}
 
 	/*
 	 * Now do whatever we've been asked to do

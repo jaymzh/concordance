@@ -399,7 +399,7 @@ int get_identity(lc_callback cb, void *cb_arg)
 		return LC_ERROR_INVALID_CONFIG;
 	}
 
-	if (ri.arch == NULL || ri.arch->cookie==0) {
+	if (ri.arch == NULL || ri.arch->cookie == 0) {
 		return LC_ERROR_INVALID_CONFIG;
 	}
 
