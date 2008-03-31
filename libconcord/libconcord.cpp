@@ -850,7 +850,7 @@ int prep_firmware()
 		 */
 		if ((err = rmt->RestartConfig()))
 			return LC_ERROR;
-		data[0] = 0x01;
+		data[0] = 0x00;
 		if ((err = rmt->WriteFlash(200000, 1, data, ri.protocol, NULL,
 				NULL)))
 			return LC_ERROR;
