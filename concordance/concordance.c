@@ -93,6 +93,20 @@ enum {
 };
 
 /*
+ * We're super strict ANSI-C since MS compilers kinda suck
+ * which means no strdup(), so we'll define our own
+ */
+char *strdup(const char *str)
+{
+	int n = strlen(str) + 1;
+	char *dup = malloc(n);
+	if (dup) {
+		strcpy(dup, str);
+	}
+	return dup;
+}
+
+/*
  * Start callbacks
  */
 void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
