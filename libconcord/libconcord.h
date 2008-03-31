@@ -44,7 +44,7 @@ typedef unsigned __int64 uint64_t;
 #define debug(FMT,...) fprintf(stderr, "DEBUG (%s): "FMT"\n", __FUNCTION__,\
 	 ##__VA_ARGS__);
 #else
-static inline void debug(const char *str) {}
+static inline void debug(const char *str, ...) {}
 #endif
 
 #define LC_ERROR 1
