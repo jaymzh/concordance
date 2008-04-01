@@ -20,6 +20,7 @@ phil@ipom.com
   so that we can fix it
 - Implement new libconcord debug() macro and unify the code to use that
   instead of tons of #ifdefs
+- Re-order functions in libconcord.cpp to make more sense
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
@@ -40,6 +41,7 @@ marco_bleich@gmx.do:
 
 andreas.r.schulz@gmx.de:
 - Read the RESPONSE_DONE after IR learning (bug#1898492)
+- abstract reading files into _read_from_file()
 
 
 0.13
