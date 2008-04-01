@@ -320,6 +320,36 @@ void delete_blob(uint8_t *ptr)
 	delete[] ptr;
 }
 
+/*
+ * Common routine to read contents of file named *file_name into
+ * byte buffer **out. Get size from file and return out[size] 
+ * as read from file.
+ */
+int _read_from_file(char *file_name, uint8_t **out, uint32_t *size)
+{
+	binaryinfile file;
+
+	if (file_name == NULL) {
+		debug("Empty file_name");
+		return LC_ERROR_OS_FILE;
+	}
+
+	if (file.open(file_name) != 0) {
+		debug("Failed to open %s", file_name);
+		return LC_ERROR_OS_FILE;
+	}
+
+	*size = file.getlength();
+	*out = new uint8_t[*size];
+	file.read(*out, *size);
+
+	if (file.close() != 0) {
+		debug("Failed to close %s\n", file_name);
+		return LC_ERROR_OS_FILE;
+	}
+	return 0;
+}
+
 
 /*
  * GENERAL REMOTE STUFF
@@ -444,26 +474,17 @@ int post_postconfig(uint8_t *data, uint32_t size)
 
 int post_connect_test_success(char *file_name)
 {
+	uint32_t size;
+	uint8_t *buf;
+	int err = 0;
 	/*
 	 * If we arrived, we can talk to the remote - so if it's
 	 * just a connectivity test, tell the site we succeeded
 	 */
-	binaryinfile file;
-	if (file.open(file_name) != 0) {
-		return LC_ERROR_OS_FILE;
+	if ( (err = _read_from_file(file_name, &buf, &size)) == 0 ) {
+		Post(buf, size, "POSTOPTIONS", ri, true);
 	}
-
-	const uint32_t size = file.getlength();
-	uint8_t * const buf = new uint8_t[size];
-	file.read(buf, size);
-
-	Post(buf, size, "POSTOPTIONS", ri, true);
-
-	if (file.close() != 0) {
-		return LC_ERROR_OS_FILE;
-	}
-
-	return 0;
+	return err;
 }
 
 int get_time()
@@ -544,23 +565,7 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
 
 int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
 {
-	binaryinfile file;
-
-	if (file.open(file_name) != 0) {
-		debug("Failed to open %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	*size = file.getlength();
-	*out = new uint8_t[*size];
-	file.read(*out, *size);
-
-	if (file.close() != 0) {
-		debug("Failed to close %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	return 0;
+	return _read_from_file(file_name, out, size);
 }
 
 int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
@@ -787,23 +792,7 @@ int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
 
 int read_safemode_from_file(char *file_name, uint8_t **out, uint32_t *size)
 {
-	binaryinfile file;
-
-	if (file.open(file_name) != 0) {
-		debug("Failed to open %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	*size = file.getlength();
-	*out = new uint8_t[*size];
-	file.read(*out, *size);
-
-	if (file.close() != 0) {
-		debug("Failed to close %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	return 0;
+	return _read_from_file(file_name, out, size);
 }
 
 /*
@@ -1106,23 +1095,7 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
 	
 int read_firmware_from_file(char *file_name, uint8_t **out, uint32_t *size, int binary)
 {
-	binaryinfile file;
-
-	if (file.open(file_name) != 0) {
-		debug("Failed to open %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	*size = file.getlength();
-	*out = new uint8_t[*size];
-	file.read(*out, *size);
-
-	if (file.close() != 0) {
-		debug("Failed to close %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	return 0;
+	return _read_from_file(file_name, out, size);
 }
 
 /*
@@ -1133,15 +1106,11 @@ int learn_ir_commands(char *file_name, int post)
 	int err;
 
 	if (file_name) {
-		binaryinfile file;
-		if (file.open(file_name)) {
-			return LC_ERROR_OS_FILE;
-		}
-		uint32_t size = file.getlength();
-		uint8_t * const x = new uint8_t[size];
-		file.read(x, size);
-		if (file.close() != 0) {
-			return LC_ERROR_OS_FILE;
+		uint32_t size = 0;
+		uint8_t *x = NULL;
+		err = _read_from_file(file_name, &x, &size);
+		if (err != 0) {
+			return err;
 		}
 
 		uint8_t *t = x;
@@ -1161,10 +1130,11 @@ int learn_ir_commands(char *file_name, int post)
 
 		string ls;
 		rmt->LearnIR(&ls);
-		//printf("%s\n",ls.c_str());
+		debug("Learned code: %s",ls.c_str());
 
-		if (post)
+		if (post) {
 			Post(x, size, "POSTOPTIONS", ri, true, &ls, &keyname);
+		}
 	} else {
 		rmt->LearnIR();
 	}
