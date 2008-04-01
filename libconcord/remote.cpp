@@ -722,6 +722,7 @@ int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
 int CRemote::LearnIR(string *learn_string)
 {
 	int err = 0;
+	uint8_t rsp[68];
 
 	const static uint8_t start_ir_learn[] = { 0, COMMAND_START_IRCAP };
 	if ((err = HID_WriteReport(start_ir_learn)))
@@ -745,7 +746,6 @@ int CRemote::LearnIR(string *learn_string)
 	 * any pulses
 	 */
 	while (err == 0 && t_off < 500000) {
-		uint8_t rsp[68];
 		if ((err = HID_ReadReport(rsp, ir_word ? 500 : 4000)))
 			break;
 		const uint8_t r = rsp[1] & COMMAND_MASK;
@@ -782,6 +782,14 @@ int CRemote::LearnIR(string *learn_string)
 
 	const static uint8_t stop_ir_learn[] = { 0x00, COMMAND_STOP_IRCAP };
 	HID_WriteReport(stop_ir_learn);
+
+	/* read returned RESPONSE_DONE, otherwise next command wil fail! */
+	err = HID_ReadReport(rsp);
+	if (err == 0) {
+		if ((rsp[1] & COMMAND_MASK) != RESPONSE_DONE) {
+			err = 1;
+		}
+	}
 
 	/*
 	 * Encode our pulses into string
