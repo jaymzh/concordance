@@ -416,7 +416,8 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 		HID_WriteReport(end_cmd);
 
 		uint8_t rsp[68];
-		if ((err = HID_ReadReport(rsp, 5000))) break;
+		if ((err = HID_ReadReport(rsp, 5000)))
+			break;
 
 		if (cb) {
 			cb(cb_count++, bytes_written, len, arg);
