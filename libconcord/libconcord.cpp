@@ -238,7 +238,7 @@ const char *get_time_timezone()
 
 
 /*
- * HELPER FUNCTIONS
+ * PUBLIC HELPER FUNCTIONS
  */
 
 const char *lc_strerror(int err)
@@ -321,6 +321,10 @@ void delete_blob(uint8_t *ptr)
 }
 
 /*
+ * PRIVATE HELPER FUNCTIONS
+ */
+
+/*
  * Common routine to read contents of file named *file_name into
  * byte buffer **out. Get size from file and return out[size] 
  * as read from file.
@@ -346,6 +350,135 @@ int _read_from_file(char *file_name, uint8_t **out, uint32_t *size)
 	if (file.close() != 0) {
 		debug("Failed to close %s\n", file_name);
 		return LC_ERROR_OS_FILE;
+	}
+	return 0;
+}
+
+
+int _is_fw_update_supported(int direct)
+{
+	/*
+	 * If we don't have a fw_base, then we don't support fw updates
+	 * in anyway (direct or live).
+	 *
+	 * If we're in 'live' mode, then we need to make sure we we have a
+	 * fw_up_base (we know we have a fw_base from previous portion of if),
+	 * to know we're capable of doing it.
+	 *
+	 * Also, only allow architectures where we've figured out the
+	 * structure of the initial magic bytes.
+	 */
+	if (ri.arch->firmware_base == 0
+	    || (!direct && ri.arch->firmware_update_base == 0)
+	    || (ri.arch->firmware_4847_offset == 0)) {
+		return 0;
+	}
+
+	return 1;
+}
+
+int _write_fw_to_remote(uint8_t *in, uint32_t size, uint32_t addr,
+	lc_callback cb,	void *cb_arg)
+{
+	int err = 0;
+
+	if ((err = rmt->WriteFlash(addr, size, in,
+			ri.protocol, cb, cb_arg))) {
+		return LC_ERROR_WRITE;
+	}
+	return 0;
+}
+
+int _read_fw_from_remote(uint8_t *&out, uint32_t size, uint32_t addr,
+	lc_callback cb,	void *cb_arg)
+{
+	out = new uint8_t[size];
+	int err = 0;
+
+	if (!cb_arg) {
+		cb_arg = (void *)true;
+	}
+
+	if ((err = rmt->ReadFlash(addr, size, out,
+				ri.protocol, false, cb, cb_arg))) {
+		return LC_ERROR_READ;
+	}
+
+	return 0;
+}
+
+/*
+ * Fix the magic bytes of the firmware binaries...
+ *
+ * The first few bytes of the firmware file we receive from the
+ * website will be blanked out (0xFF), and we need to fill them
+ * by calculating appropriate content.
+ *
+ * So why don't we always do this? If the user has a dump from us,
+ * it already has the right initial bytes... and if somehow the
+ * firmware on the device is messed up, we don't want to ignore
+ * that useful data in the file.
+ *
+ * So we only overwrite the initial bytes if they are missing.
+ * For most users, that will be all the time.
+ *
+ *   - Phil Dibowitz    Tue Mar 11 23:17:53 PDT 2008
+ */
+int _fix_magic_bytes(uint8_t *in, uint32_t size)
+{
+	if (size < (ri.arch->firmware_4847_offset + 2)) {
+		return LC_ERROR;
+	}
+
+	if (in[0] == 0xFF && in[1] == 0xFF) {
+		/*
+		 * There are "always" two bytes at some location that
+		 * contain 0x48 and 0x47.
+		 *
+		 * Note: For some arch's (10 currently) we haven't
+		 * investigated where these go, hence the check for
+		 * a valid location in _is_fw_update_supported.
+		 *
+		 * Note: Arch 2 may be an exception to rule, and needs
+		 * more investigation.
+		 */
+		in[ri.arch->firmware_4847_offset] = 0x48;
+		in[ri.arch->firmware_4847_offset + 1] = 0x47;
+
+		/*
+		 * The first 2 bytes are a simple 16-bit checksum, computed
+		 * beginning at the location of the hard-coded 0x48/0x47
+		 * bytes through the end of the firmware.
+		 */
+		uint8_t suma = 0x21;
+		uint8_t sumb = 0x43;
+		for (
+			uint32_t index = ri.arch->firmware_4847_offset;
+			index < FIRMWARE_MAX_SIZE;
+			index += 2
+		) {
+			suma ^= in[index];
+			sumb ^= in[index + 1];
+		}
+		in[0] = suma;
+		in[1] = sumb;
+	}
+
+	return 0;
+}
+
+/*
+ * Chunk the hex into words, tack on an '0x', and then throw
+ * it through strtoul to get binary data (int) back.
+ */
+int _convert_to_binary(string hex, uint8_t *&ptr)
+{
+	size_t size = hex.length();
+	for (size_t i = 0; i < size; i += 2) {
+		char tmp[6];
+		sprintf(tmp, "0x%s ", hex.substr(i, 2).c_str());
+		ptr[0] = (uint8_t)strtoul(tmp, NULL, 16);
+		ptr++;
 	}
 	return 0;
 }
@@ -519,9 +652,11 @@ int set_time()
 	return 0;
 }
 
+
 /*
  * CONFIG-RELATED
  */
+
 int read_config_from_remote(uint8_t **out, uint32_t *size,
 	lc_callback cb, void *cb_arg)
 {
@@ -696,63 +831,9 @@ int find_config_binary(uint8_t *config, uint32_t config_size,
 
 
 /*
- * Private fuctions that the safemode and firmware functions use.
- */
-int _is_fw_update_supported(int direct)
-{
-	/*
-	 * If we don't have a fw_base, then we don't support fw updates
-	 * in anyway (direct or live).
-	 *
-	 * If we're in 'live' mode, then we need to make sure we we have a
-	 * fw_up_base (we know we have a fw_base from previous portion of if),
-	 * to know we're capable of doing it.
-	 *
-	 * Also, only allow architectures where we've figured out the
-	 * structure of the initial magic bytes.
-	 */
-	if (ri.arch->firmware_base == 0
-	    || (!direct && ri.arch->firmware_update_base == 0)
-	    || (ri.arch->firmware_4847_offset == 0)) {
-		return 0;
-	}
-
-	return 1;
-}
-
-int _write_fw_to_remote(uint8_t *in, uint32_t size, uint32_t addr,
-	lc_callback cb,	void *cb_arg)
-{
-	int err = 0;
-
-	if ((err = rmt->WriteFlash(addr, size, in,
-			ri.protocol, cb, cb_arg))) {
-		return LC_ERROR_WRITE;
-	}
-	return 0;
-}
-
-int _read_fw_from_remote(uint8_t *&out, uint32_t size, uint32_t addr,
-	lc_callback cb,	void *cb_arg)
-{
-	out = new uint8_t[size];
-	int err = 0;
-
-	if (!cb_arg) {
-		cb_arg = (void *)true;
-	}
-
-	if ((err = rmt->ReadFlash(addr, size, out,
-				ri.protocol, false, cb, cb_arg))) {
-		return LC_ERROR_READ;
-	}
-
-	return 0;
-}
-
-/*
  * SAFEMODE FIRMWARE RELATED
  */
+
 int erase_safemode(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
@@ -794,6 +875,7 @@ int read_safemode_from_file(char *file_name, uint8_t **out, uint32_t *size)
 {
 	return _read_from_file(file_name, out, size);
 }
+
 
 /*
  * FIRMWARE RELATED
@@ -913,64 +995,6 @@ int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 		cb_arg);
 }
 
-/*
- * The first few bytes of the firmware file we receive from the
- * website will be blanked out (0xFF), and we need to fill them
- * by calculating appropriate content.
- *
- * So why don't we always do this? If the user has a dump from us,
- * it already has the right initial bytes... and if somehow the
- * firmware on the device is messed up, we don't want to ignore
- * that useful data in the file.
- *
- * So we only overwrite the initial bytes if they are missing.
- * For most users, that will be all the time.
- *
- *   - Phil Dibowitz    Tue Mar 11 23:17:53 PDT 2008
- */
-int _fix_magic_bytes(uint8_t *in, uint32_t size)
-{
-	if (size < (ri.arch->firmware_4847_offset + 2)) {
-		return LC_ERROR;
-	}
-
-	if (in[0] == 0xFF && in[1] == 0xFF) {
-		/*
-		 * There are "always" two bytes at some location that
-		 * contain 0x48 and 0x47.
-		 *
-		 * Note: For some arch's (10 currently) we haven't
-		 * investigated where these go, hence the check for
-		 * a valid location in _is_fw_update_supported.
-		 *
-		 * Note: Arch 2 may be an exception to rule, and needs
-		 * more investigation.
-		 */
-		in[ri.arch->firmware_4847_offset] = 0x48;
-		in[ri.arch->firmware_4847_offset + 1] = 0x47;
-
-		/*
-		 * The first 2 bytes are a simple 16-bit checksum, computed
-		 * beginning at the location of the hard-coded 0x48/0x47
-		 * bytes through the end of the firmware.
-		 */
-		uint8_t suma = 0x21;
-		uint8_t sumb = 0x43;
-		for (
-			uint32_t index = ri.arch->firmware_4847_offset;
-			index < FIRMWARE_MAX_SIZE;
-			index += 2
-		) {
-			suma ^= in[index];
-			sumb ^= in[index + 1];
-		}
-		in[0] = suma;
-		in[1] = sumb;
-	}
-
-	return 0;
-}
-
 int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
 	lc_callback cb,	void *cb_arg)
 {
@@ -1049,22 +1073,6 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 	return 0;
 }
 
-/*
- * Chunk the hex into words, tack on an '0x', and then throw
- * it through strtoul to get binary data (int) back.
- */
-int convert_to_binary(string hex, uint8_t *&ptr)
-{
-	size_t size = hex.length();
-	for (size_t i = 0; i < size; i += 2) {
-		char tmp[6];
-		sprintf(tmp, "0x%s ", hex.substr(i, 2).c_str());
-		ptr[0] = (uint8_t)strtoul(tmp, NULL, 16);
-		ptr++;
-	}
-	return 0;
-}
-
 int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
 	uint32_t *size)
 {
@@ -1082,7 +1090,7 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
 			return LC_ERROR;
 		}
 
-		convert_to_binary(hex, o);
+		_convert_to_binary(hex, o);
 
 		x_size = xml_size - (x - xml);
 		o_size -= hex_size;
@@ -1098,9 +1106,11 @@ int read_firmware_from_file(char *file_name, uint8_t **out, uint32_t *size, int 
 	return _read_from_file(file_name, out, size);
 }
 
+
 /*
  * IR stuff
  */
+
 int learn_ir_commands(char *file_name, int post)
 {
 	int err;
@@ -1144,7 +1154,9 @@ int learn_ir_commands(char *file_name, int post)
 
 
 /*
- * INTERNAL FUNCTIONS
+ * PRIVATE-SHARED INTERNAL FUNCTIONS
+ * These are functions used by the whole library but are NOT part of the API
+ * and probably should be somewhere else...
  */
 
 void report_net_error(const char *msg)
