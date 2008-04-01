@@ -38,6 +38,9 @@ marco_bleich@gmx.do:
 - project files, def file for DLL
 - update Windows project files for library/cli split
 
+andreas.r.schulz@gmx.de:
+- Read the RESPONSE_DONE after IR learning (bug#1898492)
+
 
 0.13
 Released: 02/29/08
