@@ -18,6 +18,7 @@
  */
 
 /* Platform-agnostic includes */
+#define _SVID_SOURCE
 #include <libconcord.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,19 +93,6 @@ enum {
 	MODE_VERSION
 };
 
-/*
- * We're super strict ANSI-C since MS compilers kinda suck
- * which means no strdup(), so we'll define our own
- */
-char *strdup(const char *str)
-{
-	int n = strlen(str) + 1;
-	char *dup = malloc(n);
-	if (dup) {
-		strcpy(dup, str);
-	}
-	return dup;
-}
 
 /*
  * Start callbacks
