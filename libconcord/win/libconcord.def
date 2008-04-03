@@ -47,6 +47,7 @@ get_time_timezone
 ;
 lc_strerror
 delete_blob
+read_file
 
 ; GENERAL REMOTE INTERACTIONS
 ;
@@ -66,7 +67,6 @@ invalidate_flash
 ;
 read_config_from_remote
 write_config_to_remote
-read_config_from_file
 write_config_to_file
 verify_remote_config
 erase_config
@@ -77,7 +77,6 @@ find_config_binary
 erase_safemode
 read_safemode_from_remote
 write_safemode_to_file
-read_safemode_from_file
 
 ; FIRMWARE INTERACTIONS
 ;
@@ -89,7 +88,6 @@ erase_firmware
 read_firmware_from_remote
 write_firmware_to_remote
 write_firmware_to_file
-read_firmware_from_file
 extract_firmware_binary
 
 ; IR-stuff

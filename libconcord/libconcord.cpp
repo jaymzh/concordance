@@ -321,15 +321,11 @@ void delete_blob(uint8_t *ptr)
 }
 
 /*
- * PRIVATE HELPER FUNCTIONS
- */
-
-/*
  * Common routine to read contents of file named *file_name into
  * byte buffer **out. Get size from file and return out[size] 
  * as read from file.
  */
-int _read_from_file(char *file_name, uint8_t **out, uint32_t *size)
+int read_file(char *file_name, uint8_t **out, uint32_t *size)
 {
 	binaryinfile file;
 
@@ -354,6 +350,10 @@ int _read_from_file(char *file_name, uint8_t **out, uint32_t *size)
 	return 0;
 }
 
+
+/*
+ * PRIVATE HELPER FUNCTIONS
+ */
 
 int _is_fw_update_supported(int direct)
 {
@@ -605,19 +605,15 @@ int post_postconfig(uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int post_connect_test_success(char *file_name)
+int post_connect_test_success(uint8_t *data, uint32_t size)
 {
-	uint32_t size;
-	uint8_t *buf;
-	int err = 0;
 	/*
 	 * If we arrived, we can talk to the remote - so if it's
 	 * just a connectivity test, tell the site we succeeded
 	 */
-	if ( (err = _read_from_file(file_name, &buf, &size)) == 0 ) {
-		Post(buf, size, "POSTOPTIONS", ri, true);
-	}
-	return err;
+	Post(data, size, "POSTOPTIONS", ri, true);
+
+	return 0;
 }
 
 int get_time()
@@ -696,11 +692,6 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
 	}
 
 	return 0;
-}
-
-int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size)
-{
-	return _read_from_file(file_name, out, size);
 }
 
 int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
@@ -869,11 +860,6 @@ int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
 	}
 
 	return 0;
-}
-
-int read_safemode_from_file(char *file_name, uint8_t **out, uint32_t *size)
-{
-	return _read_from_file(file_name, out, size);
 }
 
 
@@ -1100,33 +1086,25 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
 
 	return 0;
 }
-	
-int read_firmware_from_file(char *file_name, uint8_t **out, uint32_t *size, int binary)
-{
-	return _read_from_file(file_name, out, size);
-}
 
 
 /*
  * IR stuff
  */
 
-int learn_ir_commands(char *file_name, int post)
+int learn_ir_commands(uint8_t *data, uint32_t size, int post)
 {
 	int err;
 
-	if (file_name) {
-		uint32_t size = 0;
-		uint8_t *x = NULL;
-		err = _read_from_file(file_name, &x, &size);
+	if (data) {
 		if (err != 0) {
 			return err;
 		}
 
-		uint8_t *t = x;
+		uint8_t *t = data;
 		string keyname;
 		do {
-			err = GetTag("KEY", t, size - (t - x), t, &keyname);
+			err = GetTag("KEY", t, size - (t - data), t, &keyname);
 			if (err != 0) {
 				return err;
 			}
@@ -1143,7 +1121,7 @@ int learn_ir_commands(char *file_name, int post)
 		debug("Learned code: %s",ls.c_str());
 
 		if (post) {
-			Post(x, size, "POSTOPTIONS", ri, true, &ls, &keyname);
+			Post(data, size, "POSTOPTIONS", ri, true, &ls, &keyname);
 		}
 	} else {
 		rmt->LearnIR();

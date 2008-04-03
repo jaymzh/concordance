@@ -116,7 +116,7 @@ static int Zap(string &server, const char *s1, const char *s2)
 		return LC_ERROR_OS_NET;
 	}
 
-	printf("%i bytes sent", err);
+	debug("%i bytes sent", err);
 
 	char buf[1000];
 	err = recv(sock,buf,999,0);

@@ -192,17 +192,13 @@ void print_time(int action)
 /*
  * Read the config from a file and write it to the remote
  */
-int upload_config(char *file_name, struct options_t *options,
+int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	uint8_t *data;
-	uint32_t size = 0;
 	uint8_t *binary_data;
 	uint32_t binary_size;
-
-	read_config_from_file(file_name, &data, &size);
 
 	binary_data = data;
 	binary_size = size;
@@ -221,7 +217,6 @@ int upload_config(char *file_name, struct options_t *options,
 	 */
 	printf("Invalidating Flash:  ");
 	if ((err = invalidate_flash())) {
-		delete_blob(data);
 		return err;
 	}
 	printf("                     done\n");
@@ -231,7 +226,6 @@ int upload_config(char *file_name, struct options_t *options,
 	 */
 	printf("Erasing Flash:       ");
 	if ((err = erase_config(binary_size, cb, (void *)0))) {
-		delete_blob(data);
 		return err;
 	}
 	printf("       done\n");
@@ -239,14 +233,12 @@ int upload_config(char *file_name, struct options_t *options,
 	printf("Writing Config:      ");
 	if ((err = write_config_to_remote(binary_data, binary_size, cb,
 			(void *)1))) {
-		delete_blob(data);
 		return err;
 	}
 	printf("       done\n");
 
 	printf("Verifying Config:    ");
 	if ((err = verify_remote_config(binary_data, binary_size, cb, (void *)1))) {
-		delete_blob(data);
 		return err;
 	}
 	printf("       done\n");
@@ -254,13 +246,10 @@ int upload_config(char *file_name, struct options_t *options,
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
 		if ((err = post_postconfig(data, size))) {
-			delete_blob(data);
 			return err;
 		}
 		printf("                     done\n");
 	}
-
-	delete_blob(data);
 
 	return 0;
 }
@@ -286,17 +275,15 @@ int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 	return 0;
 }
 
-int upload_firmware(char *file_name, struct options_t *options,
-	lc_callback cb, void *cb_arg)
+int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
+	struct options_t *options, lc_callback cb, void *cb_arg)
 {
 	int err;
-	uint8_t *firmware;
-	uint32_t firmware_size;
 	uint8_t *firmware_bin;
 	uint32_t firmware_bin_size;
 
 	err = 0;
-	firmware = firmware_bin = 0;
+	firmware_bin = 0;
 
 	if ((err = is_fw_update_supported((*options).direct))) {
 		fprintf(stderr, "Sorry, firmware upgrades are not yet");
@@ -317,12 +304,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 		}
 	}
 
-	if ((err = read_firmware_from_file(file_name, &firmware,
-			&firmware_size, (*options).binary))) {
-		delete_blob(firmware);
-		return err;
-	}
-
 	if ((*options).binary) {
 		firmware_bin = firmware;
 		firmware_bin_size = firmware_size;
@@ -330,7 +311,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 		if ((err = extract_firmware_binary(firmware, firmware_size,
 				&firmware_bin, &firmware_bin_size))) {
 			delete_blob(firmware_bin);
-			delete_blob(firmware);
 			return err;
 		}
 	}
@@ -341,7 +321,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 			if (firmware_bin != firmware) {
 				delete_blob(firmware_bin);
 			}
-			delete_blob(firmware);
 			return err;
 		}
 	}
@@ -351,7 +330,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 		if (firmware_bin != firmware) {
 			delete_blob(firmware_bin);
 		}
-		delete_blob(firmware);
 		return err;
 	}
 	printf("                     done\n");
@@ -361,7 +339,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 		if (firmware_bin != firmware) {
 			delete_blob(firmware_bin);
 		}
-		delete_blob(firmware);
 		return err;
 	}
 	printf("       done\n");
@@ -372,7 +349,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 		if (firmware_bin != firmware) {
 			delete_blob(firmware_bin);
 		}
-		delete_blob(firmware);
 		return err;
 	}
 	printf("       done\n");
@@ -385,7 +361,6 @@ int upload_firmware(char *file_name, struct options_t *options,
 	if (!(*options).direct) {
 		if ((err = finish_firmware())) {
 			printf("Failed to finalize FW update\n");
-			delete_blob(firmware);
 			return err;
 		}
 	}
@@ -393,13 +368,11 @@ int upload_firmware(char *file_name, struct options_t *options,
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
 		if ((err = post_postfirmware(firmware, firmware_size))) {
-			delete_blob(firmware);
 			return err;
 		}
 		printf("                     done\n");
 	}
 
-	delete_blob(firmware);
 	return 0;
 }
 
@@ -558,60 +531,63 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 		}
 	}
 
+	if (optind + 1 < argc) {
+		fprintf(stderr, "Multiple arguments were");
+		fprintf(stderr, " specified after the options");
+		fprintf(stderr, " - not sure what to do,");
+		fprintf(stderr, " exiting\n");
+		exit(1);
+	} else if (optind < argc) {
+		/* one thing left over, lets hope its a filename */
+		*file_name = argv[optind];
+	}
+
+}
+
+void detect_mode(char *file_name, int *mode)
+{
 	/*
 	 * Now, in case someone passed in just a filename, check arguments
 	 */
 	if (*mode == MODE_UNSET) {
-		if (optind < argc) {
-			char *file_name_copy;
-			char *file;
+		char *file_name_copy;
+		char *file;
 
-			if (optind + 1 < argc) {
-				fprintf(stderr, "Multiple arguments were");
-				fprintf(stderr, " specified after the options");
-				fprintf(stderr, " - not sure what to do,");
-				fprintf(stderr, " exiting\n");
-				exit(1);
-			}
+		/*
+		 * FIXME: We'll attempt to figure out what to
+		 *        do based on filename. This is fragile
+		 *        and should be done based on some
+		 *        metadata in the file... but this will
+		 *        do for now.
+		 */
 
-			*file_name = argv[optind];
+		/*
+		 * Dup our string since POSIX basename()
+		 * may modify it.
+		 */
+		file_name_copy = (char *)strdup(file_name);
+		file = basename(file_name_copy);
 
-			/*
-			 * FIXME: We'll attempt to figure out what to
-			 *        do based on filename. This is fragile
-			 *        and should be done based on some
-			 *        metadata in the file... but this will
-			 *        do for now.
-			 */
-
-			/*
-			 * Dup our string since POSIX basename()
-			 * may modify it.
-			 */
-			file_name_copy = (char *)strdup(*file_name);
-			file = basename(file_name_copy);
-
-			if (!strcasecmp(file, "connectivity.ezhex")) {
-				*mode = MODE_CONNECTIVITY;
-			} else if (!strcasecmp(file, "update.ezhex")) {
-				*mode = MODE_WRITE_CONFIG;
-			} else if (!strcasecmp(file, "learnir.eztut")) {
-				*mode = MODE_LEARN_IR;
-			} else if (!strcasecmp(file, "latestfirmware.ezup")) {
-				*mode = MODE_WRITE_FIRMWARE;
-			} else {
-				fprintf(stderr,
-					"Don't know what to do with %s\n",
-					*file_name);
-				exit(1);
-			}
-			free(file_name_copy);
-			/*	
-			 * Since basename returns a pointer to
-			 * file_name_copy, if we free(file), we get
-			 * a double-free bug.
-			 */
+		if (!strcasecmp(file, "connectivity.ezhex")) {
+			*mode = MODE_CONNECTIVITY;
+		} else if (!strcasecmp(file, "update.ezhex")) {
+			*mode = MODE_WRITE_CONFIG;
+		} else if (!strcasecmp(file, "learnir.eztut")) {
+			*mode = MODE_LEARN_IR;
+		} else if (!strcasecmp(file, "latestfirmware.ezup")) {
+			*mode = MODE_WRITE_FIRMWARE;
+		} else {
+			fprintf(stderr,
+				"Don't know what to do with %s\n",
+				file_name);
+			exit(1);
 		}
+		free(file_name_copy);
+		/*	
+		 * Since basename returns a pointer to
+		 * file_name_copy, if we free(file), we get
+		 * a double-free bug.
+		 */
 	}
 }
 
@@ -791,6 +767,8 @@ int main(int argc, char *argv[])
 	struct options_t options;
 	char *file_name;
 	int mode, err;
+	uint8_t *data;
+	uint32_t size;
 
 #ifdef WIN32
 	con=GetStdHandle(STD_OUTPUT_HANDLE);
@@ -811,32 +789,60 @@ int main(int argc, char *argv[])
 
 	parse_options(&options, &mode, &file_name, argc, argv);
 
-	if (mode == MODE_UNSET) {
-		printf("No mode requested. No work to do.\n");
-		exit(1);
-	}
-
 	/*
- 	 * If we're in "version" mode, we already printed the version,
- 	 * just exit.
- 	 */
+	 * Handle the few simple modes that don't require any files
+	 * to be read in or any realy work to be done first...
+	 */
 	if (mode == MODE_VERSION) {
 		exit(0);
 	}
 
-	/*
-	 * If we're in "help" mode, do that and exit before we set too much up.
-	 */
 	if (mode == MODE_HELP) {
 		help();
 		exit(0);
 	}
 
 	/*
+	 * OK, if we have a filename go ahead and read the file...
+	 */
+	data = 0;
+	size = 0;
+
+	/*
+ 	 * Alright, at this point, if there's going to be a filename,
+ 	 * we have one, so lets read the file.
+ 	 */
+	if (file_name) {
+		read_file(file_name, &data, &size);
+	}
+
+	/*
+	 * And if we don't have a mode, lets detect that mode based on
+	 * the file.
+	 *
+	 * FIXME: This should be something NOT based on filename.
+	 */
+	if (mode == MODE_UNSET) {
+		detect_mode(file_name, &mode);
+	}
+
+	/*
+	 * And if we still don't have a mode, we exit.
+	 */
+	if (mode == MODE_UNSET) {
+		printf("No mode requested. No work to do.\n");
+		exit(1);
+	}
+
+	/*
 	 * In a few special cases, we populate a default filename. NEVER
 	 * if we're are writing to the device, however.
+	 *
+	 * But wait - we already read in the file! Indeed, if we have a default
+	 * filename, then we'll be writing to the file, not reading it, which
+	 * is why we do this down here.
 	 */
-	if (!file_name) {
+	if (!file_name)  {
 		populate_default_filename(mode, options.binary, &file_name);
 	}
 
@@ -892,7 +898,7 @@ int main(int argc, char *argv[])
 		case MODE_CONNECTIVITY:
 			if (!options.noweb)
 				printf("Contacting website:  ");
-				err = post_connect_test_success(file_name);
+				err = post_connect_test_success(data, size);
 				printf("                     done\n");
 			break;
 
@@ -909,7 +915,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_WRITE_CONFIG:
-			err = upload_config(file_name, &options,
+			err = upload_config(data, size, &options,
 				cb_print_percent_status, NULL);
 			if (err != 0)
 				break;
@@ -930,7 +936,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_WRITE_FIRMWARE:
-			err = upload_firmware(file_name, &options,
+			err = upload_firmware(data, size, &options,
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to upload firmware: %s\n",
@@ -954,7 +960,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_LEARN_IR:
-			err = learn_ir_commands(file_name, !options.noweb);
+			err = learn_ir_commands(data, size, !options.noweb);
 			break;
 
 		case MODE_GET_TIME:
@@ -974,6 +980,10 @@ int main(int argc, char *argv[])
 	}
 			
 cleanup:
+
+	if (data) {
+		delete_blob(data);
+	}
 
 	deinit_concord();
 

@@ -190,7 +190,7 @@ int set_time();
  * successful. A Connectivity.EZHex file must be passed in so that we
  * can get the URL, cookie information, etc.
  */
-int post_connect_test_success(char *file_name);
+int post_connect_test_success(uint8_t *data, uint32_t size);
 /*
  * Prior to updating the config, if you want to interact with the website
  * you have to send it some initial data. This does that. The data passed
@@ -241,19 +241,15 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
 int write_config_to_remote(uint8_t *in, uint32_t size,
 	lc_callback cb, void *cb_arg);
 /*
- * Read the config from a file. If it's a standard XML file from the
+ * Read the in a file. If it's a standard XML file from the
  * membersharmonyremote.com website, the XML will be included. If it's just
  * the binary blob, that's fine too. size will be returned.
  *
  * NOTE: The pointer *out should not point to anything useful. We will
  * allocate a char array and point your pointer at it. Use delete_blob to
  * reclaim this memory.
- *
- * To actually get the binary data from the file for other functions,
- * use find_binary_start() to move a pointer to the beginning of the binary
- * data embedded in the file.
  */
-int read_config_from_file(char *file_name, uint8_t **out, uint32_t *size);
+int read_file(char *file_name, uint8_t **out, uint32_t *size);
 /*
  * Given a binary-only config blob *in, write the config to a file. Unless
  * binary is true, the XML will be constructed and written to the file
@@ -312,10 +308,6 @@ int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
  * written as pure binary.
  */
 int write_safemode_to_file(uint8_t *in, uint32_t size,char *file_name);
-/*
- * Read safemode firmware from file_name into out.
- */
-int read_safemode_from_file(char *file_name, uint8_t **out, uint32_t *size);
 
 /*
  * FIRMWARE INTERACTIONS
@@ -372,16 +364,8 @@ int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
 int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 	int binary);
 /*
- * Read firmware from file_name into out.
- * Note that if you read the firmware from a file in non-binary mode,
- * you must use extract_firmware_binary() to get the binary data out
- * to pass to this function.
- */
-int read_firmware_from_file(char *file_name, uint8_t **out, uint32_t *size,
-	int binary);
-/*
  * Extract the binary firmware from a file read in with
- * read_firmware_from_file(). Obviously this function isn't necessary in
+ * read_file(). Obviously this function isn't necessary in
  * binary mode.
  */
 int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
@@ -391,7 +375,7 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
  * IR-stuff. This stuff hasn't yet been cleaned up, you'll have to
  * dig in yourself.
  */
-int learn_ir_commands(char *file_name, int post);
+int learn_ir_commands(uint8_t *data, uint32_t size, int post);
 
 #ifdef __cplusplus
 }
