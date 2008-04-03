@@ -1,4 +1,8 @@
 /*
+ *  vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
+ *
+ *  $Id$
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3 of the License, or
@@ -1147,4 +1151,3 @@ void report_net_error(const char *msg)
 	debug("Net error: %s failed with error %s", msg, strerror(errno));
 #endif
 }
-
