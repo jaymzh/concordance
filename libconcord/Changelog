@@ -21,6 +21,11 @@ phil@ipom.com
 - Implement new libconcord debug() macro and unify the code to use that
   instead of tons of #ifdefs
 - Re-order functions in libconcord.cpp to make more sense
+- Replace all read_*_from_file() APIs with Andreas' _read_from_file()
+  function, renaming it read_file()
+- Restructure code-flow in concordance to read a file very early
+  with read_file(), and then pass around the data as needed. Both for
+  cleanup and to prep for an libconcord API to detect filetype better
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
