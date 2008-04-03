@@ -816,7 +816,8 @@ int main(int argc, char *argv[])
  	 * Alright, at this point, if there's going to be a filename,
  	 * we have one, so lets read the file.
  	 */
-	if (file_name) {
+	if (file_name && (mode != MODE_DUMP_CONFIG && mode != MODE_DUMP_FIRMWARE
+			  && mode != MODE_DUMP_SAFEMODE)) {
 		read_file(file_name, &data, &size);
 	}
 
