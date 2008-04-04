@@ -217,7 +217,7 @@ int get_time_day()
 
 int get_time_dow()
 {
-	return rtime.day;
+	return rtime.dow;
 }
 
 int get_time_month()
@@ -338,7 +338,7 @@ int identify_file(uint8_t *in, uint32_t size, int *type)
 	}
 
 	uint8_t *end_info_ptr;
-        err = GetTag("/INFORMATION", in, size, end_info_ptr);
+	err = GetTag("/INFORMATION", in, size, end_info_ptr);
 	if (err == -1) {
 		return LC_ERROR;
 	}
