@@ -26,6 +26,10 @@ phil@ipom.com
 - Restructure code-flow in concordance to read a file very early
   with read_file(), and then pass around the data as needed. Both for
   cleanup and to prep for an libconcord API to detect filetype better
+- Make libconcord submit HID data without an initial 0-byte that a
+  Windows HID stack would expect. In the event we're using WinHID,
+  our WinHID code will add the extra 0-byte, but the rest of the code
+  is no longer encumbered with it.
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
