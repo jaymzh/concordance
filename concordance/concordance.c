@@ -560,14 +560,19 @@ int detect_mode(uint8_t *data, uint32_t size, int *mode)
 	switch (type) {
 	case LC_FILE_TYPE_CONNECTIVITY:
 		*mode = MODE_CONNECTIVITY;
+		break;
 	case LC_FILE_TYPE_CONFIGURATION:
 		*mode = MODE_WRITE_CONFIG;
+		break;
 	case LC_FILE_TYPE_FIRMWARE:
 		*mode = MODE_WRITE_FIRMWARE;
+		break;
 	case LC_FILE_TYPE_LEARN_IR:
 		*mode = MODE_LEARN_IR;
+		break;
 	default:
 		return LC_ERROR;
+		break;
 	}
 
 	return 0;
