@@ -277,7 +277,6 @@ int FindRemote(THIDINFO &hid_info)
 int HID_WriteReport(const uint8_t *data)
 {
 	DWORD err, dw;
-	BOOL ret;
 	uint8_t *windata = new uint8_t[caps.OutputReportByteLength];
 
 	// Add an initial 0-byte for the Windows USB stack
