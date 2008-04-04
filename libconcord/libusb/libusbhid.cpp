@@ -207,7 +207,7 @@ int HID_WriteReport(const uint8_t *data)
 	 * every command, so we data+1 here to skip that.
 	 */
 	const int err=usb_interrupt_write(h_hid, ep_write,
-		reinterpret_cast<char *>(const_cast<uint8_t*>(data+1)),
+		reinterpret_cast<char *>(const_cast<uint8_t*>(data)),
 		orl, 500);
 
 	if (err < 0) {
@@ -222,7 +222,7 @@ int HID_WriteReport(const uint8_t *data)
 int HID_ReadReport(uint8_t *data, unsigned int timeout)
 {
 	const int err=usb_interrupt_read(h_hid, ep_read,
-		reinterpret_cast<char *>(data+1), irl, timeout);
+		reinterpret_cast<char *>(data), irl, timeout);
 
 	if (err < 0) {
 		debug("Failed to read from device: %d (%s)", err,

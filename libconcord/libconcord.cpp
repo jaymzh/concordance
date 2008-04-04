@@ -1055,12 +1055,19 @@ int finish_firmware()
 			return LC_ERROR;
 	} else {
 		data[0] = 0x02;
-		if ((err = rmt->WriteRam(0, 1, data)))
+		if ((err = rmt->WriteRam(0, 1, data))) {
+			debug("Failed to write 2 to RAM 0");
 			return LC_ERROR_WRITE;
-		if ((err = rmt->ReadRam(0, 1, data)))
+		}
+		if ((err = rmt->ReadRam(0, 1, data))) {
+			debug("Failed to from RAM 0");
 			return LC_ERROR_WRITE;
-		if (data[0] != 2)
+		}
+		if (data[0] != 2) {
+			printf("byte is %d\n",data[0]);
+			debug("Finalize byte didn't match");
 			return LC_ERROR_VERIFY;
+		}
 	}
 
 	return 0;

@@ -68,7 +68,7 @@ void make_serial(uint8_t *ser, TRemoteInfo &ri)
 
 int CRemote::Reset(uint8_t kind)
 {
-	uint8_t reset_cmd[] = { 0, COMMAND_RESET, kind };
+	uint8_t reset_cmd[] = { COMMAND_RESET, kind };
 
 	return HID_WriteReport(reset_cmd);
 }
@@ -84,7 +84,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	int err = 0;
 	uint32_t cb_count = 0;
 
-	const uint8_t qid[] = { 0x00, COMMAND_GET_VERSION };
+	const uint8_t qid[] = { COMMAND_GET_VERSION };
 
 	if ((err = HID_WriteReport(qid))) {
 		debug("Failed to write to remote");
@@ -100,31 +100,31 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	/*
  	 * See specs/protocol.txt for format
  	 */
-	const unsigned int rx_len = rsp[1] & 0x0F;
+	const unsigned int rx_len = rsp[0] & 0x0F;
 
-	if ((rsp[1] & 0xF0) != RESPONSE_VERSION_DATA ||
+	if ((rsp[0] & 0xF0) != RESPONSE_VERSION_DATA ||
 	    (rx_len != 7 && rx_len != 5)) {
 		debug("Bogus ident response: %02X", rsp[1]);
 		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
 	}
 
-	ri.fw_ver_major = rsp[2] >> 4;
-	ri.fw_ver_minor = rsp[2] & 0x0F;
-	ri.hw_ver_major = rsp[3] >> 4;
-	ri.hw_ver_minor = rsp[3] & 0x0F;
-	ri.flash_id = rsp[4];
-	ri.flash_mfg = rsp[5];
-	ri.architecture = rx_len < 6 ? 2 : rsp[6] >> 4;
-	ri.fw_type = rx_len < 6 ? 0 : rsp[6] & 0x0F;
-	ri.skin = rx_len < 6 ? 2 : rsp[7];
-	ri.protocol = rx_len < 7 ? 0 : rsp[8];
+	ri.fw_ver_major = rsp[1] >> 4;
+	ri.fw_ver_minor = rsp[1] & 0x0F;
+	ri.hw_ver_major = rsp[2] >> 4;
+	ri.hw_ver_minor = rsp[2] & 0x0F;
+	ri.flash_id = rsp[3];
+	ri.flash_mfg = rsp[4];
+	ri.architecture = rx_len < 6 ? 2 : rsp[5] >> 4;
+	ri.fw_type = rx_len < 6 ? 0 : rsp[5] & 0x0F;
+	ri.skin = rx_len < 6 ? 2 : rsp[6];
+	ri.protocol = rx_len < 7 ? 0 : rsp[7];
 
 	setup_ri_pointers(ri);
 
-	//printf("Reading Flash... ");
 	uint8_t rd[1024];
 	if ((err=ReadFlash(ri.arch->config_base, 1024, rd, ri.protocol,
 								false))) {
+		debug("Error reading first k of config data");
 		return LC_ERROR_READ;
 	}
 	if (cb) {
@@ -162,6 +162,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 			COMMAND_MISC_EEPROM, rsp)
 		// All newer models store it in Flash
 		: ReadFlash(FLASH_SERIAL_ADDR, 48, rsp, ri.protocol))) {
+		debug("Couldn't read serial\n");
 		return LC_ERROR_READ;
 	}
 
@@ -204,16 +205,15 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 	do {
 		static uint8_t cmd[8];
-		cmd[0] = 0;
-		cmd[1] = COMMAND_READ_FLASH | 0x05;
-		cmd[2] = (addr >> 16) & 0xFF;
-		cmd[3] = (addr >> 8) & 0xFF;
-		cmd[4] = addr & 0xFF;
+		cmd[0] = COMMAND_READ_FLASH | 0x05;
+		cmd[1] = (addr >> 16) & 0xFF;
+		cmd[2] = (addr >> 8) & 0xFF;
+		cmd[3] = addr & 0xFF;
 		unsigned int chunk_len = end-addr;
 		if (chunk_len > max_chunk_len) 
 			chunk_len = max_chunk_len;
-		cmd[5] = (chunk_len >> 8) & 0xFF;
-		cmd[6] = chunk_len & 0xFF;
+		cmd[4] = (chunk_len >> 8) & 0xFF;
+		cmd[5] = chunk_len & 0xFF;
 
 		if ((err = HID_WriteReport(cmd)))
 			break;
@@ -225,26 +225,27 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 			if ((err = HID_ReadReport(rsp)))
 				break;
 
-			const uint8_t r = rsp[1]&COMMAND_MASK;
+			const uint8_t r = rsp[0] & COMMAND_MASK;
 
 			if (r == RESPONSE_READ_FLASH_DATA) {
-				if (seq != rsp[2]) {
+				if (seq != rsp[1]) {
 					err = LC_ERROR;
 					debug("Invalid sequence %02X %02x",
-						seq, rsp[2]);
+						seq, rsp[1]);
 					break;
 				}
-				seq+=0x11;
+				seq += 0x11;
 				const unsigned int rxlen =
-					rxlenmap[rsp[1] & LENGTH_MASK];
+					rxlenmap[rsp[0] & LENGTH_MASK];
 				if (rxlen) {
 					if (verify) {
-						if (memcmp(pr, rsp+3, rxlen)) {
+						if (memcmp(pr, rsp+2, rxlen)) {
+							debug("Verify fail");
 							err = LC_ERROR_VERIFY;
 							break;
 						}
 					} else {
-						memcpy(pr, rsp+3, rxlen);
+						memcpy(pr, rsp+2, rxlen);
 					}
 					pr += rxlen;
 					addr += rxlen;
@@ -253,7 +254,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 			} else if (r == RESPONSE_DONE) {
 				break;
 			} else {
-				debug("Invalid response [%02X]", rsp[1]);
+				debug("Invalid response [%02X]", rsp[0]);
 				err = LC_ERROR;
 			}
 		} while (err == 0);
@@ -268,7 +269,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 int CRemote::InvalidateFlash(void)
 {
-	const uint8_t ivf[]={ 0x00, COMMAND_WRITE_MISC | 0x01, 
+	const uint8_t ivf[]={ COMMAND_WRITE_MISC | 0x01, 
 				COMMAND_MISC_INVALIDATE_FLASH };
 	int err;
 
@@ -279,8 +280,8 @@ int CRemote::InvalidateFlash(void)
 	if ((err = HID_ReadReport(rsp)))
 		return err;
 
-	if ((rsp[1] & COMMAND_MASK) != RESPONSE_DONE ||
-		(rsp[2] & COMMAND_MASK) != COMMAND_WRITE_MISC) {
+	if ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE ||
+		(rsp[1] & COMMAND_MASK) != COMMAND_WRITE_MISC) {
 		return 1;
 	}
 
@@ -319,11 +320,10 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 
 	for (uint32_t i = 0; i < num_sectors; i++) {
 		static uint8_t erase_cmd[8];
-		erase_cmd[0] = 0;
-		erase_cmd[1] = COMMAND_ERASE_FLASH;
-		erase_cmd[2] = (sector_begin >> 16) & 0xFF;
-		erase_cmd[3] = (sector_begin >> 8) & 0xFF;
-		erase_cmd[4] = sector_begin & 0xFF;
+		erase_cmd[0] = COMMAND_ERASE_FLASH;
+		erase_cmd[1] = (sector_begin >> 16) & 0xFF;
+		erase_cmd[2] = (sector_begin >> 8) & 0xFF;
+		erase_cmd[3] = sector_begin & 0xFF;
 
 		if ((err = HID_WriteReport(erase_cmd)))
 			break;
@@ -383,16 +383,15 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 
 	do {
 		static uint8_t write_setup_cmd[8];
-		write_setup_cmd[0] = 0;
-		write_setup_cmd[1] = COMMAND_WRITE_FLASH | 0x05;
-		write_setup_cmd[2] = (addr >> 16) & 0xFF;
-		write_setup_cmd[3] = (addr >> 8) & 0xFF;
-		write_setup_cmd[4] = addr & 0xFF;
+		write_setup_cmd[0] = COMMAND_WRITE_FLASH | 0x05;
+		write_setup_cmd[1] = (addr >> 16) & 0xFF;
+		write_setup_cmd[2] = (addr >> 8) & 0xFF;
+		write_setup_cmd[3] = addr & 0xFF;
 		uint32_t chunk_len = end - addr;
 		if (chunk_len > max_chunk_len)
 			chunk_len = max_chunk_len;
-		write_setup_cmd[5] = (chunk_len >> 8) & 0xFF;
-		write_setup_cmd[6] = chunk_len & 0xFF;
+		write_setup_cmd[4] = (chunk_len >> 8) & 0xFF;
+		write_setup_cmd[5] = chunk_len & 0xFF;
 
 		if ((err = HID_WriteReport(write_setup_cmd)))
 			break;
@@ -406,9 +405,8 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 			}
 			unsigned int block_len = txlenmap[i];
 			uint8_t wd[68];
-			wd[0] = 0;
-			wd[1] = COMMAND_WRITE_FLASH_DATA | n;
-			memcpy(wd+2, pw, block_len);
+			wd[0] = COMMAND_WRITE_FLASH_DATA | n;
+			memcpy(wd+1, pw, block_len);
 			HID_WriteReport(wd);
 			pw += block_len;
 			addr += block_len;
@@ -416,7 +414,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 			chunk_len -= block_len;
 		}
 		
-		uint8_t end_cmd[3] = { 0, COMMAND_DONE, COMMAND_WRITE_FLASH };
+		uint8_t end_cmd[] = { COMMAND_DONE, COMMAND_WRITE_FLASH };
 		HID_WriteReport(end_cmd);
 
 		uint8_t rsp[68];
@@ -433,10 +431,10 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 
 int CRemote::ReadMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *rd)
 {
-	uint8_t rmb[] = { 0, COMMAND_READ_MISC | 0x02, kind, 0 };
+	uint8_t rmb[] = { COMMAND_READ_MISC | 0x02, kind, 0 };
 
 	while (len--) {
-		rmb[3] = addr++;
+		rmb[2] = addr++;
 
 		int err;
 		if ((err = HID_WriteReport(rmb)))
@@ -446,22 +444,22 @@ int CRemote::ReadMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *rd)
 		if ((err = HID_ReadReport(rsp)))
 			return err;
 
-		if (rsp[1] != (RESPONSE_READ_MISC_DATA | 0x02) ||
-			rsp[2] != kind)
+		if (rsp[0] != (RESPONSE_READ_MISC_DATA | 0x02) ||
+			rsp[1] != kind)
 			return 1;
 
-		*rd++ = rsp[3];
+		*rd++ = rsp[2];
 	}
 	return 0;
 }
 
 int CRemote::ReadMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *rd)
 {
-	uint8_t rmw[] = { 0, COMMAND_READ_MISC | 0x03, kind, 0, 0 };
+	uint8_t rmw[] = { COMMAND_READ_MISC | 0x03, kind, 0, 0 };
 
 	while (len--) {
-		rmw[3] = addr >> 8;
-		rmw[4] = addr & 0xFF;
+		rmw[2] = addr >> 8;
+		rmw[3] = addr & 0xFF;
 		++addr;
 
 		int err;
@@ -473,12 +471,12 @@ int CRemote::ReadMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *r
 			return err;
 
 		// WARNING: The 880 responds with C2 rather than C3
-		if ((rsp[1] & COMMAND_MASK) != RESPONSE_READ_MISC_DATA ||
-			rsp[2] != kind) {
+		if ((rsp[0] & COMMAND_MASK) != RESPONSE_READ_MISC_DATA ||
+			rsp[1] != kind) {
 			return 1;
 		}
 
-		*rd++ = (rsp[3] << 8) | rsp[4];
+		*rd++ = (rsp[2] << 8) | rsp[3];
 	}
 	return 0;
 }
@@ -486,13 +484,12 @@ int CRemote::ReadMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *r
 int CRemote::WriteMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *wr)
 {
 	uint8_t wmb[8];
-	wmb[0] = 0;
-	wmb[1] = COMMAND_WRITE_MISC | 0x03;
-	wmb[2] = kind;
+	wmb[0] = COMMAND_WRITE_MISC | 0x03;
+	wmb[1] = kind;
 
 	while (len--) {
-		wmb[3] = addr++;
-		wmb[4] = *wr++;
+		wmb[2] = addr++;
+		wmb[3] = *wr++;
 
 		int err;
 		if ((err = HID_WriteReport(wmb)))
@@ -501,8 +498,8 @@ int CRemote::WriteMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *wr
 		uint8_t rsp[68];
 		if ((err = HID_ReadReport(rsp)))
 			return err;
-		if ((rsp[1] & COMMAND_MASK) != RESPONSE_DONE ||
-			rsp[2] != COMMAND_WRITE_MISC) {
+		if ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE ||
+			rsp[1] != COMMAND_WRITE_MISC) {
 			return 1;
 		}
 	}
@@ -512,16 +509,15 @@ int CRemote::WriteMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *wr
 int CRemote::WriteMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *wr)
 {
 	uint8_t wmw[8];
-	wmw[0] = 0;
-	wmw[1] = COMMAND_WRITE_MISC | 0x05;
-	wmw[2] = kind;
+	wmw[0] = COMMAND_WRITE_MISC | 0x05;
+	wmw[1] = kind;
 
 	while (len--) {
-		wmw[3] = addr >> 8;
-		wmw[4] = addr & 0xFF;
+		wmw[2] = addr >> 8;
+		wmw[3] = addr & 0xFF;
 		++addr;
-		wmw[5] = *wr >> 8;
-		wmw[6] = *wr & 0xFF;
+		wmw[4] = *wr >> 8;
+		wmw[5] = *wr & 0xFF;
 		++wr;
 
 		int err;
@@ -531,8 +527,8 @@ int CRemote::WriteMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *
 		uint8_t rsp[68];
 		if ((err = HID_ReadReport(rsp)))
 			return err;
-		if ((rsp[1] & COMMAND_MASK) != RESPONSE_DONE ||
-			rsp[2] != COMMAND_WRITE_MISC) {
+		if ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE ||
+			rsp[1] != COMMAND_WRITE_MISC) {
 			return 1;
 		}
 	}
@@ -605,7 +601,7 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 
 		// Send Recalc Clock command for 880 only (not 360/520/550)
 		if (ri.architecture == 8) {
-			static const uint8_t rcc[] = { 0,
+			static const uint8_t rcc[] = {
 				COMMAND_WRITE_MISC | 0x01,
 				COMMAND_MISC_CLOCK_RECALCULATE };
 			err = HID_WriteReport(rcc);
@@ -645,7 +641,7 @@ int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
 	const unsigned int len = rsp[64];
 	if ((len & 1) == 0) {
 		for (unsigned int u = 2; u < len; u += 2) {
-			const unsigned int t = rsp[1+u] << 8 | rsp[2+u];
+			const unsigned int t = rsp[u] << 8 | rsp[1+u];
 			if (ir_word > 2) {
 				/*
 				 * For ODD words, t is the total time, we'll
@@ -728,7 +724,7 @@ int CRemote::LearnIR(string *learn_string)
 	int err = 0;
 	uint8_t rsp[68];
 
-	const static uint8_t start_ir_learn[] = { 0, COMMAND_START_IRCAP };
+	const static uint8_t start_ir_learn[] = { COMMAND_START_IRCAP };
 	if ((err = HID_WriteReport(start_ir_learn)))
 		return err;
 
@@ -752,9 +748,9 @@ int CRemote::LearnIR(string *learn_string)
 	while (err == 0 && t_off < 500000) {
 		if ((err = HID_ReadReport(rsp, ir_word ? 500 : 4000)))
 			break;
-		const uint8_t r = rsp[1] & COMMAND_MASK;
+		const uint8_t r = rsp[0] & COMMAND_MASK;
 		if (r == RESPONSE_IRCAP_DATA) {
-			if (!check_seq(rsp[2], seq)) {
+			if (!check_seq(rsp[1], seq)) {
 				err = 1;
 				break;
  			}
@@ -784,13 +780,13 @@ int CRemote::LearnIR(string *learn_string)
 	if (pulse_count < MAX_PULSE_COUNT)
 		pulses[pulse_count++] = t_off;
 
-	const static uint8_t stop_ir_learn[] = { 0x00, COMMAND_STOP_IRCAP };
+	const static uint8_t stop_ir_learn[] = { COMMAND_STOP_IRCAP };
 	HID_WriteReport(stop_ir_learn);
 
 	/* read returned RESPONSE_DONE, otherwise next command wil fail! */
 	err = HID_ReadReport(rsp);
 	if (err == 0) {
-		if ((rsp[1] & COMMAND_MASK) != RESPONSE_DONE) {
+		if ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE) {
 			err = 1;
 		}
 	}
