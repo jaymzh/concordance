@@ -48,6 +48,7 @@ get_time_timezone
 lc_strerror
 delete_blob
 read_file
+identify_file
 
 ; GENERAL REMOTE INTERACTIONS
 ;

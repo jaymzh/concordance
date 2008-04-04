@@ -548,51 +548,29 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 
 }
 
-void detect_mode(char *file_name, int *mode)
+int detect_mode(uint8_t *data, uint32_t size, int *mode)
 {
-	/*
-	 * Now, in case someone passed in just a filename, check arguments
-	 */
-	if (*mode == MODE_UNSET) {
-		char *file_name_copy;
-		char *file;
+	int err, type;
 
-		/*
-		 * FIXME: We'll attempt to figure out what to
-		 *        do based on filename. This is fragile
-		 *        and should be done based on some
-		 *        metadata in the file... but this will
-		 *        do for now.
-		 */
-
-		/*
-		 * Dup our string since POSIX basename()
-		 * may modify it.
-		 */
-		file_name_copy = (char *)strdup(file_name);
-		file = basename(file_name_copy);
-
-		if (!strcasecmp(file, "connectivity.ezhex")) {
-			*mode = MODE_CONNECTIVITY;
-		} else if (!strcasecmp(file, "update.ezhex")) {
-			*mode = MODE_WRITE_CONFIG;
-		} else if (!strcasecmp(file, "learnir.eztut")) {
-			*mode = MODE_LEARN_IR;
-		} else if (!strcasecmp(file, "latestfirmware.ezup")) {
-			*mode = MODE_WRITE_FIRMWARE;
-		} else {
-			fprintf(stderr,
-				"Don't know what to do with %s\n",
-				file_name);
-			exit(1);
-		}
-		free(file_name_copy);
-		/*	
-		 * Since basename returns a pointer to
-		 * file_name_copy, if we free(file), we get
-		 * a double-free bug.
-		 */
+	err = identify_file(data, size, &type);
+	if (err) {
+		return err;
 	}
+
+	switch (type) {
+	case LC_FILE_TYPE_CONNECTIVITY:
+		*mode = MODE_CONNECTIVITY;
+	case LC_FILE_TYPE_CONFIGURATION:
+		*mode = MODE_WRITE_CONFIG;
+	case LC_FILE_TYPE_FIRMWARE:
+		*mode = MODE_WRITE_FIRMWARE;
+	case LC_FILE_TYPE_LEARN_IR:
+		*mode = MODE_LEARN_IR;
+	default:
+		return LC_ERROR;
+	}
+
+	return 0;
 }
 
 void help()
@@ -818,25 +796,27 @@ int main(int argc, char *argv[])
  	 */
 	if (file_name && (mode != MODE_DUMP_CONFIG && mode != MODE_DUMP_FIRMWARE
 			  && mode != MODE_DUMP_SAFEMODE)) {
-		read_file(file_name, &data, &size);
+		if (read_file(file_name, &data, &size)) {
+			printf("Cannot read input file.\n");
+			exit(1);
+		}
 	}
 
 	/*
 	 * And if we don't have a mode, lets detect that mode based on
 	 * the file.
-	 *
-	 * FIXME: This should be something NOT based on filename.
 	 */
-	if (mode == MODE_UNSET) {
-		detect_mode(file_name, &mode);
-	}
-
-	/*
-	 * And if we still don't have a mode, we exit.
-	 */
-	if (mode == MODE_UNSET) {
-		printf("No mode requested. No work to do.\n");
-		exit(1);
+	if (mode == MODE_UNSET && file_name) {
+		if (file_name) {
+			if (detect_mode(data, size, &mode)) {
+				printf("Cannot determine mode of operation from"
+					" file.\n");
+				exit(1);
+			}
+		} else {
+			printf("No mode requested. No work to do.\n");
+			exit(1);
+		}
 	}
 
 	/*

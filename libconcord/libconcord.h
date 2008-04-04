@@ -69,6 +69,14 @@ typedef unsigned __int64 uint64_t;
 #define LC_ERROR_INVALID_CONFIG 16
 
 /*
+ * Filetypes, used by identity_file()
+ */
+#define LC_FILE_TYPE_CONNECTIVITY  0
+#define LC_FILE_TYPE_CONFIGURATION 1
+#define LC_FILE_TYPE_FIRMWARE      2
+#define LC_FILE_TYPE_LEARN_IR      3
+
+/*
  * Actual C clients are not fully supported yet, but that's the goal...
  */
 #ifdef __cplusplus
@@ -154,6 +162,16 @@ const char *lc_strerror(int err);
  * data up when you are done with it.
  */
 void delete_blob(uint8_t *ptr);
+
+/*
+ * Attempt to identify the action to perform to process the given file,
+ * given its content.
+ *
+ * The function will indicate whether the file could be identified using
+ * the return value. If the file can be identified, the type of the file
+ * will be written to *mode.
+ */
+int identify_file(uint8_t *in, uint32_t size, int *type);
 
 /*
  * GENERAL REMOTE INTERACTIONS

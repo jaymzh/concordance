@@ -324,6 +324,116 @@ void delete_blob(uint8_t *ptr)
 	delete[] ptr;
 }
 
+int identify_file(uint8_t *in, uint32_t size, int *type)
+{
+	int err;
+
+	/*
+	 * Validate this is a remotely sane XML file
+	 */
+	uint8_t *start_info_ptr;
+	err = GetTag("INFORMATION", in, size, start_info_ptr);
+	if (err == -1) {
+		return LC_ERROR;
+	}
+
+	uint8_t *end_info_ptr;
+        err = GetTag("/INFORMATION", in, size, end_info_ptr);
+	if (err == -1) {
+		return LC_ERROR;
+	}
+
+	/*
+	 * Determine size of binary data following /INFORMATION
+	 */
+	uint32_t data_len = size - (end_info_ptr - in);
+	/*
+	 * Account for CRLF after /INFORMATION>
+	 * But, don't screw up if it's missing
+	 */
+	if (data_len >= 2) {
+		data_len -= 2;
+	}
+
+	/*
+	 * Search for tag only in "connectivity test" files
+	 */
+	bool found_get_zaps_only = false;
+	uint8_t *tmp_data = in;
+	uint32_t tmp_size = size - data_len;
+	while (1) {
+		uint8_t *tag_ptr;
+		string tag_s;
+		err = GetTag("KEY", tmp_data, tmp_size, tag_ptr, &tag_s);
+		if (err == -1) {
+			break;
+		}
+		if (!stricmp(tag_s.c_str(), "GETZAPSONLY")) {
+			found_get_zaps_only = true;
+			break;
+		}
+		tmp_data = tag_ptr + tag_s.length();
+		tmp_size = end_info_ptr - tmp_data;
+	}
+
+	/*
+	 * Search for tag only in "firmware" files
+	 */
+	bool found_firmware = false;
+	tmp_data = in;
+	tmp_size = size - data_len;
+	while (1) {
+		uint8_t *tag_ptr;
+		string tag_s;
+		err = GetTag("TYPE", tmp_data, tmp_size, tag_ptr, &tag_s);
+		if (err == -1) {
+			break;
+		}
+		if (!stricmp(tag_s.c_str(), "Firmware_Main")) {
+			found_firmware = true;
+			break;
+		}
+		tmp_data = tag_ptr + tag_s.length();
+		tmp_size = end_info_ptr - tmp_data;
+	}
+
+	/*
+	 * Search for tag only in "IR learning files.
+	 */
+	uint8_t *tag_ptr;
+	err = GetTag("CHECKKEYS", in, size - data_len, tag_ptr);
+	bool found_learn_ir = (err != -1);
+
+	/*
+	 * Check tag search results for consistency, and deduce the file type
+	 */
+	if (found_get_zaps_only && !data_len && !found_firmware &&
+		!found_learn_ir) {
+		*type = LC_FILE_TYPE_CONNECTIVITY;
+		return 0;
+	}
+	if (!found_get_zaps_only && (data_len >= 16) && !found_firmware &&
+		!found_learn_ir) {
+		*type = LC_FILE_TYPE_CONFIGURATION;
+		return 0;
+	}
+	if (!found_get_zaps_only && !data_len && found_firmware &&
+		!found_learn_ir) {
+		*type = LC_FILE_TYPE_FIRMWARE;
+		return 0;
+	}
+	if (!found_get_zaps_only && !data_len && !found_firmware &&
+		found_learn_ir) {
+		*type = LC_FILE_TYPE_LEARN_IR;
+		return 0;
+	}
+
+	/*
+	 * Findings didn't match a single file type; indicate a problem
+	 */
+	return LC_ERROR;
+}
+
 /*
  * Common routine to read contents of file named *file_name into
  * byte buffer **out. Get size from file and return out[size] 
