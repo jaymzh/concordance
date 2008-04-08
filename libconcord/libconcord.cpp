@@ -1050,7 +1050,7 @@ int finish_firmware()
 	uint8_t data[1];
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
 		data[0] = 0x01;
-		if ((err = rmt->WriteFlash(200000, 1, data, ri.protocol, NULL,
+		if ((err = rmt->WriteFlash(0x200000, 1, data, ri.protocol, NULL,
 			NULL)))
 			return LC_ERROR;
 	} else {
