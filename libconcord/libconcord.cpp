@@ -1218,10 +1218,6 @@ int learn_ir_commands(uint8_t *data, uint32_t size, int post)
 	int err;
 
 	if (data) {
-		if (err != 0) {
-			return err;
-		}
-
 		uint8_t *t = data;
 		string keyname;
 		do {
