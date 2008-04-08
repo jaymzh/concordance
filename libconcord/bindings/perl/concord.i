@@ -110,15 +110,33 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
 %typemap(in) lc_callback %{
 	AV* args;
 	SV *tmp;
-	int count;
+
+	/*
+	 * create a new array, store our perl callback in it. We also
+	 * need to increase the refcount when we do this.
+	 */
 	args = newAV();
 	SvREFCNT_inc($input);
 	av_store(args, 0, $input);
-	/*for (count = items; count > 0; count--) {
-		tmp = POPs;
-		SvREFCNT_inc(tmp);
-		av_store(args, count - 1, tmp);
-	} */
+
+	/*
+	 * FIXME:
+	 * 	We SHOULD allow ulimited arguments to our callback
+	 * 	and push them onto the array, something like this:
+	 *
+	 *	for (count = items; count > 0; count--) {
+	 *		tmp = POPs;
+	 *		SvREFCNT_inc(tmp);
+	 *		av_store(args, count - 1, tmp);
+	 *	}
+	 *
+	 *	but, this code will add any function arguments prior
+	 * 	to the callback also to the array and you end up trying
+	 * 	to call some integer as your call back function, or
+	 *	some other similar problem.
+	 */
+
+	/* Pass our C callback wrapper as the callback */
 	$1 = lc_cb_wrapper;
 %}
 
@@ -126,10 +144,18 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * Tell perl how to handle void* - i.e., the cb_arg
  */
 %typemap(in) void *cb_arg {
+	/*
+	 * add the arg to our array. See the typemap for lc_callback
+	 * for more details
+	 */
 	av_store(args, 1, $input);
+	/* The array is our callback's argument */
 	$1 = (void *)args;
 }
 
+/*
+ * We need to undef the array when we're done with it...
+ */
 %typemap(argout) lc_callback %{
 	av_undef(args);
 %}
@@ -179,7 +205,7 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  */
 %typemap(argout) uint8_t** {
 	if (argvi >= items) {
-	  EXTEND(sp,1);
+		EXTEND(sp,1);
 	}
 	$result = sv_newmortal();
 	sv_setuv($result, (UV) *($1));
@@ -200,5 +226,4 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
 
 %include "../../libconcord.h"
 %include "typemaps.i"
-
 
