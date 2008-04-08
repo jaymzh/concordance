@@ -1022,7 +1022,7 @@ int prep_firmware()
 		if ((err = rmt->RestartConfig()))
 			return LC_ERROR;
 		data[0] = 0x00;
-		if ((err = rmt->WriteFlash(200000, 1, data, ri.protocol, NULL,
+		if ((err = rmt->WriteFlash(0x200000, 1, data, ri.protocol, NULL,
 				NULL)))
 			return LC_ERROR;
 	} else {
