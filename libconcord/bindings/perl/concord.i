@@ -199,9 +199,6 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * OK, here's where we take the pointer to the blob and return it
  * to the user. We add it to the stack which is part of the returned
  * list.
- *
- * FIXME: we probably need to add the NEWOBJ stuff here
- *	and the FREEOBJ stuff on delete_blob... maybe?
  */
 %typemap(argout) uint8_t** {
 	if (argvi >= items) {
