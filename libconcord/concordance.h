@@ -37,12 +37,6 @@
 #include <string>
 using namespace std;
 
-struct options_t {
-	bool binary;
-	bool verbose;
-	bool noweb;
-};
-
 void report_net_error(const char *msg);
 
 #endif // ifndef CONCORDANCE_H
