@@ -53,6 +53,8 @@ marco_bleich@gmx.do:
 andreas.r.schulz@gmx.de:
 - Read the RESPONSE_DONE after IR learning (bug#1898492)
 - abstract reading files into _read_from_file()
+- Fix handle_ir_response*() bug introduced by USB initial-0 buffer
+  changes
 
 
 0.13
