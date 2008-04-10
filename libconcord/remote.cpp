@@ -638,7 +638,7 @@ int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
 	unsigned int &t_on, unsigned int &t_off, unsigned int &pulse_count,
 	unsigned int *&pulses, unsigned int &freq)
 {
-	const unsigned int len = rsp[64];
+	const unsigned int len = rsp[63];
 	if ((len & 1) == 0) {
 		for (unsigned int u = 2; u < len; u += 2) {
 			const unsigned int t = rsp[u] << 8 | rsp[1+u];
