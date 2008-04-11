@@ -8,6 +8,8 @@ a) Microsoft Visual C++ 6.0 with Service Pack 6 (SP6)
 b) Micosoft Visual Studio 2005 (8.0)
 c) Micosoft Visual Studio 2008 (9.0) - Express Edition
 
+And you will also need to install the platform SDK.
+
 1. BUILD THE SOFTWARE
 
 Open the Project tree in your Development-System, by (letters here correspond
