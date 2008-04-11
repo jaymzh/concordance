@@ -50,7 +50,6 @@ char* basename(char* file_name)
 }
 
 HANDLE con;
-CONSOLE_SCREEN_BUFFER_INFO sbi;
 
 #else
 /* NON-Windows */
@@ -106,13 +105,22 @@ void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
 {
 	int is_bytes;
 #ifdef WIN32
-	GetConsoleScreenBufferInfo(con, &sbi);
-	SetConsoleCursorPosition(con, sbi.dwCursorPosition);
-#else                   
+	CONSOLE_SCREEN_BUFFER_INFO sbi;
+#endif
+
 	if (count != 0) {
+#ifdef WIN32
+		GetConsoleScreenBufferInfo(con, &sbi);
+		sbi.dwCursorPosition.X -= 14;
+		if (sbi.dwCursorPosition.X < 0) {
+			sbi.dwCursorPosition.X = 0;
+		}
+		SetConsoleCursorPosition(con, sbi.dwCursorPosition);
+#else
 		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
+#endif
 	}
-#endif          
+
 	is_bytes = 0;
 	if (arg) {
 		is_bytes = (int)(arg);
@@ -123,7 +131,7 @@ void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
 	} else {
 		printf("%3i%%          ", curr*100/total);
 	}
-       	fflush(stdout);
+	fflush(stdout);
 }
 
 /*
