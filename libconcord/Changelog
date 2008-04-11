@@ -30,6 +30,7 @@ phil@ipom.com
   Windows HID stack would expect. In the event we're using WinHID,
   our WinHID code will add the extra 0-byte, but the rest of the code
   is no longer encumbered with it.
+- Perl bindings for libconcord
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
@@ -43,6 +44,7 @@ s-t-concordance@wwwdotorg.org:
 - Implement new identify_file() API to intelligently determine filetype
   based on contents instead of filename
 - Fix Windows progress bar output
+- Python bindings for libconcord
 
 simon@budig.de
 - Fix sector calculation in EraseFlash() (bug#1910326)
