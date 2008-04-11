@@ -1,0 +1,9 @@
+
+TODO:
+   - Firmware Support:
+     * 5-series - figure out why it's sporadic
+     * 7-series - no testers yet
+     * eeprom models - need to write the support
+   - Finish support for zwave models
+   - Change "read file into big int array" into mmap() or XML libs, or...
+   - IRLearn - add ability to learn multiple keys in a given LeanrIR xml file
