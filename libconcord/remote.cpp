@@ -23,7 +23,7 @@
 
 #include <string.h>
 #include "libconcord.h"
-#include "concordance.h"
+#include "lc_internal.h"
 #include "hid.h"
 #include "protocol.h"
 #include "remote.h"

@@ -398,7 +398,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\concordance.h"
+				RelativePath="..\lc_internal.h"
 				>
 			</File>
 			<File

@@ -23,7 +23,7 @@
 #ifdef WINHID
 
 #include "../libconcord.h"
-#include "../concordance.h"
+#include "../lc_internal.h"
 
 #define TRACE0
 #define TRACE1

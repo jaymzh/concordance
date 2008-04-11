@@ -21,7 +21,7 @@
  */
 
 #include "libconcord.h"
-#include "concordance.h"
+#include "lc_internal.h"
 #include <string.h>
 #include <errno.h>
 

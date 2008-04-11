@@ -21,7 +21,7 @@
  *  (C) Copyright Phil Dibowitz 2007
  */
 
-#include "../concordance.h"
+#include "../lc_internal.h"
 #include "../libconcord.h"
 
 #ifdef LIBUSB

@@ -154,7 +154,7 @@ SOURCE=..\binaryfile.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\concordance.h
+SOURCE=..\lc_internal.h
 # End Source File
 # Begin Source File
 

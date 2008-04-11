@@ -30,7 +30,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "libconcord.h"
-#include "concordance.h"
+#include "lc_internal.h"
 #include "remote.h"
 #include "binaryfile.h"
 #include "hid.h"

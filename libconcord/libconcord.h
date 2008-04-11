@@ -33,23 +33,11 @@ typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef unsigned __int64 uint64_t;
 
-/*
- * FIXME: We need to fix the code that is generating these warnings!!
- */
-#if _MSC_VER >= 1400
-#pragma warning( disable : 4996 )
-#endif
-
 #else
+
 #include <stdint.h>
-#endif /* end if win32/else */
 
-#ifdef _DEBUG
-#define debug(FMT,...) fprintf(stderr, "DEBUG (%s): "FMT"\n", __FUNCTION__,\
-	 ##__VA_ARGS__);
-#else
-#define debug(FMT,...)
-#endif
+#endif /* end if win32/else */
 
 #define LC_ERROR 1
 #define LC_ERROR_INVALID_DATA_FROM_REMOTE 2
