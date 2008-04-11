@@ -42,6 +42,7 @@ s-t-concordance@wwwdotorg.org:
 - Remove dependence on windows ODBC libraries in win project files
 - Implement new identify_file() API to intelligently determine filetype
   based on contents instead of filename
+- Fix Windows progress bar output
 
 simon@budig.de
 - Fix sector calculation in EraseFlash() (bug#1910326)
