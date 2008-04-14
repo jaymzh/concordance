@@ -28,9 +28,9 @@ concordance <file>
 For manual mode:
 concordance <options>
 .SH DESCRIPTION
-This software supports programming Logitech Harmony remote controls.  This software uses libusb, which requires the RAWIO capability. That means you probably need root to use it.
+This software supports programming Logitech Harmony remote controls.  This software uses libconcord, which in turn uses libusb, which requires the RAWIO capability. That means you probably need root to use it.
 .TP
-This software can be run in one of two modes. If you run it in automatic mode, the software will use the filename to determine what to do with it. If the filename is not *exactly* as the website sends it, then concordance will not know what to do with it, and you should use the manual mode.
+This software can be run in one of two modes. If you run it in automatic mode, the software will analyze the file to determine what sort of file it is and what to do with it. In some cases, concordance may not be able to deteremine the filetype; if this happens, you should use manual mode.
 .TP
 In manual mode, you specify what you want to do. For any command-line option that requires updating the remote, a filename is required. In manual mode, you must first choose a mode (and only one):
 .SH MODE-SETTING OPTIONS
