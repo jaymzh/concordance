@@ -488,18 +488,6 @@ int _is_fw_update_supported(int direct)
 		return 0;
 	}
 
-	/*
-	 * TEMPORARY HACK FOR RELASE
-	 * While firmware updates *should* work in provided the above isn't
-	 * true... in actuality, we've had very odd issues with non
-	 * arch-8 remotes. So we'll temporarily disable firmware updates
-	 * on all other remotes for the 0.20 release, and then re-enable it
-	 * in CVS aftwards.
-	 */
-	if (ri.architecture != 8) {
-		return 0;
-	}
-
 	return 1;
 }
 
