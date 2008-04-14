@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifdef WIN32
 /* Windows includes*/
@@ -59,6 +60,9 @@ HANDLE con;
 #include <libgen.h>
 
 #endif
+
+#define MAX_WAIT_FOR_BOOT 5
+#define WAIT_FOR_BOOT_SLEEP 5
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <libgen.h>
@@ -207,7 +211,7 @@ void print_time(int action)
 int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	lc_callback cb, void *cb_arg)
 {
-	int err = 0;
+	int err, i;
 
 	uint8_t *binary_data;
 	uint32_t binary_size;
@@ -255,6 +259,29 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	}
 	printf("       done\n");
 
+	printf("Resetting Remote:    ");
+	reset_remote();
+
+	deinit_concord();
+	for (i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
+		sleep(WAIT_FOR_BOOT_SLEEP);
+		err = init_concord();
+		if (err == 0) {
+			break;
+		}
+	}
+
+	if (err != 0) {
+		return err;
+	}
+	printf("                     done\n");
+
+	printf("Setting Time:        ");
+	if ((err = set_time())) {
+		return err;
+	}
+	printf("                     done\n");
+
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
 		if ((err = post_postconfig(data, size))) {
@@ -290,7 +317,7 @@ int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 	struct options_t *options, lc_callback cb, void *cb_arg)
 {
-	int err;
+	int err, i;
 	uint8_t *firmware_bin;
 	uint32_t firmware_bin_size;
 
@@ -376,6 +403,29 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 			return err;
 		}
 	}
+
+	printf("Resetting Remote:    ");
+	reset_remote();
+
+	deinit_concord();
+	for (i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
+		sleep(WAIT_FOR_BOOT_SLEEP);
+		err = init_concord();
+		if (err == 0) {
+			break;
+		}
+	}
+
+	if (err != 0) {
+		return err;
+	}
+	printf("                     done\n");
+
+	printf("Setting Time:        ");
+	if ((err = set_time())) {
+		return err;
+	}
+	printf("                     done\n");
 
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
@@ -915,10 +965,10 @@ int main(int argc, char *argv[])
 		case MODE_WRITE_CONFIG:
 			err = upload_config(data, size, &options,
 				cb_print_percent_status, NULL);
-			if (err != 0)
-				break;
-			printf("Resetting...\n");
-			reset_remote();
+			if (err != 0) {
+				printf("Failed to upload config: %s\n",
+					lc_strerror(err));
+			}
 			break;
 
 		case MODE_DUMP_FIRMWARE:
@@ -939,10 +989,7 @@ int main(int argc, char *argv[])
 			if (err != 0) {
 				printf("Failed to upload firmware: %s\n",
 					lc_strerror(err));
-				break;
 			}
-			printf("Resetting...\n");
-			reset_remote();
 			break;
 
 		case MODE_DUMP_SAFEMODE:

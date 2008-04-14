@@ -1,3 +1,14 @@
+CVS
+Released:
+phil@ipom.com
+- concordance: After resetting the remote, wait for it to come back before
+  reporting success
+- concordance: After resetting the remote, set the time since some remotes don't
+  seem to hold time well across reboots
+- libconcord: Read RESPONSE_DONE after setting the time so that the next command
+  doesn't fail
+
+
 0.20
 Released: 04/13/08
 phil@ipom.com
@@ -21,7 +32,7 @@ phil@ipom.com
 - libconcord: Implement new debug() macro and unify the code to use that
   instead of tons of #ifdefs
 - libconcord: Re-order functions in libconcord.cpp to make more sense
-- libcocnord: Replace all read_*_from_file() APIs with Andreas'
+- libconcord: Replace all read_*_from_file() APIs with Andreas'
   _read_from_file() function, renaming it read_file()
 - Restructure code-flow in concordance to read a file very early
   with read_file(), and then pass around the data as needed. Both for
@@ -32,7 +43,7 @@ phil@ipom.com
   is no longer encumbered with it.
 - libconcord: Perl bindings
 - libconcord: Add add_cookiekeyval option to Web API to work around
-  connectivity problems wiht arch 9 remotes where a value is left out
+  connectivity problems with arch 9 remotes where a value is left out
   of the cookie in the XML file. (bug#1910362)
 
 s-t-concordance@wwwdotorg.org:

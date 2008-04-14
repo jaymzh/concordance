@@ -538,7 +538,7 @@ int CRemote::WriteMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *
 
 int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 {
-	int err=0;
+	int err = 0;
 
 	if(ri.architecture < 8) {
 		uint8_t tsv[8];
@@ -570,7 +570,8 @@ int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 
 int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 {
-	int err=0;
+	int err = 0;
+	uint8_t rsp[68];
 
 	if (ri.architecture < 8) {
 		uint8_t tsv[8];
@@ -605,6 +606,14 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 				COMMAND_WRITE_MISC | 0x01,
 				COMMAND_MISC_CLOCK_RECALCULATE };
 			err = HID_WriteReport(rcc);
+		}
+	}
+
+	/* read returned RESPONSE_DONE, otherwise next command wil fail! */
+	err = HID_ReadReport(rsp);
+	if (err == 0) {
+		if ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE) {
+			err = 1;
 		}
 	}
 
