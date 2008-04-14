@@ -5,4 +5,5 @@ concordance_LDFLAGS = -lconcord
 # -ansi and -pednatic errors are needed to ensure we're compatible with
 # crappy Microsoft compilers - phil
 concordance_CFLAGS = -Wall -ansi -pedantic-errors
+man1_MANS = concordance.1
 
