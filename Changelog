@@ -1,5 +1,5 @@
 0.20
-Released:
+Released: 04/13/08
 phil@ipom.com
 - split into library and CLI
 - rename from harmony to concordance/libconcord (bug#1892367)
