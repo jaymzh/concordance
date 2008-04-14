@@ -216,7 +216,8 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 }
 
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
-	bool has_userid, string *learn_seq = NULL, string *learn_key = NULL)
+	bool has_userid, bool add_cookiekeyval = false,
+	string *learn_seq = NULL, string *learn_key = NULL)
 {
 
 	uint8_t *x = xml;
@@ -236,6 +237,18 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 		uint8_t *n = 0;
 		if ((err = GetTag("VALUE", x, xml_size - (x - xml), n, &userid)))
 			return err;
+	}
+
+	/*
+	 * For some architectures the website leaves one required value out of
+	 * the cookie. Who knows why, but we allow the user to tell us to add
+	 * it.
+	 */
+	if (add_cookiekeyval) {
+		cookie += ";CookieKeyValue=";
+		cookie += ri.serial1;
+		cookie += ri.serial2;
+		cookie += ri.serial3;
 	}
 
 	debug("Connecting to: %s", server.c_str());

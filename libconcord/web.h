@@ -24,8 +24,9 @@
 #define WEB_H
 
 int GetTag(const char *find, uint8_t* data, uint32_t data_size,
-	uint8_t *&found, string *s=NULL);
+	uint8_t *&found, string *s = NULL);
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
-	bool has_userid, string *learn_seq=NULL, string *learn_key=NULL);
+	bool has_userid, bool add_cookiekeyval = false,
+	string *learn_seq=NULL, string *learn_key=NULL);
 
 #endif

@@ -737,7 +737,18 @@ int post_connect_test_success(uint8_t *data, uint32_t size)
 	 * If we arrived, we can talk to the remote - so if it's
 	 * just a connectivity test, tell the site we succeeded
 	 */
-	Post(data, size, "POSTOPTIONS", ri, true);
+
+	/*
+	 * For some reason, on arch 9, the site sends a file missing
+	 * one cookie value, so we need to tell Post() to add it in.
+	 * Note that it ONLY does this for the connectivity test...
+	 */
+	bool add_cookiekeyval = false;
+	if (ri.architecture == 9) {
+		add_cookiekeyval = true;
+	}
+
+	Post(data, size, "POSTOPTIONS", ri, true, add_cookiekeyval);
 
 	return 0;
 }
@@ -1250,7 +1261,8 @@ int learn_ir_commands(uint8_t *data, uint32_t size, int post)
 		debug("Learned code: %s",ls.c_str());
 
 		if (post) {
-			Post(data, size, "POSTOPTIONS", ri, true, &ls, &keyname);
+			Post(data, size, "POSTOPTIONS", ri, true, false, &ls,
+				&keyname);
 		}
 	} else {
 		rmt->LearnIR();
