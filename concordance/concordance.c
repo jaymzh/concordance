@@ -70,7 +70,7 @@ HANDLE con;
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.13+CVS";
+const char * const VERSION = "0.20";
 
 struct options_t {
 	int binary;
