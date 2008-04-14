@@ -1,0 +1,7 @@
+To build the perl bindings, do:
+
+  swig -perl5 concord.i
+  perl Makefile.PL
+  make
+  sudo make install
+
