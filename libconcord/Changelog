@@ -1,62 +1,62 @@
-CVS
+0.20
 Released:
 phil@ipom.com
 - split into library and CLI
-- formalize API
-- document API
+- rename from harmony to concordance/libconcord
+- libconcord: formalize API
+- libconcord: document API
 - convert to autoconf/automake/libtool
 - add firmware update to library and cli
-- cleanup output throughout libharmony code
-- compilation fixes for Mac
-- kext for Mac
-- rename from harmony to concord
-- ignore return value from reset_remote() since it doesn't always return
-  successfully from all remotes (thanks to linux@zachcarter.com)
+- libconcord: code cleanup
+- libconcord: compilation fixes for Mac
+- libconcord: kext for Mac
+- concordance: ignore return value from reset_remote() since it doesn't always
+  return successfully from all remotes (thanks to linux@zachcarter.com)
 - fix the location and name of the license file (thanks to
   s-t-concordance@wwwdotorg.org)
 - Add CodingStyle and SubmittingPatches documentation
-- Update auto-mode to understand firmware updates
-- Make concordance be able to handle the remote having an invalid config
+- concordance: Update auto-mode to understand firmware updates
+- concordance: Gracefully handle the remote having an invalid config
   so that we can fix it
-- Implement new libconcord debug() macro and unify the code to use that
+- libconcord: Implement new debug() macro and unify the code to use that
   instead of tons of #ifdefs
-- Re-order functions in libconcord.cpp to make more sense
-- Replace all read_*_from_file() APIs with Andreas' _read_from_file()
-  function, renaming it read_file()
+- libconcord: Re-order functions in libconcord.cpp to make more sense
+- libcocnord: Replace all read_*_from_file() APIs with Andreas'
+  _read_from_file() function, renaming it read_file()
 - Restructure code-flow in concordance to read a file very early
   with read_file(), and then pass around the data as needed. Both for
   cleanup and to prep for an libconcord API to detect filetype better
-- Make libconcord submit HID data without an initial 0-byte that a
+- libconcord: Submit HID data without an initial 0-byte that a
   Windows HID stack would expect. In the event we're using WinHID,
   our WinHID code will add the extra 0-byte, but the rest of the code
   is no longer encumbered with it.
-- Perl bindings for libconcord
+- libconcord: Perl bindings
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
 - typedef our callback type
-- API/type cleanups
-- implement the firmware checksum algorithm
-- fix includes for gcc 4.3.0
+- libconcord: API/type cleanups
+- libconcord: implement the firmware checksum algorithm
+- libconcord: fix includes for gcc 4.3.0
 - fix protocol.txt c&p error
 - Add "size" to all APIs dealing with byte-arrays
 - Remove dependence on windows ODBC libraries in win project files
 - Implement new identify_file() API to intelligently determine filetype
   based on contents instead of filename
 - Fix Windows progress bar output
-- Python bindings for libconcord
+- libconcord: Python bindings
 
 simon@budig.de
-- Fix sector calculation in EraseFlash() (bug#1910326)
+- libconcord: Fix sector calculation in EraseFlash() (bug#1910326)
 
 marco_bleich@gmx.do:
 - project files, def file for DLL
 - update Windows project files for library/cli split
 
 andreas.r.schulz@gmx.de:
-- Read the RESPONSE_DONE after IR learning (bug#1898492)
-- abstract reading files into _read_from_file()
-- Fix handle_ir_response*() bug introduced by USB initial-0 buffer
+- libconcord: Read the RESPONSE_DONE after IR learning (bug#1898492)
+- libconcord: abstract reading files into _read_from_file()
+- libconcord: Fix handle_ir_response*() bug introduced by USB initial-0 buffer
   changes
 
 
