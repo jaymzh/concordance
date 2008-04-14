@@ -2,7 +2,7 @@
 Released:
 phil@ipom.com
 - split into library and CLI
-- rename from harmony to concordance/libconcord
+- rename from harmony to concordance/libconcord (bug#1892367)
 - libconcord: formalize API
 - libconcord: document API
 - convert to autoconf/automake/libtool
@@ -31,6 +31,9 @@ phil@ipom.com
   our WinHID code will add the extra 0-byte, but the rest of the code
   is no longer encumbered with it.
 - libconcord: Perl bindings
+- libconcord: Add add_cookiekeyval option to Web API to work around
+  connectivity problems wiht arch 9 remotes where a value is left out
+  of the cookie in the XML file. (bug#1910362)
 
 s-t-concordance@wwwdotorg.org:
 - remove usage of ** where * is sufficient
