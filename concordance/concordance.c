@@ -596,7 +596,7 @@ void help()
 	printf("\tconcordance <file>\n\n");
 
 	printf("In automatic mode, just pass in the file, and the software");
-	printf(" will use the\nfilename to figure out the proper mode.\n\n");
+	printf(" will anaylize\nthe file to determine the proper mode.\n\n");
 
 	printf("When specifying options, you must first choose a mode:\n\n");
 

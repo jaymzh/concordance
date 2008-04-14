@@ -8,7 +8,7 @@ phil@ipom.com
 - convert to autoconf/automake/libtool
 - add firmware update to library and cli
 - libconcord: code cleanup
-- libconcord: compilation fixes for Mac
+- compilation fixes for Mac
 - libconcord: kext for Mac
 - concordance: ignore return value from reset_remote() since it doesn't always
   return successfully from all remotes (thanks to linux@zachcarter.com)
