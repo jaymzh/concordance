@@ -9,6 +9,8 @@ phil@ipom.com
   doesn't fail
 - concordance: Add --no-reset flag to prevent resetting the remote.
 
+s-t-concordance@wwwdotorg.org:
+- README for python bindings
 
 0.20
 Released: 04/13/08
