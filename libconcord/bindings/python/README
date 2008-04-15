@@ -1,0 +1,34 @@
+Compilation
+====================
+
+The Python bindings do not require compilation.
+
+Pre-Requisites
+====================
+
+The Python bindings make use of the ctypes library. ctypes is included as part
+of Python 2.5. It is also available as an optional module for older versions
+of Python. See the following URL for pointers:
+
+http://sourceforge.net/projects/ctypes/
+
+Installation
+====================
+
+The Python bindings make use of distutils for installation purposes. distutils
+is a standard part of Python. Simply run the following command:
+
+python setup.py install
+
+You will probably need to run this command as root, since installation
+requires writing files to system directories.
+
+Direct Usage
+====================
+
+Since the Python bindings do not require compilation, they may be used
+directly without installation. To do this, simply add the directory containing
+the bindings to your PYTHONPATH. For example:
+
+export PYTHONPATH=/path/to/libconcord/bindings/python
+
