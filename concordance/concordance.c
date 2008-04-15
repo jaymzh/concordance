@@ -273,7 +273,11 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 		sleep(WAIT_FOR_BOOT_SLEEP);
 		err = init_concord();
 		if (err == 0) {
-			break;
+			err = get_identity(cb_print_percent_status, NULL);
+			if (err == 0) {
+				break;
+			}
+			deinit_concord();
 		}
 	}
 
@@ -422,7 +426,11 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 		sleep(WAIT_FOR_BOOT_SLEEP);
 		err = init_concord();
 		if (err == 0) {
-			break;
+			err = get_identity(cb_print_percent_status, NULL);
+			if (err == 0) {
+				break;
+			}
+			deinit_concord();
 		}
 	}
 

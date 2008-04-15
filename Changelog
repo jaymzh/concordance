@@ -12,6 +12,7 @@ phil@ipom.com
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
+- concordance: Make unistd.h change work for Windows
 
 0.20
 Released: 04/13/08
