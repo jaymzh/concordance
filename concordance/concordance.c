@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #ifdef WIN32
 /* Windows includes*/
@@ -37,6 +36,7 @@
 
 #define strcasecmp stricmp
 #define strncasecmp strnicmp
+#define sleep Sleep
 
 /*
  * Windows, in it's infinite awesomeness doesn't include POSIX things
@@ -58,6 +58,7 @@ HANDLE con;
 #include <getopt.h>
 #include <strings.h>
 #include <libgen.h>
+#include <unistd.h>
 
 #endif
 
