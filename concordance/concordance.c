@@ -36,7 +36,7 @@
 
 #define strcasecmp stricmp
 #define strncasecmp strnicmp
-#define sleep Sleep
+#define sleep(x) Sleep((x) * 1000)
 
 /*
  * Windows, in it's infinite awesomeness doesn't include POSIX things
