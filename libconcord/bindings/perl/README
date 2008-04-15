@@ -1,7 +1,48 @@
-To build the perl bindings, do:
+==== BASIC INSTALLATION ====
 
-  swig -perl5 concord.i
-  perl Makefile.PL
-  make
-  sudo make install
+0. INSTALL REQUIRED SOFTWARE
+
+Swig is required to generate the perl bindings
+
+1. GENERATE THE BINDINGS
+
+   $ swig -perl5 concord.i
+
+2. BUILD THE BINDINGS
+
+   $ perl Makefile.PL
+   $ make
+
+3. INSTALL THE BINDINGS
+
+   $ sudo make install
+
+
+==== USAGE ====
+
+Simply use the module with:
+
+   use concord;
+
+Then every call available in the C API is available to you. Various functions
+are slightly modified to provide a more perlish feel. See
+libconcord/bindings/perl/test.pl for an example.
+
+
+==== DIRECT USAGE ====
+
+You can use the bindings from a non-system directory by specifying a
+library path in your perl:
+
+   use lib '/path/to/perl/module';
+   use concord;
+
+Or you can set your PERL5LIB environment variable:
+
+   PERL5LIB=/path/to/perl/module ./perl-script
+
+Note that since this perl module has a compiled object associated with
+it, if the .so file isn't installed in a system library directory, you will
+need to set your LD_LIBRARY_PATH environment variable, or otherwise tell your
+linker where to find it.
 
