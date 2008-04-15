@@ -8,9 +8,10 @@ phil@ipom.com
 - libconcord: Read RESPONSE_DONE after setting the time so that the next command
   doesn't fail
 - concordance: Add --no-reset flag to prevent resetting the remote.
+- libconcord: Add lots of information to the perl bindings README
 
 s-t-concordance@wwwdotorg.org:
-- README for python bindings
+- libconcord: README for python bindings
 
 0.20
 Released: 04/13/08
