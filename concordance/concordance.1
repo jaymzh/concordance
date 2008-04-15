@@ -82,6 +82,9 @@ Additionally, you can specify options to adjust the behavior of the software:
 .B \-b, \-\-binary\-only
 When dumping a config or firmware, this specifies to dump only the binary portion. When use without a specific filename, the default filename's extension is changed to .bin. When writing a config or firmware, this specifies the filename passed in has just the binary blob, not the XML.
 .TP
+.B \-R, \-\-no\-reset
+For config or firmware updates, do not reboot the device when done. This is generally only for debugging.
+.TP
 .B \-v, \-\-verbose
 Enable verbose output.
 .TP

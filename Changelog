@@ -7,6 +7,7 @@ phil@ipom.com
   seem to hold time well across reboots
 - libconcord: Read RESPONSE_DONE after setting the time so that the next command
   doesn't fail
+- concordance: Add --no-reset flag to prevent resetting the remote.
 
 
 0.20

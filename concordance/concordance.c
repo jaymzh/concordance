@@ -74,13 +74,14 @@ HANDLE con;
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.20";
+const char * const VERSION = "0.20+CVS";
 
 struct options_t {
 	int binary;
 	int verbose;
 	int noweb;
 	int direct;
+	int noreset;
 };
 
 enum {
@@ -259,6 +260,10 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	}
 	printf("       done\n");
 
+	if ((*options).noreset) {
+		return 0;
+	}
+
 	printf("Resetting Remote:    ");
 	reset_remote();
 
@@ -404,6 +409,10 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 		}
 	}
 
+	if ((*options).noreset) {
+		return 0;
+	}
+
 	printf("Resetting Remote:    ");
 	reset_remote();
 
@@ -481,6 +490,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 		{"print-remote-info", no_argument, 0, 'i'},
 		{"learn-ir", required_argument, 0, 'l'},
 		{"reset", no_argument, 0, 'r'},
+		{"no-reset", no_argument, 0, 'R'},
 		{"dump-safemode", optional_argument, 0, 's'},
 		{"connectivity-test", required_argument, 0, 't'},
 		{"get-time", no_argument, 0, 'k' },
@@ -495,6 +505,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 	(*options).binary = 0;
 	(*options).noweb = 0;
 	(*options).direct = 0;
+	(*options).noreset = 0;
 
 	*mode = MODE_UNSET;
 
@@ -558,6 +569,9 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			break;
 		case 'r':
 			set_mode(mode, MODE_RESET);
+			break;
+		case 'R':
+			(*options).noreset = 1;
 			break;
 		case 's':
 			set_mode(mode, MODE_DUMP_SAFEMODE);
@@ -700,6 +714,10 @@ void help()
 	printf("\tWhen writing a config or firmware, this specifies the");
 	printf(" filename\n\tpassed in has just the binary blob, not the");
 	printf(" XML.\n\n");
+
+	printf("  -R, --no-reset\n");
+	printf("\tFor config or firmware updates, do not reboot the device");
+	printf(" when done.\n\tThis is generally only for debugging.\n\n");
 
 	printf("  -v, --verbose\n");
 	printf("\tEnable verbose output.\n\n");
