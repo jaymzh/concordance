@@ -81,6 +81,33 @@ attaching a patch to a bug, you should still send it to the devel list if you
 want it committed.
 
 
+PATCHSET SUBMISSIONS
+
+Sometimes it makes sense to break a given change into several pieces, but you
+still want to submit them together. In this case, you may do this in two ways.
+You could just you attach all patches to a single email with useful filenames
+like 1_update_foo_API.patch 2_update_bar_API and a list of the patches and
+their details in the email.
+
+Alternatively, if you prefer multiple emails, you can send a group of emails
+as follows.
+
+An initial email with a subject that starts with "[PATCH 0/X]" (where X is the
+total number of patches) and a short description should be sent. This email
+should contain all the information about the patchset as a whole, as well as a
+list of patch-containing-emails that will follow. This list should look like
+this:
+
+   1/2 - libconcord: update foo() API to accept new parameter
+   2/2 - concordance: use new foo() paremeter to do bar
+
+Assuming here that X is 2. Then these patches should be submitted with
+subjects like: "[PATCH 1/2] libconcord: update foo() API to accept new param."
+
+Note that if there's a possiblity of merging some parts of your patchset in
+stages, then they should definitely be split into multiple emails.
+
+
 ADDITIONAL NOTES FOR MAJOR CHANGES
 
 As previously mentioned, all major changes should be mentioned on the list.
@@ -92,9 +119,8 @@ the library itself is written in C++. Any changes to the API must ensure it's
 still C-compatible, and that all of the API is exported properly for C
 clients.
 
-In addition, once scripting-language bindings are introduced, all API changes
-must be added to the bindings as well.
-
+In addition, all API changes must be added to all bindings we support as well.
+If you don't have experience with some of the languages, we can help.
 
 A WORD ON COMMENTS
 Comments should be immediately above the block of code they are explaining,
