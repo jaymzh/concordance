@@ -15,18 +15,19 @@ extra visibility into what's actually happening with your remote.
 
 Here is how you use this software:
 
+NOTE TO WINDOWS USERS: You do NOT need to type "sudo" - this is ONLY for
+Unix and Mac users!
+
 0. I got a file from the website, do something useful with it.
 
   $ sudo concordance <filename>
 
-This will attempt to figure out what to do, and do it. Note that concordance
-uses the *filename* to figure out what to do with it, so don't rename it. This
-option is designed for associating the .EZHex extension in your browser with
-the concordance software. Of course, this requires your desktop environment to
-support someway of getting concordance root access such as gksu or similar, but
-should allow the same seemless process the Logitech software does. If you
-would prefer to rename it, tell concordance what you need done using one of it's
-many options...
+This will attempt to figure out what to do, and do it. This option is designed
+for associating the .EZHex extension in your browser with the concordance
+software. Of course, this requires your desktop environment to support someway
+of getting concordance root access such as gksu or similar (udev can also be
+used to give your user access to the device directly), but should allow the
+same seemless process the Logitech software does.
 
 1. Backup the config
 
@@ -40,19 +41,34 @@ you don't specify, concordance will use 'config.EZHex' in the current directory.
 
 2. Connectivity test
 
-  $ sudo concordance --connectivity-test Connectivity.EZHex
+Go to members.harmonyremote.com, and when you're ready, choose "Update My
+Remote." Before Logitech provides an actual config, they will first attempt to
+do a connectivity test. Downloaded the Connectivity.EZHex file, and then run
+the test:
 
-The site will always do a connectivity test before trying to send a config,
-so be prepared to do this before next step.
+  $ sudo concordance Connectivity.EZHex
+
+If that doesn't work, you may want to try telling concordance what it is
+manually:
+  $ sudo concordance --connectivity-test Connectivity.EZHex
 
 3. Write a config
 
-Once you have downloaded a file from members.harmonyremote.com website to
-program your remote with, you can use it with:
+Once the connectivity test is successfully completed, the site will prompt you
+to download the actual config in a file called Update.EZHex. Save it and then
+you can use it with:
 
+  $ sudo concordance Update.EZHex
+
+Again, concordance should do the right thing here, but in case of problems you
+can explicitly tell concordance what to do with:
   $ sudo concordance --write-config Update.EZHex
 
 4. Backup the firmware
+
+Sometimes the site will want to update your firmware. Concordance allows you to
+backup your old firmware so you may later revert if you prefer. You can do this
+with:
 
   $ sudo concordance --dump-firmware
 
@@ -61,8 +77,11 @@ See "1. Backup the config" for more information.
 
 5. Write firmware
 
-NOTE: THIS IS NOT YET SUPPORTED. However it would work like this:
+NOTE: THIS IS NOT YET SUPPORTED ON MOST REMOTES. However for the 880, the only model we currently support this on, it works like this:
 
+  $ sudo concordance Firmware.EZHex
+
+Again, if you have a problem, you can tell concordance what to do explicitly:
   $ sudo concordance --write-firmware Firmware.EZHex
 
 
