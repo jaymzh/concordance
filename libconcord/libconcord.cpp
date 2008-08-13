@@ -703,20 +703,17 @@ int invalidate_flash()
 
 int post_preconfig(uint8_t *data, uint32_t size)
 {
-	Post(data, size, "POSTOPTIONS", ri, true);
-	return 0;
+	return Post(data, size, "POSTOPTIONS", ri, true);
 }
 
 int post_postfirmware(uint8_t *data, uint32_t size)
 {
-	Post(data, size, "COMPLETEPOSTOPTIONS", ri, false);
-	return 0;
+	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, false);
 }
 
 int post_postconfig(uint8_t *data, uint32_t size)
 {
-	Post(data, size, "COMPLETEPOSTOPTIONS", ri, true);
-	return 0;
+	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, true);
 }
 
 int post_connect_test_success(uint8_t *data, uint32_t size)
@@ -736,9 +733,7 @@ int post_connect_test_success(uint8_t *data, uint32_t size)
 		add_cookiekeyval = true;
 	}
 
-	Post(data, size, "POSTOPTIONS", ri, true, add_cookiekeyval);
-
-	return 0;
+	return Post(data, size, "POSTOPTIONS", ri, true, add_cookiekeyval);
 }
 
 int get_time()
