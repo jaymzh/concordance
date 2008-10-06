@@ -9,6 +9,8 @@ phil@ipom.com
   doesn't fail
 - concordance: Add --no-reset flag to prevent resetting the remote.
 - libconcord: Add lots of information to the perl bindings README
+- libconcord: Product name cleanups for Harman Kardon remotes from Pete Wenzel
+  <pmwenzel@yahoo.com>
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
