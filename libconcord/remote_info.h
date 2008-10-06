@@ -27,7 +27,7 @@
 static const char *MFG_UNK="Unknown";
 static const char *MFG_HAR="Logitech";
 static const char *MFG_COOL="Logicool";
-static const char *MFG_HK="harmon/kardon";
+static const char *MFG_HK="Harman Kardon";
 static const char *MFG_MON="Monster";
 
 static const TModel ModelList[]={
@@ -65,16 +65,16 @@ static const TModel ModelList[]={
 	{ MFG_MON,	"AVL-300",			"Sugar" },
 	{ MFG_MON,	"AVL-200",			"Godzilla" },
 	{ MFG_MON,	"AVL-200",			"Godzilla" },
-	{ MFG_HK,	"TK-30",			NULL },
-	{ MFG_HK,	"TK-30",			NULL },
+	{ MFG_HK,	"TC-30",			NULL },
+	{ MFG_HK,	"TC-30",			NULL },
 	{ MFG_HAR,	"Harmony XBOX360", "Mountain Dew" },
 	{ MFG_MON,	"AV-100",			NULL },
 	{ MFG_MON,	"AV-100",			NULL },
 	{ MFG_HAR,	"Harmony 880 Pro", "Espresso" },
 	{ MFG_HAR,	"Harmony 890 Pro", "Cappuccino" },		// 40
 	{ MFG_HAR,	"Harmony 550",		"Mocha Grande" },
-	{ MFG_HK,	"TK-30",			NULL },
-	{ MFG_HK,	"TK-30",			NULL },
+	{ MFG_HK,	"TC-30",			NULL },
+	{ MFG_HK,	"TC-30",			NULL },
 	{ MFG_HAR,	"Harmony 720",		"Corona" },
 	{ MFG_HAR,	"Harmony 785",		"Corona" },
 	{ MFG_HAR,	"Harmony 522",		"Mocha Decaf" },
