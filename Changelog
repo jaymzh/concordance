@@ -11,6 +11,8 @@ phil@ipom.com
 - libconcord: Add lots of information to the perl bindings README
 - libconcord: Product name cleanups for Harman Kardon remotes from Pete Wenzel
   <pmwenzel@yahoo.com>
+- libconcord: Make configure bail out if it can't find libusb. Fixes bug
+  2050170
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
