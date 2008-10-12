@@ -429,7 +429,8 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 	return err;
 }
 
-int CRemote::ReadMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *rd)
+int CRemote::ReadMiscByte(uint8_t addr, uint32_t len,
+		uint8_t kind, uint8_t *rd)
 {
 	uint8_t rmb[] = { COMMAND_READ_MISC | 0x02, kind, 0 };
 
@@ -453,7 +454,8 @@ int CRemote::ReadMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *rd)
 	return 0;
 }
 
-int CRemote::ReadMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *rd)
+int CRemote::ReadMiscWord(uint16_t addr, uint32_t len,
+		uint8_t kind, uint16_t *rd)
 {
 	uint8_t rmw[] = { COMMAND_READ_MISC | 0x03, kind, 0, 0 };
 
@@ -481,7 +483,8 @@ int CRemote::ReadMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *r
 	return 0;
 }
 
-int CRemote::WriteMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *wr)
+int CRemote::WriteMiscByte(uint8_t addr, uint32_t len,
+		uint8_t kind, uint8_t *wr)
 {
 	uint8_t wmb[8];
 	wmb[0] = COMMAND_WRITE_MISC | 0x03;
@@ -506,7 +509,8 @@ int CRemote::WriteMiscByte(uint8_t addr, uint32_t len, uint8_t kind, uint8_t *wr
 	return 0;
 }
 
-int CRemote::WriteMiscWord(uint16_t addr, uint32_t len, uint8_t kind, uint16_t *wr)
+int CRemote::WriteMiscWord(uint16_t addr, uint32_t len,
+		uint8_t kind, uint16_t *wr)
 {
 	uint8_t wmw[8];
 	wmw[0] = COMMAND_WRITE_MISC | 0x05;
@@ -643,124 +647,128 @@ bool check_seq(int received_seq, uint8_t &expected_seq)
 	}
 }
 
-int handle_ir_response(uint8_t rsp[64], unsigned int &ir_word,
-	unsigned int &t_on, unsigned int &t_off, unsigned int &pulse_count,
-	unsigned int *&pulses, unsigned int &freq)
+int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
+	uint32_t &t_on, uint32_t &t_off, uint32_t &t_total, 
+	uint32_t &ir_count,
+	uint32_t *&ir_signal, uint32_t &freq)
 {
-	const unsigned int len = rsp[63];
-	if ((len & 1) == 0) {
-		for (unsigned int u = 2; u < len; u += 2) {
-			const unsigned int t = rsp[u] << 8 | rsp[1+u];
-			if (ir_word > 2) {
-				/*
-				 * For ODD words, t is the total time, we'll
-				 * update the total OFF time and be done.
-				 *
-				 * For EVEN words, t is just the ON time
-				 * -- IF we have any ON time, then we go ahead
-				 * and record the off and on times we should
-				 * have now gathered.
-				 *
-				 * Why do we differentiate between even/odd?
-				 * Perhaps just to make sure we've had two
-				 * cycles, and thus have off/on?
-				 */
-				if (ir_word & 1) {
-					// t == on + off time
-					if (t_on)
-						t_off = t-t_on;
-					else
-						t_off += t;
+	const uint32_t len = rsp[63];
+	if ((len & 1) != 0) {
+		return 3;	// Invalid length
+	}
+
+	for (uint32_t u = 2; u < len; u += 2) {
+		const uint32_t t = rsp[u] << 8 | rsp[1+u];
+		if (ir_word > 2) {
+			/*
+			 * For ODD words, t is the total time, we'll
+			 * update the total OFF time and be done.
+			 *
+			 * For EVEN words, t is just the ON time
+			 * -- IF we have any ON time, then we go ahead
+			 *    and record the off and on times we should
+			 *    have now gathered.
+			 *
+			 * Why do we differentiate between even/odd?
+			 * Perhaps just to make sure we've had two
+			 * cycles, and thus have off/on?
+			*/
+			if (ir_word & 1) {
+				// t == on + off time
+				if (t_on) {
+					t_off = t - t_on;
 				} else {
-					// t == on time
-					t_on = t;
-					if (t_on) {
-						debug("-%i\n", t_off);
-						if (pulse_count <
-								MAX_PULSE_COUNT)
-							pulses[pulse_count++] =
-								t_off;
-						debug("+%i\n", t_on);
-						if (pulse_count <
-								MAX_PULSE_COUNT)
-							pulses[pulse_count++] =
-								t_on;
-					}
+					t_off += t;
 				}
 			} else {
-				/*
-				 * For the first 3 words...
-				 *    the first one, we ignore, apparently
-				 *    the second one, we start keeping track
-				 *      of ON time
-				 *    the third one, we have enough data to
-				 *    	calculate the frequency and record
-				 *    	the on time we've calculated
-				 */
-				switch (ir_word) {
-					case 0:
-						// ???
-						break;
-					case 1:
-						// on time of
-						// first burst
-						t_on = t;
-						break;
-					case 2:
-						// pulse count of
-						// first burst
-						if (t_on) {
-							freq = static_cast<unsigned int>(static_cast<uint64_t>(t)*1000000/t_on);
-							debug("%i Hz",freq);
-							debug("+%i",t_on);
-							pulses[pulse_count++] =
-								t_on;
-						}
-						break;
+				// t == on time
+				t_on = t;
+				if (t_on) {
+					debug("-%i\n", t_off);
+					if (ir_count < MAX_IR_SIGNAL_LENGTH) {
+						ir_signal[ir_count++] = t_off;
+					}
+					debug("+%i\n", t_on);
+					if (ir_count < MAX_IR_SIGNAL_LENGTH) {
+						ir_signal[ir_count++] = t_on;
+					}
+					t_total += t_off + t_on;
 				}
 			}
-			++ir_word;
+		} else {
+			/*
+			 * For the first 3 words...
+			 *  the first one, we ignore, apparently
+			 *  the second one, we start keeping track of ON time
+			 *  the third one, we have enough data to calculate the 
+			 *    frequency and record the on time we've calculated
+			 */
+			switch (ir_word) {
+				case 0:	// ???
+					break;
+				case 1:	// on time of first burst
+					t_on = t;
+					break;
+				case 2:	// carrier cycle count of first burst
+					if (t_on) {
+						freq = static_cast<uint32_t>(
+							static_cast<uint64_t>(t)
+								*1000000/(t_on));
+						debug("%i Hz",freq);
+						debug("+%i",t_on);
+						ir_signal[ir_count++] = t_on;
+					}
+					break;
+			}
 		}
-	} else {
-		// Invalid length
-		return 3;
+		++ir_word;
 	}
 	return 0;
 }
 
-int CRemote::LearnIR(string *learn_string)
+
+int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
+		uint32_t *ir_signal_length)
 {
 	int err = 0;
 	uint8_t rsp[68];
 
-	const static uint8_t start_ir_learn[] = { COMMAND_START_IRCAP };
-	if ((err = HID_WriteReport(start_ir_learn)))
-		return err;
+	static const uint8_t start_ir_learn[] = { COMMAND_START_IRCAP };
+	static const uint8_t stop_ir_learn[] = { COMMAND_STOP_IRCAP };
+
+	if (HID_WriteReport(start_ir_learn) != 0) {
+		return LC_ERROR_WRITE;
+	}
 
 	uint8_t seq = 0;
 	// Count of how man IR words we've received.
-	unsigned int ir_word = 0;
+	uint32_t ir_word = 0;
 	// Time button is on and off
-	unsigned int t_on = 0;
-	unsigned int t_off = 0;
+	uint32_t t_on = 0;
+	uint32_t t_off = 0;
+	// total duration of received signal: 
+	// abort when > MAX_IR_SIGNAL_DURATION
+	uint32_t t_total = 0;
 
-	// Frequency button emits
-	unsigned int freq = 0;
-	// Pulse map
-	unsigned int *pulses = new unsigned int[MAX_PULSE_COUNT];
-	unsigned int pulse_count = 0;
-
+	*ir_signal_length = 0;
+	*ir_signal = new uint32_t[MAX_IR_SIGNAL_LENGTH];
 	/*
-	 * Loop while we have no error and we haven't had 500,000us of
-	 * any pulses
+	 * Caller is responsible for deallocation of *ir_signal after use.
+	 *
+	 * Loop while we haven not:
+	 * - any error (including signal duration and buffer overflow)
+	 * - signal interrupted for IR_LEARN_DONE_TIMEOUT or longer
 	 */
-	while (err == 0 && t_off < 500000) {
-		if ((err = HID_ReadReport(rsp, ir_word ? 500 : 4000)))
+	while ((err == 0) && (t_off < IR_LEARN_DONE_TIMEOUT * 1000)) {
+		if ((err = HID_ReadReport(rsp, ir_word ? 
+			IR_LEARN_DONE_TIMEOUT : IR_LEARN_START_TIMEOUT))) {
+			err = LC_ERROR_READ;
 			break;
+		}
 		const uint8_t r = rsp[0] & COMMAND_MASK;
 		if (r == RESPONSE_IRCAP_DATA) {
 			if (!check_seq(rsp[1], seq)) {
-				err = 1;
+				err = LC_ERROR;
 				break;
  			}
 			seq += 0x10;
@@ -769,8 +777,8 @@ int CRemote::LearnIR(string *learn_string)
 			 * t_off so we can exit the loop if long enough time
 			 * goes by without action.
 			 */
-			err = handle_ir_response(rsp, ir_word, t_on, t_off,
-				pulse_count, pulses, freq);
+			err = _handle_ir_response(rsp, ir_word, t_on, t_off, 
+				t_total, *ir_signal_length, *ir_signal,	*freq);
 			if (err != 0) {
 				break;
 			}
@@ -778,42 +786,37 @@ int CRemote::LearnIR(string *learn_string)
 			break;
 		} else {
 			debug("Invalid response [%02X]", rsp[1]);
-			err = 1;
+			err = LC_ERROR;
+		}
+		/* check for overflow: */
+		if ((t_total > MAX_IR_SIGNAL_DURATION * 1000)
+			|| (*ir_signal_length > MAX_IR_SIGNAL_LENGTH)) {
+			err = LC_ERROR_IR_OVERFLOW;
 		}
 	}
 
-	if (t_off)
-		debug("-%i", t_off);
-
-	/* make sure we record a final off? */
-	if (pulse_count < MAX_PULSE_COUNT)
-		pulses[pulse_count++] = t_off;
-
-	const static uint8_t stop_ir_learn[] = { COMMAND_STOP_IRCAP };
-	HID_WriteReport(stop_ir_learn);
-
-	/* read returned RESPONSE_DONE, otherwise next command wil fail! */
-	err = HID_ReadReport(rsp);
-	if (err == 0) {
-		if ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE) {
-			err = 1;
+	if ((err == 0) && (*ir_signal_length > 0)) {
+		/* we have actually got some signal */
+		if (t_off) {
+			debug("-%i", t_off);
+		}
+		/* make sure we record a final off */
+		if (*ir_signal_length < MAX_IR_SIGNAL_LENGTH) {
+			(*ir_signal)[(*ir_signal_length)++] = t_off;
 		}
 	}
 
-	/*
-	 * Encode our pulses into string
-	 */
-	if (err == 0 && learn_string != NULL) {
-		char s[32];
-		sprintf(s, "F%04X", freq);
-		*learn_string = s;
-		for (unsigned int n = 0; n < pulse_count; ) {
-			sprintf(s, "P%04X", pulses[n++]);
-			*learn_string += s;
-			sprintf(s, "S%04X", pulses[n++]);
-			*learn_string += s;
-		}
+	if (HID_WriteReport(stop_ir_learn) != 0) {
+		err = LC_ERROR_WRITE;
 	}
-	
+
+	/* flush HID buffer until empty or RESPONSE_DONE: */
+	do {
+		if (HID_ReadReport(rsp, IR_LEARN_DONE_TIMEOUT) != 0) {
+			err = LC_ERROR_READ;
+			break;
+		}
+	} while ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE); 
+
 	return err;
 }

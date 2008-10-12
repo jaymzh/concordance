@@ -25,6 +25,11 @@
 
 int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 	uint8_t *&found, string *s = NULL);
+
+int encode_ir_signal(uint32_t carrier_clock, 
+	uint32_t *ir_signal, uint32_t ir_signal_length,
+	string *learn_seq);
+
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 	bool has_userid, bool add_cookiekeyval = false,
 	string *learn_seq=NULL, string *learn_key=NULL);

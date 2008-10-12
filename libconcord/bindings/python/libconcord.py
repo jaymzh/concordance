@@ -55,7 +55,8 @@ class _CheckRetCode(object):
         result = args[0]
         if result != 0:
             raise LibConcordException(self.func_name, result)
-        
+        return result
+
 # Internal ctypes function wrapper creation
 def _create_func(
     func_name,
@@ -321,11 +322,11 @@ get_time_timezone = _create_func(
     c_char_p
 )
 
-# int delete_blob(uint8_t *ptr);
+# void delete_blob(uint8_t *ptr);
 delete_block = _create_func(
     'delete_blob',
-    _CheckRetCode,
-    c_int,
+    None,
+    None,
     POINTER(c_ubyte)
 );
 
@@ -630,13 +631,85 @@ extract_firmware_binary = _create_func(
     POINTER(c_uint)
 )
 
-# int learn_ir_commands(uint8_t *data, uint32_t size, int post);
-learn_ir_commands = _create_func(
-    'learn_ir_commands',
+#  IR-stuff
+#  ===========================
+
+# int get_key_names(uint8_t *data, uint32_t size,
+#        char ***key_names, uint32_t *key_names_length);
+
+get_key_names = _create_func(
+    'get_key_names',
     _CheckRetCode,
     c_int,
     POINTER(c_ubyte),
     c_uint,
-    c_int
+    POINTER(POINTER(c_char_p)),
+    POINTER(c_uint)
 )
 
+# void delete_key_names(char **key_names, uint32_t key_names_length);
+
+delete_key_names = _create_func(
+    'delete_key_names',
+    None,
+    None,
+    POINTER(c_char_p),
+    c_uint
+)
+
+# int learn_from_remote(uint32_t *carrier_clock,
+#        uint32_t **ir_signal, uint32_t *ir_signal_length);
+
+learn_from_remote = _create_func(
+    'learn_from_remote',
+    _CheckRetCode,
+    c_int,
+    POINTER(c_uint),
+    POINTER(POINTER(c_uint)),
+    POINTER(c_uint)
+)
+
+# void delete_ir_signal(uint32_t *ir_signal);
+
+delete_ir_signal = _create_func(
+    'delete_ir_signal',
+    None,
+    None,
+    POINTER(c_uint)
+)
+
+# int encode_for_posting(uint32_t carrier_clock,
+#        uint32_t *ir_signal, uint32_t ir_signal_length,
+#        char **encoded_signal);
+
+encode_for_posting = _create_func(
+    'encode_for_posting',
+    _CheckRetCode,
+    c_int,
+    c_uint,
+    POINTER(c_uint),
+    c_uint,
+    POINTER(c_char_p)
+)
+
+# void delete_encoded_signal(char *encoded_signal);
+
+delete_encoded_signal = _create_func(
+    'delete_encoded_signal',
+    None,
+    None,
+    c_char_p
+)
+
+# int post_new_code(uint8_t *data, uint32_t size, 
+#        char *key_name, char *encoded_signal);
+
+post_new_code = _create_func(
+    'post_new_code',
+    _CheckRetCode,
+    c_int,
+    POINTER(c_ubyte),
+    c_uint,
+    c_char_p,
+    c_char_p
+)

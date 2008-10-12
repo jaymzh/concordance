@@ -55,6 +55,7 @@ typedef unsigned __int64 uint64_t;
 #define LC_ERROR_OS_FILE 14
 #define LC_ERROR_UNSUPP 15
 #define LC_ERROR_INVALID_CONFIG 16
+#define LC_ERROR_IR_OVERFLOW 17
 
 /*
  * Filetypes, used by identity_file()
@@ -382,10 +383,85 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
 	uint32_t *size);
 
 /*
- * IR-stuff. This stuff hasn't yet been cleaned up, you'll have to
- * dig in yourself.
+ * IR-stuff
+ * ===========================
+ * Data structure information:
+ *
+ * carrier_clock    : in Hz, usually ~36000..40000
+ * ir_signal        : IR mark/space durations (alternating) in microsconds
+ * ir_signal_length : total number of mark/space durations in ir_signal
+ *      ir_signal will start with a mark and end with a space duration,
+ *      hence ir_signal_length will always be an even number.
+ * 
+ * They are usually filled in by calling learn_from_remote(...),
+ * to learn IR signals from an existing other remote, but may also
+ * be set by the application, e.g. be derived from Pilips Pronto Hex
+ * codes or RC5/NEC/... command codes (separate conversion library required).
+ *
+ * encoded posting format : IR code data converted to Logitech 
+ *     posting string format, returned by encode_for_posting.
+ *     Having the encoding separate from the posting keeps the
+ *     parameter list of post_new_code() tidy and allows the
+ *     application to display the encoded signal when desired.
  */
-int learn_ir_commands(uint8_t *data, uint32_t size, int post);
+
+/*
+ * Scan the contents of the received LearnIR.EZTut file
+ * (read into *data[size]) for the key names to be learned.
+ *
+ * Fills key_names with the found names and key_names_length
+ * with the number of found key names.
+ * Returns 0 for success, or an error code in case of failure.
+ *
+ * Memory allocated for the strings must be freed by the caller
+ * via delete_key_names() when not needed any longer.
+ */
+int get_key_names(uint8_t *data, uint32_t size,
+	char ***key_names, uint32_t *key_names_length);
+
+void delete_key_names(char **key_names, uint32_t key_names_length);
+
+/*
+ * Fill ir_data with IR code learned from other remote
+ * via Harmony IR receiver.
+ *
+ * Returns 0 for success, error code for failure.
+ *
+ * Memory allocated for ir_signal must be freed by the caller
+ * via delete_ir_signal() when not needed any longer.
+ */
+int learn_from_remote(uint32_t *carrier_clock,
+	uint32_t **ir_signal, uint32_t *ir_signal_length);
+
+void delete_ir_signal(uint32_t *ir_signal);
+
+/*
+ * Fill encoded_signal with IR code encoded to Logitech
+ * posting string format.
+ *
+ * Returns 0 for success, error code in case of failure.
+ *
+ * Memory allocated for the string must be freed by the caller
+ * via delete_post_string() when not needed any longer.
+ */
+int encode_for_posting(uint32_t carrier_clock,
+	uint32_t *ir_signal, uint32_t ir_signal_length,
+	char **encoded_signal);
+
+void delete_encoded_signal(char *encoded_signal);
+
+/*
+ * Post encoded IR-code with key_name and additional 
+ * information from XML data[size] to Logitech.
+ *
+ * Logitech will only accept keynames already present in the
+ * database or user-defined via 'Learn new Key' web page
+ * for the current device.
+ *
+ * Returns 0 for success, error code for failure.
+ */
+int post_new_code(uint8_t *data, uint32_t size, 
+	char *key_name, char *encoded_signal);
 
 #ifdef __cplusplus
 }

@@ -37,6 +37,7 @@
 #define strcasecmp stricmp
 #define strncasecmp strnicmp
 #define sleep(x) Sleep((x) * 1000)
+#define strdup _strdup
 
 /*
  * Windows, in it's infinite awesomeness doesn't include POSIX things
@@ -46,11 +47,24 @@
 char* basename(char* file_name)
 {
 	char* _basename = strrchr(file_name, '\\');
-
+	
 	return _basename ? _basename+1 : file_name;
 }
 
 HANDLE con;
+
+/*
+ * (see below) Windows does not need this, since _getch already
+ * does what we need - just make set_canon do nothing 
+ * Note that _getch returns '\r' when user hits the <Enter> key
+ */
+int set_canon(int flag)
+{
+	return(1);
+}
+
+#define read_key _getch
+#define ENTER_KEY '\r'
 
 #else
 /* NON-Windows */
@@ -59,6 +73,29 @@ HANDLE con;
 #include <strings.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <termios.h>
+
+/*
+ * set_canon in LINUX modifies stdin such that getchar behaves like
+ * _getch in Windows, i.e. the next key is returned immediately.
+ * Note that getchar returns '\n' when user hits the <Enter> key
+ */
+int set_canon(int flag)
+{
+	struct termios t;
+
+	tcgetattr(0, &t);
+	if (flag) {
+		t.c_lflag |= ICANON;
+	} else {
+		t.c_lflag &= ~ICANON;
+	}
+	tcsetattr(0, TCSANOW, &t); 
+	return(1);
+}
+/* Thus, we can define: */
+#define read_key getchar
+#define ENTER_KEY '\n'
 
 #endif
 
@@ -138,6 +175,205 @@ void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
 		printf("%3i%%          ", curr*100/total);
 	}
 	fflush(stdout);
+}
+
+void print_ir_burst(uint32_t length)
+{
+	if (length < 250) {
+		printf("|");
+	} else if (length < 1000) {
+		printf("#");
+	} else {
+		printf("##");
+	}
+}
+
+void print_ir_space(uint32_t length)
+{
+	if (length < 250) {
+		printf(".");
+	} else if (length < 1000) {
+		printf("_");
+	} else if (length < 10000) {
+		printf("__");
+	} else {
+		printf("\n");
+	}
+}
+
+void print_received_ir_signal(uint32_t carrier_clock, uint32_t *ir_signal,
+	uint32_t ir_signal_length, struct options_t *options)
+{
+	uint32_t index;
+	printf("\nASCII-graph of received IR signal:\n");
+	for (index=0; index < ir_signal_length; index += 2){
+		print_ir_burst(ir_signal[index]);
+		print_ir_space(ir_signal[index+1]);
+	}
+	printf("\n");
+	printf("Carrier clock          : %u Hz\n", carrier_clock);
+	printf("Total mark/space pairs : %u\n\n", ir_signal_length/2);
+#ifdef _DEBUG
+	/*
+	 * full dump of new IR signal:
+	 */
+	for (index=0; index < ir_signal_length; index += 2){
+		printf("\tP:%6u\tS:%6u\n", ir_signal[index],
+			ir_signal[index+1]);
+	}
+#endif
+}
+
+char get_cmd(char *prompt, char *allowed, char def) {
+	char result = 0;
+	char got_key;
+	uint32_t index;
+	set_canon(0);
+	while ( result == 0 ) {
+		printf("%s (%c)?", prompt, def);
+		got_key = read_key();
+		printf("\n");
+		if (got_key == ENTER_KEY) {
+			result = def;
+		} else {
+			for (index = 0; index < strlen(allowed); index++) {
+				if (allowed[index] == got_key) {
+					result = got_key;
+					break;
+				}
+			}
+		}
+	}
+	set_canon(1);
+	return result;
+}	
+
+int learn_ir_commands(uint8_t *data, uint32_t size, struct options_t *options)
+{
+	int err = 0;
+	uint32_t carrier_clock = 0;
+	uint32_t *ir_signal = NULL;
+	uint32_t ir_signal_length = 0;
+	uint32_t index = 0;
+	char **key_names;
+	uint32_t key_names_length = 0;
+	char *post_string = NULL;
+	char user_cmd;
+
+	err = get_key_names(data, size, &key_names, &key_names_length);
+	if ((err != 0) || (key_names_length == 0)) { return err; }
+	
+	printf("Received file contains %u key names to be learned.\n",
+		key_names_length);
+	
+	while (1) {
+		if (index >= key_names_length) {
+			index--;
+			printf("Last key in list!\n");
+		}
+		printf("\nKey name : <%s> : \n", key_names[index]);
+		user_cmd = get_cmd(
+			"[L]earn, [N]ext, [P]revious, [Q]uit",
+			"LlHhNnPpQq", 'L');
+		err = -1; 
+		/* have no code yet */
+		switch (user_cmd) {
+			case 'L':
+			case 'l':
+				/* learn from remote: */
+				printf("press corresponding key ");
+				printf("on original remote within 5 sec:\n");
+				printf("Learning IR signal:  ");
+				cb_print_percent_status(0, 0, 1, NULL);
+				err = learn_from_remote(&carrier_clock,
+					&ir_signal, &ir_signal_length);
+				if (err == 0) {
+					cb_print_percent_status(1, 1, 1, NULL);
+					printf("       done\n");
+				}
+				break;
+			case 'P':
+			case 'p':
+				if (index > 0) {
+					index--;
+				} else {
+					printf("First key in list!\n");
+				}
+				break;
+			case 'N':
+			case 'n':
+				index++;
+				break;
+			default:
+				break;
+		}				
+		if ( err == 0 ) {
+			/* have new IR code: */
+			if ((*options).verbose) {
+				print_received_ir_signal(carrier_clock,
+					ir_signal, ir_signal_length, options);
+			}
+			err = encode_for_posting(carrier_clock, ir_signal,
+					ir_signal_length, &post_string);
+			/* done with learned signal, free memory: */
+			delete_ir_signal(ir_signal);
+		}
+			
+		if ( err == 0 ) {
+			/* have successfully encoded new code: */
+#ifdef _DEBUG				
+			if ((*options).verbose) {
+				printf("%s\n\n", post_string );
+			}
+#endif
+			if (!(*options).noweb) {
+				user_cmd = get_cmd(
+				"[U]pload new code, [R]etry same key, [N]ext key, [Q]uit",
+				"UuRrNnQq", 'U');
+			} else {
+				/* no upload: just skip to next key */
+				user_cmd = 'N';
+			}
+			switch (user_cmd) {
+				case 'U':
+				case 'u':
+					printf("Upload to website:   ");
+					cb_print_percent_status(
+						0, 0, 1, NULL);
+					err = post_new_code(data, size, 
+						key_names[index], post_string);
+						if ( err == 0 ) {
+						cb_print_percent_status(
+							1, 1, 1, NULL);
+						printf("       done\n");
+						index++;
+					} else {
+						printf("       failed\n");
+					}
+					break;
+				case 'N':
+				case 'n':
+					index++;
+					break;
+				default:
+					break;
+			}
+			/* done, free memory */
+			delete_encoded_signal(post_string);
+		} else {
+			if (err > 0) {
+				printf("\nError receiving IR signal:\n\t%s \n",
+					lc_strerror(err));
+			}
+		}
+		
+		if (user_cmd == 'Q' || user_cmd == 'q') {
+			break;
+		}
+	}
+	/* done, free memory */
+	delete_key_names(key_names, key_names_length);
+	return 0;
 }
 
 /*
@@ -222,7 +458,8 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	binary_size = size;
 
 	if (!(*options).binary) {
-		if ((err = find_config_binary(data, size, &binary_data, &binary_size)))
+		if ((err = find_config_binary(data, size,
+					       &binary_data, &binary_size)))
 			return LC_ERROR;
 
 		if (!(*options).noweb)
@@ -256,7 +493,8 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	printf("       done\n");
 
 	printf("Verifying Config:    ");
-	if ((err = verify_remote_config(binary_data, binary_size, cb, (void *)1))) {
+	if ((err = verify_remote_config(binary_data,
+				       binary_size, cb, (void *)1))) {
 		return err;
 	}
 	printf("       done\n");
@@ -284,7 +522,7 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	if (err != 0) {
 		return err;
 	}
-	printf("                     done\n");
+	printf("       done\n");
 
 	printf("Setting Time:        ");
 	if ((err = set_time())) {
@@ -1032,7 +1270,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_LEARN_IR:
-			err = learn_ir_commands(data, size, !options.noweb);
+			err = learn_ir_commands(data, size, &options);
 			break;
 
 		case MODE_GET_TIME:

@@ -92,5 +92,14 @@ write_firmware_to_file
 extract_firmware_binary
 
 ; IR-stuff
-;
-learn_ir_commands
+get_key_names
+delete_key_names
+
+learn_from_remote
+delete_ir_signal
+
+encode_for_posting
+delete_encoded_signal
+
+post_new_code
+

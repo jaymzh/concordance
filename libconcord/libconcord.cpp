@@ -39,6 +39,7 @@
 #include "protocol.h"
 #include "time.h"
 #include <errno.h>
+#include <list>
 
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
@@ -313,6 +314,11 @@ const char *lc_strerror(int err)
 		case LC_ERROR_INVALID_CONFIG:
 			return 
 			"The configuration present on the remote is invalid";
+			break;
+
+		case LC_ERROR_IR_OVERFLOW:
+			return 
+			"Received IR signal is too long - release key earlier";
 			break;
 	}
 
@@ -1165,7 +1171,7 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 		do {
 			of.write("\t\t\t<DATA>");
 			char hex[16];
-			int u = 32;
+			uint32_t u = 32;
 			if (u > size) {
 				u = size;
 			}
@@ -1219,41 +1225,200 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
  * IR stuff
  */
 
-int learn_ir_commands(uint8_t *data, uint32_t size, int post)
+/*
+ * List of key names to be learned is passed in section INPUTPARMS
+ * as e.g.:
+ * <PARAMETER><KEY>KeyName</KEY><VALUE>PowerToggle</VALUE></PARAMETER>
+ * First of these is repeated in section PARAMETERS, so we must
+ * concentrate on INPUTPARMS to avoid duplication.
+ */
+
+/*
+ * locate the INPUTPARMS section in *data:
+ */
+int _init_key_scan(uint8_t *data, uint32_t size, 
+	uint8_t **inputparams_start, uint8_t **inputparams_end)
 {
 	int err;
-
-	if (data) {
-		uint8_t *t = data;
-		string keyname;
-		do {
-			err = GetTag("KEY", t, size - (t - data), t, &keyname);
-			if (err != 0) {
-				return err;
-			}
-		} while (keyname != "KeyName");
-		uint8_t *n = 0;
-		err = GetTag("VALUE", t, size, n, &keyname);
+		
+	/* locating start tag "<INPUTPARMS>" */
+	err = GetTag("INPUTPARMS", data, size, *inputparams_start);
+	if (err == 0) {
+		/* locating end tag "</INPUTPARMS>" */
+		err = GetTag("/INPUTPARMS", *inputparams_start, 
+			size - (*inputparams_start - data), *inputparams_end);
+	}
+	return err;
+}
+	
+int _next_key_name(uint8_t **start, uint8_t *inputparams_end, string *keyname)
+{
+	int err;
+	/*
+	 * to be really paranoid, we would have to narrow the search range
+	 * further down to next <PARAMETER>...</PARAMETER>, but IMHO it
+	 * should be safe to assume that Logitech always sends sane files:
+	 */
+	do {
+		err = GetTag("KEY", *start, (inputparams_end - *start),
+				*start, keyname);
 		if (err != 0) {
 			return err;
 		}
-		printf("Key Name: %s\n",keyname.c_str());
+	} while (*keyname != "KeyName");
 
-		string ls;
-		rmt->LearnIR(&ls);
-		debug("Learned code: %s",ls.c_str());
+	err = GetTag("VALUE", *start, (inputparams_end - *start),
+			*start, keyname);
 
-		if (post) {
-			Post(data, size, "POSTOPTIONS", ri, true, false, &ls,
-				&keyname);
-		}
-	} else {
-		rmt->LearnIR();
+	if (err == 0) {
+		/* found next key name : */
+		debug("Key Name: %s\n", (*keyname).c_str());
 	}
+	return err;
+}
 
+
+int get_key_names(uint8_t *data, uint32_t size,
+	char ***key_names, uint32_t *key_names_length)
+{
+	using namespace std;
+	uint8_t *cursor = data;
+	uint8_t *inputparams_end;
+	uint32_t key_index = 0;
+	list<string> key_list;
+	string key_name;
+	
+	if ((data == NULL) || (size == 0) || (key_names == NULL)
+		     	|| (key_names_length == NULL)) {
+		return LC_ERROR;
+	}
+	/* setup data scanning, locating start and end of keynames section: */
+	if (_init_key_scan(data, size, &cursor, &inputparams_end) != 0) {
+		return LC_ERROR;
+	}
+	
+	/* scan for key names and append found names to list: */
+	while (_next_key_name(&cursor, inputparams_end, &key_name) == 0) {
+		key_list.push_back(key_name);
+	}
+	
+	if (key_list.size() == 0) {
+		return LC_ERROR;
+	}
+	
+	*key_names_length = key_list.size();
+	*key_names = new char*[*key_names_length];
+			
+	/* copy list of found names to allocated buffer: */
+	for (
+		list<string>::const_iterator cursor = key_list.begin();
+		cursor != key_list.end();
+		++cursor
+	) {
+		(*key_names)[key_index++] = strdup((*cursor).c_str());
+	}
+	/* C++ should take care of key_name and key_list deallocation */
 	return 0;
 }
 
+/*
+ * Free memory allocated by get_key_names:
+ */
+void delete_key_names(char **key_names, uint32_t key_names_length)
+{
+	uint32_t key_count = 0;
+	if (key_names != NULL) {
+		for (key_count = 0; key_count < key_names_length; key_count++) {
+			free(key_names[key_count]);
+			/* allocated by strdup -> free() */
+		}
+		delete[](key_names); /* allocated by new[] -> delete[] */
+	}
+}
+
+/*
+ * Fill ir_data with IR code learned from other remote
+ * via Harmony IR receiver.
+ * Returns 0 for success, error code for failure.
+ */
+int learn_from_remote(uint32_t *carrier_clock,
+	uint32_t **ir_signal, uint32_t *ir_signal_length)
+{
+	if (rmt == NULL){
+		return LC_ERROR_CONNECT;
+	}
+	if ((carrier_clock == NULL) || (ir_signal == NULL)
+			|| (ir_signal_length == NULL)){
+		/* nothing to write to: */
+		return LC_ERROR;
+	}
+	
+	/* try to learn code via Harmony from original remote: */
+	return rmt->LearnIR(carrier_clock, ir_signal, ir_signal_length);
+}
+
+/*
+ * Free memory allocated by learn_from_remote:
+ */
+void delete_ir_signal(uint32_t *ir_signal)
+{
+	delete[] ir_signal;  /* allocated by new[] -> delete[] */
+}
+
+/*
+ * Fill encoded_signal with IR code encoded to Logitech
+ * posting string format.
+ * Returns 0 for success, error code in case of failure.
+ */
+int encode_for_posting(uint32_t carrier_clock,
+	uint32_t *ir_signal, uint32_t ir_signal_length,
+	char **encoded_signal)
+{
+	int err = 0;
+	string encoded;
+	if ((ir_signal == NULL) || (ir_signal_length == 0)
+			|| (encoded_signal == NULL)) {
+		return LC_ERROR;	/* cannot do anything without */
+	}
+	err = encode_ir_signal(carrier_clock, 
+			ir_signal, ir_signal_length, &encoded);
+	if (err == 0) {
+		debug("Learned code: %s",encoded.c_str());
+		*encoded_signal = strdup(encoded.c_str());
+	}
+	return err;
+}
+
+/*
+ * Free memory allocated by encode_for_posting:
+ */
+void delete_encoded_signal(char *encoded_signal)
+{
+	free(encoded_signal); /* allocated by strdup -> free() */
+}
+
+/*
+ * Post encoded IR-code with key_name and additional 
+ * information from XML data[size] to Logitech.
+ * Returns 0 for success, error code for failure.
+ */
+int post_new_code(uint8_t *data, uint32_t size, 
+	char *key_name, char *encoded_signal)
+{
+	string learn_key;
+	string learn_seq;
+
+	if ((key_name == NULL) || (encoded_signal == NULL)
+			|| (data == NULL) || (size == 0)) {
+		return LC_ERROR_POST;	/* cannot do anything without */
+	}
+	
+	learn_key = key_name;
+	learn_seq = encoded_signal;
+	
+	return Post(data, size, "POSTOPTIONS", ri, true, false,
+			&learn_seq, &learn_key);
+}
 
 /*
  * PRIVATE-SHARED INTERNAL FUNCTIONS

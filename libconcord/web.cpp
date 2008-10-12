@@ -160,7 +160,7 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 			if (*search == '<') {
 				break;
 			}
-			if (search - data >= data_size) {
+			if (search >= data + data_size) {
 				return -1;
 			}
 			search++;
@@ -194,7 +194,7 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 				while (*search && *search != '<') {
 					*s += *search;
 					search++;
-					if (search - data >= data_size) {
+					if (search >= data + data_size) {
 						break;
 					}
 				}
@@ -207,13 +207,49 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 			if (*search == '>') {
 				break;
 			}
-			if (search - data >= data_size) {
+			if (search >= data + data_size) {
 				return -1;
 			}
 			search++;
 		}
 	}
 }
+
+int encode_ir_signal(uint32_t carrier_clock, 
+	uint32_t *ir_signal, uint32_t ir_signal_length,
+	string *learn_seq)
+{	/*
+	 * Encode ir_signal into string accepted by Logitech server
+	 */
+	char s[32];
+	
+	if ((learn_seq == NULL) || (ir_signal == NULL)
+			|| (ir_signal_length == 0)) {
+		return LC_ERROR;
+	}
+	if (carrier_clock > 0xFFFF) {
+		sprintf(s, "F%08X", carrier_clock);
+	} else {
+		sprintf(s, "F%04X", carrier_clock);
+	}
+	*learn_seq = s;
+	for (unsigned int n = 0; n < ir_signal_length; ) {
+		if (ir_signal[n] > 0xFFFF) {
+			sprintf(s, "P%08X", ir_signal[n++]);
+		} else {
+			sprintf(s, "P%04X", ir_signal[n++]);
+		}
+		*learn_seq += s;
+		if (ir_signal[n] > 0xFFFF) {
+			sprintf(s, "S%08X", ir_signal[n++]);
+		} else {
+			sprintf(s, "S%04X", ir_signal[n++]);
+		}
+		*learn_seq += s;
+	}
+	return 0;
+}
+
 
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 	bool has_userid, bool add_cookiekeyval = false,

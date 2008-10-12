@@ -27,7 +27,14 @@
 #define FLASH_EEPROM_ADDR 0x10
 #define FLASH_SERIAL_ADDR 0x000110
 #define FLASH_SIZE 48
-#define MAX_PULSE_COUNT 1000
+/*
+ * limits for IR signal learning, stop when any is reached:
+ * timeouts in milliseconds, length in number of mark/space durations
+ */
+#define IR_LEARN_START_TIMEOUT   5000
+#define MAX_IR_SIGNAL_DURATION   5000
+#define IR_LEARN_DONE_TIMEOUT     500
+#define MAX_IR_SIGNAL_LENGTH     1000
 
 /*
  * WARNING: Do not change this!
@@ -147,7 +154,8 @@ public:
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
 	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)=0;
 
-	virtual int LearnIR(string *learn_string=NULL)=0;
+	virtual int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
+		uint32_t *ir_signal_length)=0;
 };
 
 class CRemote : public CRemoteBase	// All non-Z-Wave remotes
@@ -171,7 +179,7 @@ public:
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=0, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
 		lc_callback cb=NULL, void *cb_arg=NULL);
@@ -185,7 +193,8 @@ public:
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
 
-	int LearnIR(string *learn_string=NULL);
+	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
+		uint32_t *ir_signal_length);
 };
 
 // Base class for all Z-Wave remotes
@@ -212,7 +221,7 @@ public:
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=0, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL);
 	int InvalidateFlash(void);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
 		lc_callback cb=NULL, void *cb_arg=NULL);
@@ -226,7 +235,8 @@ public:
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
 
-	int LearnIR(string *learn_string=NULL);
+	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
+		uint32_t *ir_signal_length);
 };
 
 // 890, 890Pro, AVL-300, RF Extender

@@ -13,11 +13,18 @@ phil@ipom.com
   <pmwenzel@yahoo.com>
 - libconcord: Make configure bail out if it can't find libusb. Fixes bug
   2050170
+- concordance: Fixing spacing issue on "Resetting Remote" line
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
 - concordance: Make unistd.h change work for Windows
 - Fix post_*() to return error codes on failure
+
+andreas.schulz@nord-com.net:
+- libconcord: Brand new API for IR learning. More flexible and extensible.
+- libconcord: Add support for leanring multiple IR keys with one IR file from
+  the website
+- concordance: Port to new IR learning API
 
 0.20
 Released: 04/13/08

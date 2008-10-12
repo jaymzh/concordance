@@ -353,7 +353,8 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 	return 1;
 }
 
-int CRemoteZ_Base::LearnIR(string *learn_string)
+int CRemoteZ_Base::LearnIR(uint32_t *freq, uint32_t **ir_signal,
+	uint32_t *ir_signal_length)
 {
 	return 0;
 }
