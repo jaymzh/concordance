@@ -32,3 +32,14 @@ the bindings to your PYTHONPATH. For example:
 
 export PYTHONPATH=/path/to/libconcord/bindings/python
 
+Debugging
+====================
+
+If you set the environment variable LIBCONCORD_PY_TRACE to string "1", then
+libconcord.py will trace all function calls. This may prove helpful when
+debugging client applications.
+
+For example, in bash:
+
+LIBCONCORD_PY_TRACE=1 ./congruity /path/to/Connectivity.EZHex
+
