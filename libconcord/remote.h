@@ -154,8 +154,8 @@ public:
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
 	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)=0;
 
-	virtual int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
-		uint32_t *ir_signal_length)=0;
+	virtual int LearnIR(uint32_t *freq, uint32_t **ir_signal,
+		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg)=0;
 };
 
 class CRemote : public CRemoteBase	// All non-Z-Wave remotes
@@ -193,8 +193,8 @@ public:
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
 
-	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
-		uint32_t *ir_signal_length);
+	int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
+		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
 };
 
 // Base class for all Z-Wave remotes
@@ -236,7 +236,7 @@ public:
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
-		uint32_t *ir_signal_length);
+		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
 };
 
 // 890, 890Pro, AVL-300, RF Extender

@@ -728,13 +728,17 @@ int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
 
 
 int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
-		uint32_t *ir_signal_length)
+		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 	uint8_t rsp[68];
 
 	static const uint8_t start_ir_learn[] = { COMMAND_START_IRCAP };
 	static const uint8_t stop_ir_learn[] = { COMMAND_STOP_IRCAP };
+
+	if (cb) {
+		cb(0, 0, 1, cb_arg);
+	}
 
 	if (HID_WriteReport(start_ir_learn) != 0) {
 		return LC_ERROR_WRITE;
@@ -817,6 +821,10 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 			break;
 		}
 	} while ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE); 
+
+	if (cb && !err) {
+		cb(1, 1, 1, cb_arg);
+	}
 
 	return err;
 }

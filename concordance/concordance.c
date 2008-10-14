@@ -284,11 +284,10 @@ int learn_ir_commands(uint8_t *data, uint32_t size, struct options_t *options)
 				printf("press corresponding key ");
 				printf("on original remote within 5 sec:\n");
 				printf("Learning IR signal:  ");
-				cb_print_percent_status(0, 0, 1, NULL);
 				err = learn_from_remote(&carrier_clock,
-					&ir_signal, &ir_signal_length);
+					&ir_signal, &ir_signal_length,
+					cb_print_percent_status, NULL);
 				if (err == 0) {
-					cb_print_percent_status(1, 1, 1, NULL);
 					printf("       done\n");
 				}
 				break;

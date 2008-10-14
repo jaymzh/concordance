@@ -1342,7 +1342,8 @@ void delete_key_names(char **key_names, uint32_t key_names_length)
  * Returns 0 for success, error code for failure.
  */
 int learn_from_remote(uint32_t *carrier_clock,
-	uint32_t **ir_signal, uint32_t *ir_signal_length)
+	uint32_t **ir_signal, uint32_t *ir_signal_length,
+	lc_callback cb, void *cb_arg)
 {
 	if (rmt == NULL){
 		return LC_ERROR_CONNECT;
@@ -1354,7 +1355,8 @@ int learn_from_remote(uint32_t *carrier_clock,
 	}
 	
 	/* try to learn code via Harmony from original remote: */
-	return rmt->LearnIR(carrier_clock, ir_signal, ir_signal_length);
+	return rmt->LearnIR(carrier_clock, ir_signal, ir_signal_length, cb,
+		cb_arg);
 }
 
 /*

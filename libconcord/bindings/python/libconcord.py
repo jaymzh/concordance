@@ -776,13 +776,16 @@ delete_key_names = _create_func(
 )
 
 # int learn_from_remote(uint32_t *carrier_clock,
-#     uint32_t **ir_signal, uint32_t *ir_signal_length);
+#     uint32_t **ir_signal, uint32_t *ir_signal_length,
+#     lc_callback cb, void *cb_arg);
 learn_from_remote = _create_func(
     'learn_from_remote',
     _ret_lc_concord(),
     _out('carrier_clock', c_uint),
     _out('ir_signal', POINTER(c_uint)),
-    _out('ir_signal_length', c_uint)
+    _out('ir_signal_length', c_uint),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
 # void delete_ir_signal(uint32_t *ir_signal);

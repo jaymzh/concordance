@@ -431,7 +431,8 @@ void delete_key_names(char **key_names, uint32_t key_names_length);
  * via delete_ir_signal() when not needed any longer.
  */
 int learn_from_remote(uint32_t *carrier_clock,
-	uint32_t **ir_signal, uint32_t *ir_signal_length);
+	uint32_t **ir_signal, uint32_t *ir_signal_length,
+	lc_callback cb, void *cb_arg);
 
 void delete_ir_signal(uint32_t *ir_signal);
 

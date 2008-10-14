@@ -20,6 +20,7 @@ s-t-concordance@wwwdotorg.org:
 - concordance: Make unistd.h change work for Windows
 - Fix post_*() to return error codes on failure
 - libconcord: Add tracing to python bindings and update for IR API changes
+- Add callback support to andreas new IR API
 
 andreas.schulz@nord-com.net:
 - libconcord: Brand new API for IR learning. More flexible and extensible.
