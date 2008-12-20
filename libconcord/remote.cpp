@@ -613,12 +613,25 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 		}
 	}
 
-	/* read returned RESPONSE_DONE, otherwise next command wil fail! */
+        if (err != 0) {
+		return err;
+	}
+
+	/*
+	 * For some models, they return a RESPONSE_DONE, and we have to read
+	 * it otherwise otherwise next command will fail.
+	 * However, other devices don't return this, in which case the read
+	 * failes.
+	 * So, if the read succeeds, we check the response, otherwise we just
+	 * move on with life.
+	 */
 	err = HID_ReadReport(rsp);
 	if (err == 0) {
 		if ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE) {
 			err = 1;
 		}
+	} else {
+		err = 0;
 	}
 
 	return err;
