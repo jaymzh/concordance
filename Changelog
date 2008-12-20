@@ -14,6 +14,7 @@ phil@ipom.com
 - libconcord: Make configure bail out if it can't find libusb. Fixes bug
   2050170
 - concordance: Fixing spacing issue on "Resetting Remote" line
+- concordance: Fix inconsistencies in stderr/stdout error reporting
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
@@ -27,6 +28,7 @@ andreas.schulz@nord-com.net:
 - libconcord: Add support for leanring multiple IR keys with one IR file from
   the website
 - concordance: Port to new IR learning API
+- concordance: Report mismatch between requested mode and file mode
 
 0.20
 Released: 04/13/08

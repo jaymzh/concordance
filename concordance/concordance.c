@@ -361,7 +361,8 @@ int learn_ir_commands(uint8_t *data, uint32_t size, struct options_t *options)
 			delete_encoded_signal(post_string);
 		} else {
 			if (err > 0) {
-				printf("\nError receiving IR signal:\n\t%s \n",
+				fprintf(stderr, "\nERROR:Problemreceiving IR");
+				fprintf(stderr, " signal:\n\t%s \n",
 					lc_strerror(err));
 			}
 		}
@@ -870,6 +871,7 @@ int detect_mode(uint8_t *data, uint32_t size, int *mode)
 {
 	int err, type;
 
+	*mode = MODE_UNSET;
 	err = identify_file(data, size, &type);
 	if (err) {
 		return err;
@@ -894,6 +896,37 @@ int detect_mode(uint8_t *data, uint32_t size, int *mode)
 	}
 
 	return 0;
+}
+
+char *mode_string(int mode)
+{
+	switch (mode) {
+	case MODE_CONNECTIVITY:
+		return "Connectivity Check";
+		break;
+	case MODE_WRITE_CONFIG:
+		return "Write Configuration";
+		break;
+	case MODE_WRITE_FIRMWARE:
+		return "Write Firmware";
+		break;
+	case MODE_LEARN_IR:
+		return "Learn IR";
+		break;
+	default:
+		return "Unknown";
+		break;
+	}
+}
+
+void report_mode_mismatch(int mode, int file_mode)
+{
+	fprintf(stderr, "ERROR: Requested mode is: %s\n",
+		mode_string(mode));
+	fprintf(stderr, "       but file detected as: %s\n",
+		mode_string(file_mode));
+	fprintf(stderr, "Try not specifying a mode at all, I will figure it");
+	fprintf(stderr, " out for you.\n");
 }
 
 void help()
@@ -1075,7 +1108,7 @@ int main(int argc, char *argv[])
 {
 	struct options_t options;
 	char *file_name;
-	int mode, err;
+	int mode, file_mode, err;
 	uint8_t *data;
 	uint32_t size;
 
@@ -1124,26 +1157,36 @@ int main(int argc, char *argv[])
 	if (file_name && (mode != MODE_DUMP_CONFIG && mode != MODE_DUMP_FIRMWARE
 			  && mode != MODE_DUMP_SAFEMODE)) {
 		if (read_file(file_name, &data, &size)) {
-			printf("Cannot read input file.\n");
+			fprintf(stderr, "ERROR: Cannot read input file: %s\n",
+				file_name);
+			exit(1);
+		}
+		/*
+		 * Now that the file is read, see if we can recognize it:
+		 */
+		if (detect_mode(data, size, &file_mode)) {
+			fprintf(stderr, "ERROR: Cannot determine mode of");
+			fprintf(stderr, " operation from file.\n");
+		}
+		/*
+		 * If we don't have a mode, lets detect that mode based on
+		 * the file.
+		 */
+		if (mode == MODE_UNSET) {
+			mode = file_mode;
+		} else if (mode != file_mode) {
+			report_mode_mismatch(mode, file_mode);
 			exit(1);
 		}
 	}
 
 	/*
-	 * And if we don't have a mode, lets detect that mode based on
-	 * the file.
+	 * We have checked the parameters and the input file:
+	 * If we still don't know what to do, failure is the only option:
 	 */
-	if (mode == MODE_UNSET && file_name) {
-		if (file_name) {
-			if (detect_mode(data, size, &mode)) {
-				printf("Cannot determine mode of operation from"
-					" file.\n");
-				exit(1);
-			}
-		} else {
-			printf("No mode requested. No work to do.\n");
-			exit(1);
-		}
+	if (mode == MODE_UNSET) {
+		fprintf(stderr, "ERROR: No mode requested. No work to do.\n");
+		exit(1);
 	}
 
 	/*
@@ -1158,11 +1201,9 @@ int main(int argc, char *argv[])
 		populate_default_filename(mode, options.binary, &file_name);
 	}
 
-	err = 0;
-
 	err = init_concord();
 	if (err != 0) {
-		printf("Error initializing libconcord: %s\n",
+		fprintf(stderr, "ERROR: Couldn't initializing libconcord: %s\n",
 			lc_strerror(err));
 		exit(1);
 	}
@@ -1190,7 +1231,7 @@ int main(int argc, char *argv[])
 	printf("Requesting Identity: ");
 	err = get_identity(cb_print_percent_status, NULL);
 	if (err != 0 && err != LC_ERROR_INVALID_CONFIG) {
-		printf("Error requesting identity\n");
+		fprintf(stderr, "ERROR: failed to requesting identity\n");
 		goto cleanup;
 	}
 	printf("       done\n");
@@ -1297,7 +1338,7 @@ cleanup:
 	deinit_concord();
 
 	if (err) {
-		printf("Failed with error %i\n",err);
+		printf("Failed with error %i\n", err);
 	} else {
 		printf("Success!\n");
 	}
