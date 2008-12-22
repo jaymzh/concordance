@@ -15,6 +15,8 @@ phil@ipom.com
   2050170
 - concordance: Fixing spacing issue on "Resetting Remote" line
 - concordance: Fix inconsistencies in stderr/stdout error reporting
+- consnoop: Code cleanups, command options parsing, debug/verbose modes,
+  extra flash write output
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
