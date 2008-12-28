@@ -25,14 +25,18 @@ MAN?=$(PREFIX)/share/man
 
 CXX?= g++
 CXXFLAGS?= -g -Wall -O2
-CXXFILES?= snoop.cpp
+CXXFILES?= consnoop.cpp
 LIBS?=
 CPPFLAGS?=
 
 all: consnoop
 
-snoop: $(CXXFILES)
+consnoop: $(CXXFILES)
 	$(CXX) $(CXXFLAGS) $(CXXFILES) -o consnoop $(CPPFLAGS)
+
+install: consnoop
+	$(INSTALL) -m 0755 consnoop $(BINDIR)
+	
 
 clean:
 	/bin/rm -f consnoop

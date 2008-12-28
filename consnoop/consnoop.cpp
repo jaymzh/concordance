@@ -84,8 +84,8 @@ void print_data(const uint8_t * const data)
 		return;
 	const uint8_t length = data[0] & LENGTH_MASK;
 	printf("   DATA: ");
-	for (int i = 0; i < length; i++) {
-		printf("%i", data[i]);
+	for (int i = 1; i < length; i++) {
+		printf("%02X", data[i]);
 	}
 	printf("\n");
 }
@@ -119,6 +119,7 @@ void decode(const uint8_t * const data)
 			break;
 		case RESPONSE_READ_FLASH_DATA & COMMAND_MASK:
 			printf("Read  Flash Data\n");
+			print_data(data);
 			break;
 		case COMMAND_START_IRCAP & COMMAND_MASK:
 			printf("Start IR capture\n");
@@ -221,7 +222,6 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-	printf("filename is %s", file_name);
 
 	ifstream infile;
 	infile.open(file_name);
