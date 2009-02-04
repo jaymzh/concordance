@@ -22,6 +22,7 @@
  */
 
 #include <string>
+#include <string.h>
 #include <fstream>
 #include <stdlib.h>
 #ifdef WIN32
@@ -34,6 +35,15 @@ typedef unsigned char uint8_t;
 using namespace std;
 
 #include "../libconcord/protocol.h"
+
+static const unsigned int rxlenmap0[16] =
+	{  0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14 };
+static const unsigned int rxlenmapx[16] =
+	{  0,  0,  1,  2,  3,  4,  5,  6, 14, 30, 62,  0,  0,  0,  0,  0 };
+static const unsigned int txlenmap0[16] =
+	{  0,  1,  2,  3,  4,  5,  6,  7,  0,  0,  0,  0,  0,  0,  0,  0 };
+static const unsigned int txlenmapx[16] =
+	{  0,  1,  2,  3,  4,  5,  6,  7, 15, 31, 63,  0,  0,  0,  0,  0 };
 
 bool verbose = false;
 bool debug = false;
@@ -78,19 +88,20 @@ const char* get_misc(uint8_t x)
 	return "Unknown";
 }
 
-void print_data(const uint8_t * const data)
+void print_data(const uint8_t * const data, unsigned int const * lenmap)
 {
 	if (!verbose)
 		return;
-	const uint8_t length = data[0] & LENGTH_MASK;
+	const uint8_t length_enc = data[0] & LENGTH_MASK;
+	const uint8_t length = lenmap[length_enc];
 	printf("   DATA: ");
-	for (int i = 1; i < length; i++) {
+	for (int i = 1; i <= length; i++) {
 		printf("%02X", data[i]);
 	}
 	printf("\n");
 }
 
-void decode(const uint8_t * const data)
+void decode(const uint8_t * const data, int proto)
 {
 	// Note: The uninteresting stuff is commented out
 	const uint8_t length = data[0] & LENGTH_MASK;
@@ -110,7 +121,7 @@ void decode(const uint8_t * const data)
 			break;
 		case COMMAND_WRITE_FLASH_DATA & COMMAND_MASK:
 			printf("Write Flash Data\n");
-			print_data(data);
+			print_data(data, proto ? txlenmapx : txlenmap0);
 			break;
 		case COMMAND_READ_FLASH & COMMAND_MASK:
 			printf("Read  Flash %06X %i\n",
@@ -119,7 +130,7 @@ void decode(const uint8_t * const data)
 			break;
 		case RESPONSE_READ_FLASH_DATA & COMMAND_MASK:
 			printf("Read  Flash Data\n");
-			print_data(data);
+			print_data(data, proto ? rxlenmapx : rxlenmap0);
 			break;
 		case COMMAND_START_IRCAP & COMMAND_MASK:
 			printf("Start IR capture\n");
@@ -201,6 +212,7 @@ void help()
 int main(int argc, char *argv[])
 {
 	int tmpint = 0;
+	int proto = 1;
 	char *file_name = NULL;
 	while ((tmpint = getopt(argc, argv, "dhf:v")) != EOF) {
 		switch (tmpint) {
@@ -220,6 +232,9 @@ int main(int argc, char *argv[])
 		case 'v':
 			verbose = true;
 			break;
+		case '0':
+			proto = 0;
+			break;
 		}
 	}
 
@@ -233,6 +248,7 @@ int main(int argc, char *argv[])
 		getline(infile,s);
 		if(!s.compare(0, payloadbytes.size(), payloadbytes)) {
 			uint8_t data[260];
+			memset(data, 0xcd, sizeof(data));
 			unsigned int n = 0;
 			for(unsigned int i = payloadbytes.size();
                             i<s.size(); ++i) {
@@ -262,7 +278,7 @@ int main(int argc, char *argv[])
 				}
 				printf("\n");
 			}
-			decode(data);
+			decode(data, proto);
 		}
 	}
 	infile.close();
