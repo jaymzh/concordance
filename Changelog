@@ -17,6 +17,8 @@ phil@ipom.com
 - concordance: Fix inconsistencies in stderr/stdout error reporting
 - consnoop: Code cleanups, command options parsing, debug/verbose modes,
   extra flash write output
+- libconcord: Thanks to s-t-concordance@wwwdotorg.org finding the bad byte, we
+  now can do firmware upgrades on 5xx remotes
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings

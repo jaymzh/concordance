@@ -367,7 +367,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 
 	uint32_t cb_count = 0;
 	const unsigned int max_chunk_len = 
-		protocol == 0 ? 749 : 1023;
+		protocol == 0 ? 749 : 3150;
 
 	/* mapping of lenghts - see specs/protocol.txt */
 	static const unsigned int txlenmap0[] =
