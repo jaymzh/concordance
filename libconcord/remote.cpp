@@ -68,7 +68,7 @@ void make_serial(uint8_t *ser, TRemoteInfo &ri)
 
 int CRemote::Reset(uint8_t kind)
 {
-	uint8_t reset_cmd[] = { COMMAND_RESET, kind };
+	uint8_t reset_cmd[64] = { COMMAND_RESET, kind };
 
 	return HID_WriteReport(reset_cmd);
 }
@@ -84,7 +84,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	int err = 0;
 	uint32_t cb_count = 0;
 
-	const uint8_t qid[] = { COMMAND_GET_VERSION };
+	const uint8_t qid[64] = { COMMAND_GET_VERSION };
 
 	if ((err = HID_WriteReport(qid))) {
 		debug("Failed to write to remote");
@@ -204,7 +204,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	int err = 0;
 
 	do {
-		static uint8_t cmd[8];
+		static uint8_t cmd[64] = {0};
 		cmd[0] = COMMAND_READ_FLASH | 0x05;
 		cmd[1] = (addr >> 16) & 0xFF;
 		cmd[2] = (addr >> 8) & 0xFF;
@@ -269,7 +269,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 int CRemote::InvalidateFlash(void)
 {
-	const uint8_t ivf[]={ COMMAND_WRITE_MISC | 0x01, 
+	const uint8_t ivf[64]={ COMMAND_WRITE_MISC | 0x01, 
 				COMMAND_MISC_INVALIDATE_FLASH };
 	int err;
 
@@ -319,7 +319,7 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 	uint32_t sector_end = sectors[n] + flash_base;
 
 	for (uint32_t i = 0; i < num_sectors; i++) {
-		static uint8_t erase_cmd[8];
+		static uint8_t erase_cmd[64] = {0};
 		erase_cmd[0] = COMMAND_ERASE_FLASH;
 		erase_cmd[1] = (sector_begin >> 16) & 0xFF;
 		erase_cmd[2] = (sector_begin >> 8) & 0xFF;
@@ -382,7 +382,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 	int err = 0;
 
 	do {
-		static uint8_t write_setup_cmd[8];
+		static uint8_t write_setup_cmd[64] = {0};
 		write_setup_cmd[0] = COMMAND_WRITE_FLASH | 0x05;
 		write_setup_cmd[1] = (addr >> 16) & 0xFF;
 		write_setup_cmd[2] = (addr >> 8) & 0xFF;
@@ -404,7 +404,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 				--n;
 			}
 			unsigned int block_len = txlenmap[i];
-			uint8_t wd[68];
+			uint8_t wd[64] = {0};
 			wd[0] = COMMAND_WRITE_FLASH_DATA | n;
 			memcpy(wd+1, pw, block_len);
 			HID_WriteReport(wd);
@@ -414,7 +414,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 			chunk_len -= block_len;
 		}
 		
-		uint8_t end_cmd[] = { COMMAND_DONE, COMMAND_WRITE_FLASH };
+		uint8_t end_cmd[64] = { COMMAND_DONE, COMMAND_WRITE_FLASH };
 		HID_WriteReport(end_cmd);
 
 		uint8_t rsp[68];
@@ -432,7 +432,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 int CRemote::ReadMiscByte(uint8_t addr, uint32_t len,
 		uint8_t kind, uint8_t *rd)
 {
-	uint8_t rmb[] = { COMMAND_READ_MISC | 0x02, kind, 0 };
+	uint8_t rmb[64] = { COMMAND_READ_MISC | 0x02, kind, 0 };
 
 	while (len--) {
 		rmb[2] = addr++;
@@ -457,7 +457,7 @@ int CRemote::ReadMiscByte(uint8_t addr, uint32_t len,
 int CRemote::ReadMiscWord(uint16_t addr, uint32_t len,
 		uint8_t kind, uint16_t *rd)
 {
-	uint8_t rmw[] = { COMMAND_READ_MISC | 0x03, kind, 0, 0 };
+	uint8_t rmw[64] = { COMMAND_READ_MISC | 0x03, kind, 0, 0 };
 
 	while (len--) {
 		rmw[2] = addr >> 8;
@@ -486,7 +486,7 @@ int CRemote::ReadMiscWord(uint16_t addr, uint32_t len,
 int CRemote::WriteMiscByte(uint8_t addr, uint32_t len,
 		uint8_t kind, uint8_t *wr)
 {
-	uint8_t wmb[8];
+	uint8_t wmb[64] = {0};
 	wmb[0] = COMMAND_WRITE_MISC | 0x03;
 	wmb[1] = kind;
 
@@ -512,7 +512,7 @@ int CRemote::WriteMiscByte(uint8_t addr, uint32_t len,
 int CRemote::WriteMiscWord(uint16_t addr, uint32_t len,
 		uint8_t kind, uint16_t *wr)
 {
-	uint8_t wmw[8];
+	uint8_t wmw[64] = {0};
 	wmw[0] = COMMAND_WRITE_MISC | 0x05;
 	wmw[1] = kind;
 
@@ -606,7 +606,7 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 
 		// Send Recalc Clock command for 880 only (not 360/520/550)
 		if (ri.architecture == 8) {
-			static const uint8_t rcc[] = {
+			static const uint8_t rcc[64] = {
 				COMMAND_WRITE_MISC | 0x01,
 				COMMAND_MISC_CLOCK_RECALCULATE };
 			err = HID_WriteReport(rcc);
@@ -746,8 +746,8 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 	int err = 0;
 	uint8_t rsp[68];
 
-	static const uint8_t start_ir_learn[] = { COMMAND_START_IRCAP };
-	static const uint8_t stop_ir_learn[] = { COMMAND_STOP_IRCAP };
+	static const uint8_t start_ir_learn[64] = { COMMAND_START_IRCAP };
+	static const uint8_t stop_ir_learn[64] = { COMMAND_STOP_IRCAP };
 
 	if (cb) {
 		cb(0, 0, 1, cb_arg);
