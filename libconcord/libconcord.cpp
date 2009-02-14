@@ -1414,10 +1414,10 @@ int post_new_code(uint8_t *data, uint32_t size,
 			|| (data == NULL) || (size == 0)) {
 		return LC_ERROR_POST;	/* cannot do anything without */
 	}
-	
+
 	learn_key = key_name;
 	learn_seq = encoded_signal;
-	
+
 	return Post(data, size, "POSTOPTIONS", ri, true, false,
 			&learn_seq, &learn_key);
 }
