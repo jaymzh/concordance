@@ -39,6 +39,7 @@ use concord;
 
 use constant FW_FILE => '/tmp/perl_fw';
 use constant CONFIG_FILE => '/tmp/perl_fw';
+use constant IR_FILE => '/tmp/LearnIr.EZTut';
 
 sub cb
 {
@@ -141,11 +142,12 @@ sub upload_config
 		print "Failed to write config to remote";
 		exit(1);
 	}
-	print "done\n";
+
 	concord::delete_blob($blob);
-	concord::delete_blob($binblob);
+	print "done\n";
 
 }
+
 sub upload_firmware
 {
 	my ($err, $blob, $size, $binblob, $binsize);
@@ -208,6 +210,55 @@ sub upload_firmware
 	concord::delete_blob($binblob);
 }
 
+sub learn_ir_commands
+{
+	my ($err, $blob, $size, $binblob, $binsize);
+
+	print "Reading IR file ";
+	($err, $blob, $size) = concord::read_file(IR_FILE);
+	print "done\n";
+
+	print "Getting key names ";
+	my $key_names;
+	($err, $key_names) =
+		concord::get_key_names($blob, $size);
+	print "done\n";
+
+	my ($carrier_clock, $ir_signal, $ir_length); 
+
+	for (my $i = 0; $i < scalar(@$key_names); $i++) {
+		print "KEY: $key_names->[$i]\n";
+		print "Press the right key within 5 seconds... ";
+		($err, $carrier_clock, $ir_signal, $ir_length) =
+			concord::learn_from_remote(\&cb, 0);
+		if ($err) {
+			print "Failed to learn\n";
+			exit(1);
+		}
+
+		my $str;
+		($err, $str) = concord::encode_for_posting($carrier_clock,
+			$ir_signal, $ir_length);
+		
+		if ($err) {
+			print "Failed to encode\n";
+			exit(1);
+		}
+
+		concord::delete_ir_signal($ir_signal);
+
+		$err = concord::post_new_code($blob, $size, $key_names->[$i],
+				$str);
+
+		if ($err) {
+			print "Failed to post\n";
+			exit(1);
+		}
+		print "done\n";
+	}
+}
+	
+
 #
 # main
 #
@@ -236,6 +287,7 @@ GetOptions($opts,
 	'upload-config|C',
 	'dump-firmware|f',
 	'upload-firmware|F',
+	'learn-ir|l',
 	) || die();
 
 if (keys(%$opts) != 1) {
@@ -255,5 +307,7 @@ if (exists($opts->{'dump-config'})) {
 	upload_firmware();
 	print "resetting...\n";
 	concord::reset_remote();
+} elsif (exists($opts->{'learn-ir'})) {
+	learn_ir_commands();
 }
 

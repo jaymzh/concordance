@@ -17,7 +17,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright Phil Dibowitz 2008
+ * (C) Copyright Phil Dibowitz 2008-2009
+ */
+
+/*
+ * FIXME:
+ *   - Figure out how to make SWIG ignore (not wrap) delete_key_names()
+ *     since it's not needed in our perl interface.
  */
 
 %module concord
@@ -181,6 +187,13 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
 }
 
 /*
+ * Special case for ir_signal - this is an array of ints.
+ */
+%typemap(in) uint32_t *ir_signal {
+	$1 = (uint32_t*)SvUV($input);
+}
+
+/*
  * When passing in a pointer to a blob, we just need to grab the
  * unsigned value and cast it.
  */
@@ -193,6 +206,23 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  */
 %typemap(in) uint32_t {
 	$1 = (uint32_t)SvUV($input);
+}
+
+/*
+ * For the IR stuff we have ***key_names. We'll return an array of scalars, but
+ * here we'll ignore it (don't make perl users pass in anything), and pass to C
+ * a pointer we make.
+ */
+%typemap(in, numinputs=0) char*** (char **key_names) {
+	$1 = &key_names;
+}
+
+%typemap(in, numinputs=0) char** (char *encoded_signal) {
+	$1 = &encoded_signal;
+}
+
+%typemap(in, numinputs=0) uint32_t** (uint32_t *num) {
+	$1 = &num;
 }
 
 /*
@@ -210,14 +240,93 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
 }
 
 /*
- * Here's where we return sizes
+ * Here's where we return sizes - but since we have some uint32_t*'s that aren't
+ * outputs, we have to list these individually... ignore only works in input.
  */
-%typemap(argout) uint32_t* {
+%typemap(argout) uint32_t *size,
+		 uint32_t *binary_size,
+		 uint32_t *key_names_length,
+		 uint32_t *ir_signal_length,
+		 uint32_t *carrier_clock
+{
 	if (argvi >= items) {
-	  EXTEND(sp,1);
+		EXTEND(sp,1);
 	}
 	$result = sv_newmortal();
 	sv_setuv($result, (UV) (*$1));
+	argvi++;
+}
+
+/*
+ * Return ir_signal
+ * The code is the same as above, we could combine them, but for simplicity's
+ * sake, the above is all just pts to ints, and this is a pointer to an array,
+ * so we keep it separate.
+ */
+%typemap(argout) uint32_t** {
+	if (argvi >= items) {
+		EXTEND(sp,1);
+	}
+	$result = sv_newmortal();
+	sv_setuv($result, (UV) (*$1));
+	argvi++;
+}
+
+/*
+ * Return string
+ */
+%typemap(argout) char** {
+	if (argvi >= items) {
+		EXTEND(sp,1);
+	}
+	$result = sv_newmortal();
+	sv_setpv((SV*)$result, *$1);
+	argvi++;
+}
+
+/*
+ * Return key_names. This has to be *specific* to keynames because
+ * we call delete_key_names().
+ */
+%typemap(argout) char ***key_names {
+	if (argvi >= items) {
+		EXTEND(sp,1);
+	}
+
+	/*
+	 * Code copied from
+	 * http://www.swig.org/Doc1.3/Perl5.html#Perl5_nn32
+	 *
+	 * I don't like this method of a C-array of perl SVs... I'd rather
+	 * create a perl AV and fill it as necessary with SVs, and I tried that
+	 * using the code here:
+         *    http://docstore.mik.ua/orelly/perl/advprog/ch20_05.htm#ch20-40642
+         * but it would render $VAR1 => [ $VAR1 ]; in perl instead of
+         * $VAR1 => [ 'key1' ]; and I never figured out why.
+	 */
+	AV *myav;
+	SV **svs;
+	int i = 0;
+	/* Figure out how many elements we have */
+	int len = sizeof(*$1) / sizeof(char*);
+
+	/* Create a C-array of perl-scalar ptrs. */
+	svs = (SV **) malloc(len*sizeof(SV *));
+	for (i = 0; i < len ; i++) {
+		svs[i] = sv_newmortal();
+		sv_setpv((SV*)svs[i],(*$1)[i]);
+	}
+
+	/* Create a perl array */
+	myav = av_make(len,svs);
+	free(svs);
+
+	/* Cleanup the char** - keynames is never pa*/
+	delete_key_names(*$1, len);
+
+	/* Return a ptr to it. */
+	$result = newRV((SV*)myav);
+	sv_2mortal($result);
 	argvi++;
 }
 
