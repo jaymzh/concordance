@@ -20,12 +20,6 @@
  * (C) Copyright Phil Dibowitz 2008-2009
  */
 
-/*
- * FIXME:
- *   - Figure out how to make SWIG ignore (not wrap) delete_key_names()
- *     since it's not needed in our perl interface.
- */
-
 %module concord
 %{
 
@@ -329,6 +323,17 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
 	sv_2mortal($result);
 	argvi++;
 }
+
+/*
+ * As you can see above, we call delete_key_names() for the user. Since we
+ * convert the char*** into an @array of scalars usable from perl, no need
+ * to also pass back a ptr to a structure they will never need. As such, we just
+ * call delete immediately.
+ * 
+ * Since the user will never need delete_key_names(), we tell SWIG not to wrap
+ * it.
+ */
+%ignore delete_key_names;
 
 %include "../../libconcord.h"
 %include "typemaps.i"

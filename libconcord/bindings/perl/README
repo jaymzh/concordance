@@ -28,7 +28,8 @@ Then every call available in the C API is available to you. Various functions
 are slightly modified to provide a more perlish feel. See
 libconcord/bindings/perl/test.pl for an example.
 
-NOTE: You do *NOT* need to call delete_key_names() in perl!
+NOTE: You do *NOT* need to call delete_key_names() in perl, and in fact, it's
+not available.
 
 
 ==== DIRECT USAGE ====
