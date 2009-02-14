@@ -74,7 +74,7 @@ class LibConcordException(Exception):
         self.func = func
         self.result = result
         try:
-            self.result_str = c_char_p(_dll.lc_strerror(c_int(self.result))).value
+            self.result_str = lc_strerror(self.result)
         except:
             self.result_str = 'Unknown'
 
@@ -478,6 +478,13 @@ get_time_timezone = _create_func(
     'get_time_timezone',
     c_char_p
 )
+
+# This is not prototyped using _create_func
+# to avoid error checker and tracing loops etc.
+# const char *lc_strerror(int err);
+lc_strerror = _dll.lc_strerror
+lc_strerror.restype = c_char_p
+lc_strerror.argtypes = (c_int,)
 
 # void delete_blob(uint8_t *ptr);
 delete_blob = _create_func(

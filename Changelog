@@ -30,6 +30,8 @@ s-t-concordance@wwwdotorg.org:
 - Add callback support to andreas new IR API
 - consnoop: Fix length map in data decoding
 - libconcord: initialize all arays containing protocol packets
+- libconcord: python bindings: Prototype lc_strerr to avoid either/both incorrect
+  exception text or crashes on 64-bit machines.
 
 andreas.schulz@nord-com.net:
 - libconcord: Brand new API for IR learning. More flexible and extensible.
