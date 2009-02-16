@@ -120,6 +120,7 @@ struct options_t {
 	int noweb;
 	int direct;
 	int noreset;
+	int force;
 };
 
 enum {
@@ -724,13 +725,14 @@ int dump_firmware(struct options_t *options, char *file_name,
 void parse_options(struct options_t *options, int *mode, char **file_name,
 	int argc, char *argv[])
 {
-	int tmpint;
+	int tmpint, option_index;
 
 	static struct option long_options[] = {
 		{"binary", no_argument, 0, 'b'},
 		{"dump-config", optional_argument, 0, 'c'},
 		{"write-config", required_argument, 0, 'C'},
 		{"direct", no_argument, 0, 'd'},
+		{"force", no_argument, 0, 0},
 		{"dump-firmware", optional_argument, 0, 'f'},
 		{"write-firmware", required_argument, 0, 'F'},
 		{"help", no_argument, 0, 'h'},
@@ -752,17 +754,23 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 	(*options).binary = 0;
 	(*options).noweb = 0;
 	(*options).direct = 0;
+	(*options).force = 0;
 	(*options).noreset = 0;
 
 	*mode = MODE_UNSET;
 
 	tmpint = 0;
+	option_index = 0;
 
 	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVw",
-				long_options, NULL)) != EOF) {
+				long_options, &option_index)) != EOF) {
 		switch (tmpint) {
 		case 0:
 			/* Long-only options go here */
+			if (!strcmp(long_options[option_index].name, "force")) {
+				(*options).force = 1;
+				break;
+			}
 			break;
 		case 'b':
 			(*options).binary = 1;
@@ -919,9 +927,14 @@ char *mode_string(int mode)
 	}
 }
 
-void report_mode_mismatch(int mode, int file_mode)
+void report_mode_mismatch(int mode, int file_mode, int force)
 {
-	fprintf(stderr, "ERROR: Requested mode is: %s\n",
+	if (force) {
+		fprintf(stderr, "WARNING:");
+	} else {
+		fprintf(stderr, "ERROR:");
+	}
+	fprintf(stderr, " Requested mode is: %s\n",
 		mode_string(mode));
 	fprintf(stderr, "       but file detected as: %s\n",
 		mode_string(file_mode));
@@ -949,6 +962,11 @@ void help()
 	printf("   -C, --write-config <filename>\n");
 	printf("\tRead a config from <filename> and write it to the");
 	printf(" remote.\n\n");
+	printf("   --force\n");
+	printf("\tForce. This forces concordance to use the file the way\n");
+	printf("\tyou specified, even if it doesn't think that's the kind\n");
+	printf("\tof file it is. This is necessary for files dumped by\n");
+	printf("\tconcordance.\n\n");
 	printf("   -f, --dump-firmware [<filename>]\n");
 	printf("\tRead firmware from the remote and write it to a file.\n");
 	printf("\tIf no filename is specified firmware.EZUp is used.\n\n");
@@ -1165,7 +1183,7 @@ int main(int argc, char *argv[])
 		 * Now that the file is read, see if we can recognize it:
 		 */
 		if (detect_mode(data, size, &file_mode)) {
-			fprintf(stderr, "ERROR: Cannot determine mode of");
+			fprintf(stderr, "WARNING: Cannot determine mode of");
 			fprintf(stderr, " operation from file.\n");
 		}
 		/*
@@ -1175,8 +1193,10 @@ int main(int argc, char *argv[])
 		if (mode == MODE_UNSET) {
 			mode = file_mode;
 		} else if (mode != file_mode) {
-			report_mode_mismatch(mode, file_mode);
-			exit(1);
+			report_mode_mismatch(mode, file_mode, options.force);
+			if (!options.force) {
+				exit(1);
+			}
 		}
 	}
 

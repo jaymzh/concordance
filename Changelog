@@ -21,6 +21,7 @@ phil@ipom.com
   now can do firmware upgrades on 5xx remotes
 - libconcord: Update perl bindings for IR API change, update test driver for change
   and fix segfault bug
+- concordance: Add --force flag to override filetype mismatch fatal error.
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
