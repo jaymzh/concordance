@@ -1,0 +1,231 @@
+#!/bin/bash
+
+#
+# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=4:ai
+#
+# This script generates udev and/or policykit rules for Logitech Harmony
+# devices.
+#
+# This script is loosely-based on scripts by Douglas E. Warner
+# <silfreed@silfreed.net>
+#
+# GPLv2
+#
+# Copyright 2009 Phil Dibowitz
+#
+
+UDEV_POLICY_TEMPLATE='ATTR{idVendor}=="%s", ATTR{idProduct}=="%s", SYMLINK+="harmony-%%k"'
+UDEV_NO_POLICY_TEMPLATE='SYSFS{idVendor}=="%s", SYSFS{idProduct}=="%s", MODE="0660", GROUP="dialout"'
+
+HAL_PRE_TEMPLATE='    <match key="usb_device.vendor_id" int="0x%s">'
+HAL_RULE_TEMPLATE='      <match key="usb_device.product_id" int="0x%s">
+        <append key="info.capabilities" type="strlist">access_control</append>
+        <merge key="access_control.file"
+               type="copy_property">linux.device_file</merge>
+        <merge key="access_control.type" type="string">libconcord</merge>
+      </match>'
+HAL_POST='    </match>'
+
+NATIONAL_VID=0400
+NATIONAL_PID=c359
+LOGITECH_VID=046d
+LOGITECH_MIN_PID=c110
+LOGITECH_MAX_PID=c14f
+
+UDEV_FILE='libconcord.rules'
+HAL_POLICY_FILE='libconcord.fdi'
+POLICYKIT_FILE='org.freedesktop.hal.device-access.libconcord.policy'
+CONSOLEKIT_FILE='libconcord.perms'
+
+#
+# GENERAL FUNCTIONS
+#
+emit_for_all() {
+    file="$1"
+    template="$2"
+    include_vid="$3"
+
+		printf "$template\n" $NATIONAL_VID $NATIONAL_PID >>$file
+
+    for pid in `seq 0x$LOGITECH_MIN_PID 0x$LOGITECH_MAX_PID`; do
+        pid=`printf "%x" $pid`
+        if [ "$include_vid" == 'yes' ] ; then
+            printf "$template\n" $LOGITECH_VID $pid >>$file
+        else
+            printf "$template\n" $pid >>$file
+        fi
+    done
+}
+
+#
+# UDEV FUNCTIONS
+#
+emit_udev_header() {
+    file="$1"
+    cat >$file <<END
+# Neat trick so that non-harmony devices don't read through a million rules
+SUBSYSTEM=="usb_device", GOTO="harmony_usb_rules"
+SUBSYSTEM=="usb", GOTO="harmony_usb_rules"
+BUS!="usb", GOTO="harmony_rules_end"
+GOTO="harmony_rules_end"
+LABEL="harmony_usb_rules"
+END
+}
+
+emit_udev_footer() {
+    file="$1"
+    cat >>$file <<END
+GOTO="harmony_rules_end"
+LABEL="harmony_rules_end"
+END
+}
+
+emit_udev_rules() {
+    file="$1"
+    type="$2"
+    if [ "$type" == 'policykit' -o "$type" == 'consolekit' ]; then
+        template="$UDEV_POLICY_TEMPLATE"
+    else
+        template="$UDEV_NO_POLICY_TEMPLATE"
+    fi
+
+    emit_for_all $file "$template" 'yes'
+}
+
+create_udev_file() {
+    mode=$1
+    echo -n "Creating udev file: $UDEV_FILE ... "
+    emit_udev_header $UDEV_FILE
+    emit_udev_rules $UDEV_FILE $mode
+    emit_udev_footer $UDEV_FILE
+    echo 'done'
+}
+
+#
+# HAL POLICY FUNCITONS
+#
+
+emit_hal_policy_header() {
+    file="$1"
+    cat >$file <<END
+<?xml version="1.0" encoding="UTF-8"?>
+<deviceinfo version="0.2">
+  <device>
+END
+    printf "$HAL_PRE_TEMPLATE\n" $LOGITECH_VID >>$file
+}
+
+emit_hal_policy_footer() {
+    printf "$HAL_POST\n" >>$file
+    file="$1"
+    cat >>$file <<END
+  </device>
+</deviceinfo>
+END
+}
+    
+emit_hal_policy_rules() {
+    file="$1"
+
+    emit_for_all $file "$HAL_RULE_TEMPLATE"
+}
+
+create_hal_policy_file() {
+    echo -n "Creating hal policy file: $HAL_POLICY_FILE ... "
+    emit_hal_policy_header $HAL_POLICY_FILE
+    emit_hal_policy_rules $HAL_POLICY_FILE
+    emit_hal_policy_footer $HAL_POLICY_FILE
+    echo 'done'
+}
+
+#
+# POLICYKIT FUNCITONS
+#
+
+emit_policykit() {
+    file="$1"
+    cat >$file <<END
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
+
+<policyconfig>
+  <action id="org.freedesktop.hal.device-access.libconcord">
+    <description>Directly access the Logitech Harmony remote</description>
+    <message>System policy prevents access to the Logitech Harmony remote</message>
+    <defaults>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+</policyconfig>
+END
+}
+
+create_policykit_file() {
+    echo -n "Creating PolicyKit file: $POLICYKIT_FILE ..."
+    emit_policykit $POLICYKIT_FILE
+    echo ' done'
+}
+
+#
+# CONSOLEKIT
+#
+
+emit_perms() {
+    file="$1"
+    cat >$file <<END
+<harmony>=/dev/harmony*
+<console> 0600 <harmony> 0600 root
+END
+}
+
+create_perms_file() {
+    echo -n "Creating perms file: $CONSOLEKIT_FILE ..."
+    emit_perms $CONSOLEKIT_FILE
+    echo ' done'
+}
+
+#
+# OTHER FUNCTIONS
+#
+
+usage() {
+    echo "Usage: $0 <-u|-p|-c>"
+}
+
+#
+# MAIN
+#
+
+while getopts upc opt; do
+    case $opt in
+        u)
+            MODE='udev_only'
+            ;;
+        p)
+            MODE='policykit'
+            ;;
+        c)
+            MODE='consolekit'
+            ;;
+        *)
+            usage
+            exit 1
+    esac
+done
+
+if [ "$MODE" == '' ]; then
+    usage
+    exit 1
+fi
+
+create_udev_file $MODE
+if [ "$MODE" == 'policykit' ]; then
+    create_hal_policy_file
+    create_policykit_file
+elif [ "$MODE" == 'consolekit' ]; then
+    create_perms_file
+fi
+

@@ -19,9 +19,12 @@ phil@ipom.com
   extra flash write output
 - libconcord: Thanks to s-t-concordance@wwwdotorg.org finding the bad byte, we
   now can do firmware upgrades on 5xx remotes
-- libconcord: Update perl bindings for IR API change, update test driver for change
-  and fix segfault bug
+- libconcord: Update perl bindings for IR API change, update test driver for
+  change and fix segfault bug
 - concordance: Add --force flag to override filetype mismatch fatal error.
+- libconcord: Add support to the install system for generating and installing
+  udev/consolekit/policykit config files based on work from
+  silfreed@silfreed.net
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings
