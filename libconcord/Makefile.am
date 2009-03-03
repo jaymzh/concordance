@@ -22,17 +22,17 @@ policykit:
 	./gen_udev_support -p
 
 install_policykit: policykit install_udev_generic 
-	$(MKDIR_P) $(DESTDIR)/$(datarootdir)/hal/fdi/policy/10osvendor/
-	$(MKDIR_P) $(DESTDIR)/$(datarootdir)/PolicyKit/policy/
+	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
+	$(MKDIR_P) $(DESTDIR)$(datarootdir)/PolicyKit/policy/
 	$(install_sh_DATA) libconcord.fdi \
-		$(DESTDIR)/$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.fdi
+		$(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.fdi
 	$(install_sh_DATA) org.freedesktop.hal.device-access.libconcord.policy \
-		$(DESTDIR)/$(datarootdir)/PolicyKit/policy/
+		$(DESTDIR)$(datarootdir)/PolicyKit/policy/
 
 consolekit:
 	./gen_udev_support -c
 
 install_consolekit: consolekit install_udev_generic
-	$(MKDIR_P) $(DESTDIR)/$(datarootdir)/hal/fdi/policy/10osvendor/
+	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
 	$(install_sh_DATA) libconcord.perms \
-		$(DATDIR)/$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.perms
+		$(DATDIR)$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.perms
