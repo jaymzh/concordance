@@ -44,6 +44,9 @@ andreas.schulz@nord-com.net:
 - concordance: Port to new IR learning API
 - concordance: Report mismatch between requested mode and file mode
 
+silfreed@silfreed.net:
+- libconcord: Makefile.am udev targets should use sysconfigdir
+
 0.20
 Released: 04/13/08
 phil@ipom.com

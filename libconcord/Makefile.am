@@ -12,16 +12,16 @@ udev:
 	./gen_udev_support -u
 
 install_udev_generic:
-	$(MKDIR_P) $(DESTDIR)/etc/udev/rules.d
-	$(install_sh_DATA) libconcord.rules $(DESTDIR)/etc/udev/
-	(cd $(DESTDIR)/etc/udev/rules.d && ln -f -s ../libconcord.rules 99_libconcord.rules)
+	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/udev/rules.d
+	$(install_sh_DATA) libconcord.rules \
+		$(DESTDIR)$(sysconfdir)/udev/rules.d/99-libconcord.rules
 
 install_udev: udev install_udev_generic
 
 policykit:
 	./gen_udev_support -p
 
-install_policykit: policykit install_udev_generic 
+install_policykit: policykit install_udev_generic
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/PolicyKit/policy/
 	$(install_sh_DATA) libconcord.fdi \
@@ -35,4 +35,5 @@ consolekit:
 install_consolekit: consolekit install_udev_generic
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
 	$(install_sh_DATA) libconcord.perms \
-		$(DATDIR)$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.perms
+		$(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.perms
+
