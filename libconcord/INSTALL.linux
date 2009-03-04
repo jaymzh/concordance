@@ -25,7 +25,7 @@ As root, simply run "make install"
 3. INSTALL UDEV/CONSOLEKIT/POLICYKIT SUPPORT (OPTIONAL)
 
 If you don't want to have to be root to use concordance (or any other
-libconcord frontend, you'll need to setup udev, consolekit, or policykit
+libconcord frontend), you'll need to set up udev, consolekit, or policykit
 support. If you don't know which of these your distribution uses, then the
 plain udev support will work:
 
@@ -46,7 +46,7 @@ files and install them in the right place for the console user to have access
 to the remote when it's plugged in. In otherwords, there is no need to do udev
 and policykit - policykit will take care of everything needed for policykit.
 
-If you're system is using consolekit, then you can use:
+If your system is using consolekit, then you can use:
 
   make consolekit
   sudo make install_consolekit
@@ -56,11 +56,11 @@ all systems.
 
 
 ==== EXTRA INSTALL NOTES ====
+
 By default this library installs in /usr/local/lib. You can override the PREFIX
 (/usr/local) by passing a PREFIX variable to make:
 
   make PREFIX=/usr/
-
 
 ==== ADDITIONAL NOTES ====
 
