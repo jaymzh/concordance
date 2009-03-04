@@ -25,6 +25,8 @@ phil@ipom.com
 - libconcord: Add support to the install system for generating and installing
   udev/consolekit/policykit config files based on work from
   silfreed@silfreed.net
+- libconcord: Update INSTALL.Linux to cover udev/consolekit/policykit
+  installation
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: README for python bindings

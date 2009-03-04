@@ -22,6 +22,38 @@ help you choose where software gets installed and how it is built.
 
 As root, simply run "make install"
 
+3. INSTALL UDEV/CONSOLEKIT/POLICYKIT SUPPORT (OPTIONAL)
+
+If you don't want to have to be root to use concordance (or any other
+libconcord frontend, you'll need to setup udev, consolekit, or policykit
+support. If you don't know which of these your distribution uses, then the
+plain udev support will work:
+
+  make udev
+  sudo make install_udev
+
+This will allow anyone in the "dialout" group to read and write to harmony
+remote controls connected to the machine.
+
+Alternatively, if you use policykit (fedora, and ubuntu, for example), you can
+do:
+
+  make policykit
+  sudo make install_policykit
+
+This will generate a different udev file and all the appropriate policykit
+files and install them in the right place for the console user to have access
+to the remote when it's plugged in. In otherwords, there is no need to do udev
+and policykit - policykit will take care of everything needed for policykit.
+
+If you're system is using consolekit, then you can use:
+
+  make consolekit
+  sudo make install_consolekit
+
+If you're not sure which method your system uses, the udev one will work on
+all systems. 
+
 
 ==== EXTRA INSTALL NOTES ====
 By default this library installs in /usr/local/lib. You can override the PREFIX
@@ -34,7 +66,8 @@ By default this library installs in /usr/local/lib. You can override the PREFIX
 
 Because this software uses libusb, it does Direct IO. That means the library
 requires root priveleges to talk to the remote control, or the user
-must have the RAWIO capability.
+must have the RAWIO capability. You can work around this with the optional
+step 3 above.
 
 In addition, libconcord attempts to unbind any in-kernel drivers that may
 bind to your remote. However, if it can't, you may need to unbind them manually.
