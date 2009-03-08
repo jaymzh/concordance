@@ -1,4 +1,4 @@
-AC_INIT([libconcord], [0.20], [bug-automake@gnu.org])
+AC_INIT([libconcord], [0.21], [bug-automake@gnu.org])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_LIBTOOL
 AC_PROG_CXX

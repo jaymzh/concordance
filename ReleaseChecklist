@@ -1,0 +1,22 @@
+- Check ABI/API version
+  (http://www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html)
+  * If bumping, bump in:
+    * Makefile.am
+      - use libtool versioning
+    * libconcord.py
+      - only need the _current_ part of the version
+    * setup.py
+
+- Bump concordance version number
+  * concordance/concordance.c
+  * concordance/configure.ac
+  * libconcord/configure.ac
+
+- Check for old version:
+  * fgrep -R '0.20' *
+
+- Make clean, recompile, reinstall, test
+
+- Change version in Changelog, commit
+
+- CVS Export, tar, upload

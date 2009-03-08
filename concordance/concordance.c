@@ -112,7 +112,7 @@ int set_canon(int flag)
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.20+CVS";
+const char * const VERSION = "0.21";
 
 struct options_t {
 	int binary;
@@ -944,15 +944,12 @@ void report_mode_mismatch(int mode, int file_mode, int force)
 
 void help()
 {
-	printf("There are two ways to invoke this software. You can specify");
-	printf(" what you want\nto do:\n");
-	printf("\tconcordance <options>\n\n");
-	printf("Or you can let the software attempt to figure out what to");
-	printf(" do for you:\n");
+	printf("There are two ways to invoke this software. The primary");
+	printf(" way is \"automatic\nmode\" where you just pass in a file");
+	printf(" and the software figures out what to\ndo for you:\n");
 	printf("\tconcordance <file>\n\n");
-
-	printf("In automatic mode, just pass in the file, and the software");
-	printf(" will anaylize\nthe file to determine the proper mode.\n\n");
+	printf("Or you can specify what to do:\n");
+	printf("\tconcordance <options>\n\n");
 
 	printf("When specifying options, you must first choose a mode:\n\n");
 
@@ -962,11 +959,6 @@ void help()
 	printf("   -C, --write-config <filename>\n");
 	printf("\tRead a config from <filename> and write it to the");
 	printf(" remote.\n\n");
-	printf("   --force\n");
-	printf("\tForce. This forces concordance to use the file the way\n");
-	printf("\tyou specified, even if it doesn't think that's the kind\n");
-	printf("\tof file it is. This is necessary for files dumped by\n");
-	printf("\tconcordance.\n\n");
 	printf("   -f, --dump-firmware [<filename>]\n");
 	printf("\tRead firmware from the remote and write it to a file.\n");
 	printf("\tIf no filename is specified firmware.EZUp is used.\n\n");
@@ -1011,6 +1003,12 @@ void help()
 	printf("\tWhen writing a config or firmware, this specifies the");
 	printf(" filename\n\tpassed in has just the binary blob, not the");
 	printf(" XML.\n\n");
+
+	printf("   --force\n");
+	printf("\tForce. This forces concordance to use the file the way\n");
+	printf("\tyou specified, even if it doesn't think that's the kind\n");
+	printf("\tof file it is. This is necessary for files dumped by\n");
+	printf("\tconcordance.\n\n");
 
 	printf("  -R, --no-reset\n");
 	printf("\tFor config or firmware updates, do not reboot the device");
