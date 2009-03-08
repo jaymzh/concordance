@@ -19,4 +19,16 @@
 
 - Change version in Changelog, commit
 
-- CVS Export, tar, upload
+- CVS Tag release
+
+- Make tarbal
+  cd /tmp
+  cvs export -r $tag -d concordance-$version concordance
+  cd concordance-$version/libconcord
+  autoreconf -i
+  cd ../concordance
+  autoreconf -i
+  cd ../..
+  tar jcf concordance-$version.tar.bz2 concordance-$version
+
+- test compile, upload
