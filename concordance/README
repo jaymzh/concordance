@@ -78,7 +78,10 @@ See "1. Backup the config" for more information.
 
 5. Write firmware
 
-NOTE: THIS IS NOT YET SUPPORTED ON MOST REMOTES. However for the 880, the only model we currently support this on, it works like this:
+NOTE: This feature is only implemented for certain models. Please see:
+  http://www.phildev.net/concordance/supported_models.shtml
+
+However for models we support this on, it works like this:
 
   $ concordance Firmware.EZHex
 

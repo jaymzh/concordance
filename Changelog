@@ -1,3 +1,9 @@
+CVS
+Released:
+phil@ipom.com
+- concordance: Update README to point to the supported models page rather
+  than list specifics about support (thanks to wolfgang@rohdewald.de)
+
 0.21
 Released: 03/08/09
 phil@ipom.com
