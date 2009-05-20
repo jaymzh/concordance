@@ -5,6 +5,7 @@ phil@ipom.com
   than list specifics about support (thanks to wolfgang@rohdewald.de)
 - libconcord: Update INSTALL.linux to explain that by default udev files don't
   go into /etc. Fixes bug 2788066
+- libconcord: Fix minor memory leak.
 
 0.21
 Released: 03/08/09
