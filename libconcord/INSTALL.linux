@@ -54,6 +54,20 @@ If your system is using consolekit, then you can use:
 If you're not sure which method your system uses, the udev one will work on
 all systems. 
 
+NOTE: By default the install prefix is /usr/local which means that the
+udev/policykit/consolekit make targets will install in /usr/local/etc which
+won't actually do anything. This means for these to work you must run
+./configure with
+*either*:
+  --prefix=/usr
+*or*:
+  --sysconfigdir=/etc --datarootdir=/usr/share
+
+The first one will install binaries in /usr/bin and libraries in /usr/lib which
+may potentially conflict with files installed by your distribution. The later
+will leave everything in /usr/local except for the udev/policykit/consolekit
+files.
+
 
 ==== EXTRA INSTALL NOTES ====
 

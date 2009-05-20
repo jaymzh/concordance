@@ -3,6 +3,8 @@ Released:
 phil@ipom.com
 - concordance: Update README to point to the supported models page rather
   than list specifics about support (thanks to wolfgang@rohdewald.de)
+- libconcord: Update INSTALL.linux to explain that by default udev files don't
+  go into /etc. Fixes bug 2788066
 
 0.21
 Released: 03/08/09
