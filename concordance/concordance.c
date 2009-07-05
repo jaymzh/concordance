@@ -598,6 +598,7 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 	} else {
 		if ((err = extract_firmware_binary(firmware, firmware_size,
 				&firmware_bin, &firmware_bin_size))) {
+			printf("Failed to extract firmware from file\n");
 			delete_blob(firmware_bin);
 			return err;
 		}
