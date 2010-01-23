@@ -1,2 +1,13 @@
-See INSTALL.linux in each project.
+INSTALLING FROM PACKAGE
+
+The best way to install this software in Debian or Ubuntu is with the packages
+in those distros:
+   sudo apt-get install concordance
+
+Will do what you want.
+
+
+INSTALLING FROM SOURCE
+
+If you'd like to install from source, see INSTALL.linux in each project.
 

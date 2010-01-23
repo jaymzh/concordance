@@ -1,3 +1,8 @@
+Note that Debian and Ubuntu how have packages for libconcord and we recommend
+you use those instead of installing from source. If you prefer to install from
+source, see the instructions below.
+
+
 ==== BASIC INSTALLATION ====
 
 0. INSTALL REQUIRED SOFTWARE
