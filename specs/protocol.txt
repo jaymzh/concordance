@@ -203,7 +203,7 @@ COMMAND_RESET 0xE0
 Use to ask the remote to reset something. See COMMAND_RESET_* below, which
 should be the second byte. There is always 1 arg.
 
-  ** SECOND BYTE FOR COMMAND_WRITE_MISC OR COMMAND_READ_MISC **
+  ** SECOND BYTE FOR COMMAND_RESET **
 
   COMMAND_RESET_USB 0x01
 
@@ -279,5 +279,5 @@ Other data is in this first 1K, but not all of what's there is known.
 
 
 # for vim
-vim:textwidth=78:
+vim:textwidth=80:
 
