@@ -687,14 +687,14 @@ write_safemode_to_file = _create_func(
 # int is_fw_update_supported(int direct);
 is_fw_update_supported = _create_func(
     'is_fw_update_supported',
-    _ret_lc_concord(),
+    c_int,
     _in('direct', c_int)
 )
 
 # int is_config_safe_after_fw();
 is_config_safe_after_fw = _create_func(
     'is_config_safe_after_fw',
-    _ret_lc_concord()
+    c_int
 )
 
 # int prep_firmware();
