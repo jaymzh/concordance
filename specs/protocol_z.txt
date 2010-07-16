@@ -1,1 +1,294 @@
-... to be written ...
+
++++ TABLE OF CONTENTS
+
+   - PACKET FORMAT
+   - COMMANDS
+
+
++++ PACKET FORMAT
+
+For ZWave remotes, the payload always follows the same format. However, for some
+remotes (89x, possibly 9xx), these payloads are in HID packets, and for others
+(1xxx, HarmonyOne, Harmony XBox), these are in a TCP packet which is sent over
+tcp-over-usb (usbnet). The format is as follows:
+
+  byte1: MSN = Command Type
+         LSN = 0
+  byte2: Command
+  byte3: message type
+  byte4: numParameters
+  .....: parameters
+
+Command Types are:
+  2: CLIENT
+  3: NOTIFY
+  4: ENV
+  5: IR
+  8: ZWAVE
+  A: PIC
+  E: DEVICE
+
+  The only particularly useful one for our purpose is CLIENT, and the commands
+  for this family are in the COMMANDS section below.
+
+Message Type is:
+  0x80 (128): Command (from software)
+  0x01 (  1): Response (from device)
+
+Num Parameters is:
+
+   00: 10.. .... variable length or endian encoding?
+       11.. .... then scale = 512
+       01.. .... then scale = 4                     
+       00.. .... then scale = 1
+       ..ss ssss = base_size   
+       size = scale * base_size
+
+
++++ COMMANDS
+
+Since the only ones we're interested are commands in the CLIENT Command Type,
+all of these are assumed to be that.. Thus they will start with 20, and we only
+include the LSB.
+
+GET_SYSTEM_INFO 0x61 (97)
+message type: 0x80 (128)
+parameters: 0
+notes: only from server
+
+message type: 0x01 (1)
+parameters: 8
+  parameter 1: 2 bytes USB Vendor ID
+    sample values: 04 6d (1113)
+  parameter 2: 2 bytes USB Product ID
+    sample values: c1 1f (49439)
+  parameter 3: 2 bytes product Type
+    sample values: 00 0b (11)
+  parameter 4: 2 bytes firmware Major Version
+    sample values: 00 05 (5)
+  parameter 5: 2 bytes firmware Minor Version
+    sample values: 00 00 (0)
+  parameter 6: 1 byte firmware Type
+    sample values: 00 (0)
+  parameter 7: 2 bytes skin
+    sample values: 00 35 (53)
+  parameter 8: 2 bytes board revision
+    sample values: 01 a2 (418)
+notes: sometimes the connection is closed right after this response
+
+
+GET_GUID 0x67 (103)
+message type: 0x80 (128)
+parameters: 0
+notes: from server, after 0x2061
+
+message type: 0x01 (1)
+parameters: 1 (guid)
+  parameter 1: 48 bytes (0xb0, 176, 1011 0000)
+    sample values:                            
+      01 4f fb 2d ee ee ee ee  ee ee ee ee ee ee ee ee
+      60 ed 07 db c8 26 45 7c  8d ff 47 4f 61 b5 3a 0f
+      db fa 5c 2e 27 6a 4a 5a  8a 03 39 ad 10 ab 98 5c
+
+GET_REGION_IDS 0x6e (110)
+message type: 0x80 (128)
+parameters: 1
+  parameter 1: 1 bytes (flag of some sort)
+    sample values: 01
+notes: from server, after 0x2067; also sent again after 0x2012
+
+message type: 0x01 (1)
+parameters: 1
+  parameter 1: 10 bytes (0x8a, 138, 1000 1010) (list of writable regions?)
+  sample values:
+      01 02 03 05 07 0b 0c 0d  0e 0f
+notes: this is variable-length array, which we've observed to be 10 bytes,
+usually?
+
+GET_REGION_VERSION 0x6f (111)
+message type: 0x80 (128)
+parameters: 1 (region ID)
+  parameter 1: 1 byte
+    sample values: 00 (0)
+    sample values: 01 (1)
+    sample values: 02 (...
+note: the values sent are the bytes returned in the previous command (0x206e,
+0x01)
+
+message type: 0x01 (1)
+parameters: 1 (version?)
+  parameter 1: 2 bytes
+    sample values:
+      01 01 (sent in response to 00)
+      00 05 (sent in response to 01)
+      00 05 (sent in response to 02)
+      07 03 (sent in response to 03)
+      06 01 (sent in response to 05)
+      51 01 (sent in response to 07)
+      05 03 (sent in response to 0b)
+      00 04 (sent in response to 0c)
+      00 04 (sent in response to 0d)
+      05 03 (sent in response to 0e)
+      00 01 (sent in response to 0f)
+
+GET_HOME_ID 0x89 (137)
+message type: 0x80
+parameters: 0
+notes: sent after all 0x206f commands, but not required (1 trace lacked this)
+
+message type: 0x01
+parameters: 1 Home ID (integer)
+  parameter 1: 4 bytes
+    sample values: 01 4f fb 2d
+
+GET_NODE_ID 0x87 (135)
+message type: 0x80
+parameters: 0
+
+message type: 0x01
+parameters: 1 Node ID (byte)
+  parameter 1: 1 byte
+    sample values: 00
+
+PING_UDP 0x12 (18)
+message type: 0x80
+parameters: 0
+
+message type: 0x01
+parameters: 0
+
+START_UPDATE 0x41 (65)
+message type: 0x80
+parameters: 2
+  parameter 1: 1 byte (flags)
+    sample values: 00
+  parameter 2: 1 byte (region ID)
+    sample values: 04
+
+message type: 0x01
+parameters: 0
+
+WRITE_UPDATE_HEADER 0x42 (66)
+message type: 0x80
+parameters: 2
+  parameter 1: 4 bytes (size)
+    sample values: 00 2f 11 34
+    sample values: 00 2f 11 39
+  parameter 2: 1 bytes (region id)
+    sample values: 04
+
+message type: 0x01
+parameters: 0
+
+WRITE_UPDATE_DATA 0x43 (67)
+message type: 0x80
+parameters: 3
+  parameter 1: 1 byte (region ID)
+    sample values: 04
+  parameter 2: 0x400 (1024) bytes (0xc2, 194/2 , 1100 0010) (data)
+  parameter 3: 4 bytes (length)
+    sample values: 00 00 04 00
+notes:
+  This is repeated for every 1K-byte chunk.
+  Parameter 3 seems to be the length since parameter 2
+  is the length rounded up to the next scaling factor.
+
+message type: 0x01
+parameters: 0
+
+WRITE_UPDATE_DATA_DONE 0x44 (68)
+message type: 0x80
+parameters: 1
+  parameter 1: 1 byte (region ID)
+    sample values: 04
+notes: sent after all 0x2043 commands
+
+message type: 0x01
+parameters: 0
+
+GET_UPDATE_CHECKSUM 0x45 (69)
+message type: 0x80
+parameters: 2
+  parameter 1: 2 bytes (seed)
+    sample values: ff ff
+  parameter 2: 1 byte (region ID)
+    sample values: 04
+
+message type: 0x01
+parameters: 1
+  parameter 1: 2 bytes (checksum - integer)
+    sample values: 00 02
+    sample values: dc 52
+
+FINISH_UPDATE 0x46 (70)
+message type: 0x80
+parameters: 2
+  parameter 1: 1 byte (validate - 0 or 1)
+    sample values: 01
+  parameter 2: 1 byte (region ID)
+    sample values: 04
+
+message type: 0x01
+parameters: 0
+
+RESET 0x1b (27)
+message type: 0x80
+parameters: 0
+notes: sent after 0x2046 commands
+
+message type: 0x01
+parameters: 0
+
+UPDATE_TIME_COMMAND 0x71 (113)
+message type: 0x80
+parameters: 12 (0x0c)
+  parameter 1: 2 bytes
+    year
+    sample values: 07 d9 (2009)
+  parameter 2: 1 byte
+    number of month: 1 = Jan, 2 = Feb, etc.
+    sample values: 03 (Mar)
+  parameter 3: 1 byte
+    day of month
+    sample values: 0c (12)
+  parameter 4: 1 byte
+    hour
+    sample values: 13 (19)
+    sample values: 12 (18)
+  parameter 5: 1 byte
+    minute ?
+    sample values: 00
+    sample values: 35 (53)
+  parameter 6: 1 byte
+    second ?
+    sample values: 2d (45)
+    sample values: 25 (37)
+  parameter 7: 1 byte
+    day of week
+    sample values: 04
+    sample values: 04
+  parameter 8: 2 bytes
+    utcOffset
+    sample values: 0e 10
+  parameter 9: 2 bytes
+    0
+    sample values: 00 00
+  parameter 10: 2 bytes
+    0
+    sample values: 00 00
+  parameter 11: 2 bytes
+    0
+    sample values: 00 00
+  parameter 12: 14 bytes (0x8e, 142, 1000 1110)
+    time zone
+    sample values:
+      45 75 72 6f 70 65 2f 42  65 72 6c 69 6e 00       Europe/Berlin
+
+message type: 0x01
+parameters: 0
+
+
+
+# for vim
+vim:textwidth=80:
+
