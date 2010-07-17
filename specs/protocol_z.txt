@@ -7,19 +7,30 @@
 
 +++ PACKET FORMAT
 
-For ZWave remotes, the payload always follows the same format. However, for some
-remotes (89x, possibly 9xx), these payloads are in HID packets, and for others
-(1xxx, HarmonyOne, Harmony XBox), these are in a TCP packet which is sent over
-tcp-over-usb (usbnet). The format is as follows:
+For ZWave remotes, there are two types. The kind that use HID and the kind that
+use IP-over-USB. Each has it's own payload format, but the command structure is
+the same for all of them.
+
+The 89x uses HID, while the rest all seem to use IP-over-USB (usbnet).
+
+For HID remotes, the format is as follows:
+
+  byte1: Number of the last byte (i.e. length - 1)
+  byte2: 1 (which appears to represent "udp")
+  byte3: Message Type
+  byte4: Command
+  .....: Parameters
+
+The payload for the IP-over-USB remotes is as follows:
 
   byte1: MSN = Command Type
          LSN = 0
   byte2: Command
-  byte3: message type
-  byte4: numParameters
-  .....: parameters
+  byte3: Message Type
+  byte4: Number of parameters
+  .....: Parameters
 
-Command Types are:
+In this case, Command Types are:
   2: CLIENT
   3: NOTIFY
   4: ENV
@@ -35,7 +46,7 @@ Message Type is:
   0x80 (128): Command (from software)
   0x01 (  1): Response (from device)
 
-Num Parameters is:
+Numver of Parameters is encoded as follows:
 
    00: 10.. .... variable length or endian encoding?
        11.. .... then scale = 512
