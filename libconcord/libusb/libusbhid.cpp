@@ -32,6 +32,7 @@
 #else
 #include <usb.h>
 #endif
+#include <errno.h>
 
 /*
  * Harmonies either fall under logitech's VendorID (0x046d), and logitech's
@@ -201,10 +202,11 @@ int FindRemote(THIDINFO &hid_info)
 
 int HID_WriteReport(const uint8_t *data)
 {
-
 	/*
 	 * In Windows you send an preceeding 0x00 byte with
-	 * every command, so we data+1 here to skip that.
+	 * every command, and the codebase used to do that, and we'd
+	 * skip the first byte here. Now, we do not assume this, we send
+	 * wholesale here, and add the 0 in the windows code.
 	 */
 	const int err=usb_interrupt_write(h_hid, ep_write,
 		reinterpret_cast<char *>(const_cast<uint8_t*>(data)),
@@ -221,8 +223,14 @@ int HID_WriteReport(const uint8_t *data)
 
 int HID_ReadReport(uint8_t *data, unsigned int timeout)
 {
-	const int err=usb_interrupt_read(h_hid, ep_read,
+	/* Note default timeout is set to 500 in hid.h */
+	const int err = usb_interrupt_read(h_hid, ep_read,
 		reinterpret_cast<char *>(data), irl, timeout);
+
+	if (err == -ETIMEDOUT) {
+		debug("Timeout on interrupt read from device");
+		return err;
+	}
 
 	if (err < 0) {
 		debug("Failed to read from device: %d (%s)", err,

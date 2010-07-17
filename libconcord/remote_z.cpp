@@ -18,6 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * (C) Copyright Kevin Timmerman 2007
+ * (C) Copyright Phil Dibowitz 2010
  */
 
 #include <string.h>
@@ -34,13 +35,15 @@ int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	if (len > 60)
 		return 1;
 	uint8_t pkt[68];
-	pkt[0] = 0;
-	pkt[1] = 3+len;
-	pkt[2] = 1; // UDP
-	pkt[3] = typ;
-	pkt[4] = cmd;
+	pkt[0] = 3+len;
+	pkt[1] = 1; // UDP
+	pkt[2] = typ;
+	pkt[3] = 0xFF & cmd;
 	if (data && len)
-		memcpy(pkt + 5, data, len);
+		memcpy(pkt + 4, data, len);
+
+	debug("Writing packet. First 5 bytes: %02X %02X %02X %02X %02X\n",
+		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]);
 
 	return HID_WriteReport(pkt);
 }
@@ -49,15 +52,21 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
 	uint8_t pkt[68];
 	int err;
-	if ((err = HID_ReadReport(pkt)))
+	if ((err = HID_ReadReport(pkt))) {
 		return err;
-	if (pkt[1] < 4)
+	}
+	debug("Reading packet. First 5 bytes: %02X %02X %02X %02X %02X\n",
+		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]);
+	if (pkt[0] < 4) {
 		return 1;
-	status = pkt[5];
-	len = pkt[1] - 4;
+	}
+	if (pkt[0] < 4) {
+		status = pkt[4];
+	}
+	len = pkt[0] - 4;
 	//if(!len) return 0;
 	//memcpy(data, pkt + 6, len);
-	memcpy(data, pkt + 2, len + 4);
+	memcpy(data, pkt + 1, len + 3);
 	return 0;
 }
 
@@ -84,6 +93,8 @@ int CRemoteZ_HID::Read(uint8_t &status, uint32_t &len, uint8_t *data)
 
 int CRemoteZ_HID::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 {
+	debug("ParseParams, %02x %02x %02x %02x %02x %02x\n", data[0],
+		data[1], data[2], data[3], data[4], data[5]);
 	switch (data[2]) {
 		case COMMAND_GET_SYSTEM_INFO:
 			pl.count = 8;
@@ -123,8 +134,9 @@ int CRemoteZ_HID::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
-	if (len > 60)
+	if (len > 60) {
 		return 1;
+	}
 
 	static const uint8_t service_type = SERVICE_FAMILY_CLIENT;
 	const bool request = (typ == TYPE_REQUEST);
@@ -197,25 +209,41 @@ int CRemoteZ_TCP::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 
 int CRemoteZ_Base::Reset(uint8_t kind)
 {
-	if (kind != 2)
+	int err = 0;
+	if (kind != 2) {
 		return 1;
+	}
 
-	Write(TYPE_REQUEST, COMMAND_RESET);
+	if ((err = Write(TYPE_REQUEST, COMMAND_RESET))) {
+		debug("Failed to write to remote");
+		return 1;
+	}
 	uint8_t rsp[60];
 	unsigned int len;
 	uint8_t status;
-	Read(status, len, rsp);
+	if ((err = Read(status, len, rsp))) {
+		debug("Failed to read to remote");
+		return 1;
+	}
 	return 0;
 }
 
 int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	lc_callback cb, void *cb_arg)
 {
-	Write(TYPE_REQUEST, COMMAND_GET_SYSTEM_INFO);
+	int err = 0;
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_SYSTEM_INFO))) {
+		debug("Failed to write to remote");
+		return 1;
+	}
 	uint8_t rsp[60];
 	unsigned int len;
 	uint8_t status;
-	Read(status, len, rsp);
+	if ((err = Read(status, len, rsp))) {
+		debug("Failed to read from remote");
+		return 1;
+	}
+
 	CRemoteZ_Base::TParamList pl;
 	ParseParams(len, rsp, pl);
 
@@ -249,30 +277,50 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 	setup_ri_pointers(ri);
 	
-	Write(TYPE_REQUEST, COMMAND_GET_GUID);
-	Read(status, len, rsp);
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_GUID))) {
+		debug("Failed to write to remote");
+		return 1;
+	}
+	if ((err = Read(status, len, rsp))) {
+		debug("Failed to read from remote");
+		return 1;
+	}
+
 	ParseParams(len, rsp, pl);
 
 	make_serial(pl.p[0], ri);
 
 	ri.config_bytes_used = 0;
-	ri.max_config_size  =1;
+	ri.max_config_size = 1;
 
 #if 0	// Get region info - 1000 only!
 	uint8_t rr[] = { 1, 1, 1 }; // AddByteParam(1);
-	Write(TYPE_REQUEST, COMMAND_GET_REGION_IDS, 3, rr);
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_REGION_IDS, 3, rr))) {
+		debug("Failed to write to remote");
+		return 1;
+	}
 	uint8_t rgn[64];
-	Read(status, len, rgn);
+	if ((err = Read(status, len, rgn))) {
+		debug("Failed to read from remote");
+		return 1;
+	}
 	ParseParams(len, rgn, pl);
-	if (pl.count==1) {
+	if (pl.count == 1) {
 		const unsigned int rc = *(pl.p[0]-1) & 0x3F;
-		for(unsigned int r = 0; r<rc; ++r) {
+		for(unsigned int r = 0; r < rc; ++r) {
 			const uint8_t rn = *(pl.p[0]+r);
-			printf("Region %i\n",rn);
+			printf("Region %i\n", rn);
 			uint8_t rv[] = { 1, 1, rn }; // AddByteParam(rn);
-			Write(TYPE_REQUEST, COMMAND_GET_REGION_VERSION, 3, rv);
+			if ((err = Write(TYPE_REQUEST,
+					COMMAND_GET_REGION_VERSION, 3, rv))) {
+				debug("Failed to write to remote");
+				return 1;
+			}
 			uint8_t rgv[64];
-			Read(status,len,rgv);
+			if ((err = Read(status, len, rgv))) {
+				debug("Failed to read from remote");
+				return 1;
+			}
 			CRemoteZ_Base::TParamList rp;
 			ParseParams(len,rgv,rp);
 		}
@@ -324,11 +372,18 @@ int CRemoteZ_Base::RestartConfig()
 
 int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 {
-	Write(TYPE_REQUEST, COMMAND_GET_CURRENT_TIME);
+	int err = 0;
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_CURRENT_TIME))) {
+		debug("Failed to write to remote");
+		return 1;
+	}
 	uint8_t time[60];
 	unsigned int len;
 	uint8_t status;
-	Read(status, len, time);
+	if ((err = Read(status, len, time))) {
+		debug("Failed to read to remote");
+		return 1;
+	}
 	CRemoteZ_Base::TParamList pl;
 	ParseParams(len, time, pl);
 
@@ -340,10 +395,11 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	ht.second = *pl.p[5];
 	ht.dow = *pl.p[6]&7;
 	ht.utc_offset = static_cast<int16_t>(GetWord(pl.p[7]));
-	if(pl.count>11)
+	if (pl.count > 11) {
 		ht.timezone = reinterpret_cast<char*>(pl.p[11]);
-	else
+	} else {
 		ht.timezone = "";
+	}
 
 	return 0;
 }
