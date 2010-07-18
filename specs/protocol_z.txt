@@ -21,6 +21,10 @@ For HID remotes, the format is as follows:
   byte4: Command
   .....: Parameters
 
+Message Type is
+  0x00 for Command (from software)
+  0x01 for Response (from device)
+
 The payload for the IP-over-USB remotes is as follows:
 
   byte1: MSN = Command Type
@@ -250,7 +254,7 @@ notes: sent after 0x2046 commands
 message type: 0x01
 parameters: 0
 
-UPDATE_TIME_COMMAND 0x71 (113)
+UPDATE_TIME 0x71 (113)
 message type: 0x80
 parameters: 12 (0x0c)
   parameter 1: 2 bytes
