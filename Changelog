@@ -6,6 +6,16 @@ phil@ipom.com
 - libconcord: Update INSTALL.linux to explain that by default udev files don't
   go into /etc. Fixes bug 2788066
 - libconcord: Fix minor memory leak.
+- specs: zwave protocol specs, with special thanks to Ian Flanigan
+  <flan@lean.to> and "Phrozen" for their invaluable work and contributions to
+  making this possible.
+- libconcord: Better error reporting for libusb
+- libconcord: Get the code for HID-based reads/writes working for z-wave remotes,
+  as well as get-identity, and get-time working (89x series).
+- libconcord: Error checking added to zwave code.
+
+s-t-concordance@wwwdotorg.org:
+- libconcord: Fix error reporting in python bindings
 
 0.21
 Released: 03/08/09
