@@ -60,7 +60,7 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 	if (pkt[0] < 4) {
 		return 1;
 	}
-	if (pkt[0] < 4) {
+	if (pkt[0] > 4) {
 		status = pkt[4];
 	}
 	len = pkt[0] - 4;
@@ -214,7 +214,7 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 		return 1;
 	}
 
-	if ((err = Write(TYPE_REQUEST, COMMAND_RESET))) {
+	if ((err = Write(TYPE_REQUEST, COMMAND_Z_RESET))) {
 		debug("Failed to write to remote");
 		return 1;
 	}
@@ -406,7 +406,40 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 
 int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 {
-	return 1;
+	int err = 0;
+
+	uint8_t tsv[16] = { ht.year, 0, // 2 bytes
+		ht.month,
+		ht.day,
+		ht.hour,
+		ht.minute,
+		ht.second,
+		ht.dow,
+		// utcOffset
+		ht.utc_offset, 0, // 2 bytes
+		// 0s
+		0, 0, // 2 bytes
+		0, 0, // 2 bytes
+		0, 0, // 2 bytes
+		// ht.timezone.c_str()
+		};
+
+	if ((err = Write(TYPE_REQUEST, COMMAND_UPDATE_TIME, 16, tsv))) {
+		debug("Failed to write to remote");
+		return 1;
+	}
+
+	/* The response we get back after a set time appears to be garbage?
+	   But we read it anyway so the next command will work. */
+	uint8_t rsp[60];
+	unsigned int len;
+	uint8_t status;
+	if ((err = Read(status, len, rsp))) {
+		debug("failed to read from remote");
+		return 1;
+	}
+
+	return 0;
 }
 
 int CRemoteZ_Base::LearnIR(uint32_t *freq, uint32_t **ir_signal,

@@ -13,6 +13,7 @@ phil@ipom.com
 - libconcord: Get the code for HID-based reads/writes working for z-wave remotes,
   as well as get-identity, and get-time working (89x series).
 - libconcord: Error checking added to zwave code.
+- libconcord: 89x SetTime() support
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: Fix error reporting in python bindings
