@@ -33,7 +33,7 @@ int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
 	if (len > 60)
-		return 1;
+		return LC_ERROR;
 	uint8_t pkt[68];
 	pkt[0] = 3+len;
 	pkt[1] = 1; // UDP
@@ -53,12 +53,12 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 	uint8_t pkt[68];
 	int err;
 	if ((err = HID_ReadReport(pkt))) {
-		return err;
+		return LC_ERROR_READ;
 	}
 	debug("Reading packet. First 5 bytes: %02X %02X %02X %02X %02X\n",
 		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]);
 	if (pkt[0] < 4) {
-		return 1;
+		return LC_ERROR;
 	}
 	if (pkt[0] > 4) {
 		status = pkt[4];
@@ -135,7 +135,7 @@ int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
 	if (len > 60) {
-		return 1;
+		return LC_ERROR;
 	}
 
 	static const uint8_t service_type = SERVICE_FAMILY_CLIENT;
@@ -211,19 +211,19 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 {
 	int err = 0;
 	if (kind != 2) {
-		return 1;
+		return LC_ERROR;
 	}
 
 	if ((err = Write(TYPE_REQUEST, COMMAND_Z_RESET))) {
 		debug("Failed to write to remote");
-		return 1;
+		return LC_ERROR_WRITE;
 	}
 	uint8_t rsp[60];
 	unsigned int len;
 	uint8_t status;
 	if ((err = Read(status, len, rsp))) {
 		debug("Failed to read to remote");
-		return 1;
+		return LC_ERROR_READ;
 	}
 	return 0;
 }
@@ -234,14 +234,14 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	int err = 0;
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_SYSTEM_INFO))) {
 		debug("Failed to write to remote");
-		return 1;
+		return LC_ERROR_WRITE;
 	}
 	uint8_t rsp[60];
 	unsigned int len;
 	uint8_t status;
 	if ((err = Read(status, len, rsp))) {
 		debug("Failed to read from remote");
-		return 1;
+		return LC_ERROR_READ;
 	}
 
 	CRemoteZ_Base::TParamList pl;
@@ -279,11 +279,11 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_GUID))) {
 		debug("Failed to write to remote");
-		return 1;
+		return LC_ERROR_WRITE;
 	}
 	if ((err = Read(status, len, rsp))) {
 		debug("Failed to read from remote");
-		return 1;
+		return LC_ERROR_READ;
 	}
 
 	ParseParams(len, rsp, pl);
@@ -297,12 +297,12 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	uint8_t rr[] = { 1, 1, 1 }; // AddByteParam(1);
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_REGION_IDS, 3, rr))) {
 		debug("Failed to write to remote");
-		return 1;
+		return LC_ERROR;
 	}
 	uint8_t rgn[64];
 	if ((err = Read(status, len, rgn))) {
 		debug("Failed to read from remote");
-		return 1;
+		return LC_ERROR;
 	}
 	ParseParams(len, rgn, pl);
 	if (pl.count == 1) {
@@ -314,12 +314,12 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 			if ((err = Write(TYPE_REQUEST,
 					COMMAND_GET_REGION_VERSION, 3, rv))) {
 				debug("Failed to write to remote");
-				return 1;
+				return LC_ERROR;
 			}
 			uint8_t rgv[64];
 			if ((err = Read(status, len, rgv))) {
 				debug("Failed to read from remote");
-				return 1;
+				return LC_ERROR;
 			}
 			CRemoteZ_Base::TParamList rp;
 			ParseParams(len,rgv,rp);
@@ -375,14 +375,14 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	int err = 0;
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_CURRENT_TIME))) {
 		debug("Failed to write to remote");
-		return 1;
+		return LC_ERROR_WRITE;
 	}
 	uint8_t time[60];
 	unsigned int len;
 	uint8_t status;
 	if ((err = Read(status, len, time))) {
 		debug("Failed to read to remote");
-		return 1;
+		return LC_ERROR_READ;
 	}
 	CRemoteZ_Base::TParamList pl;
 	ParseParams(len, time, pl);
@@ -426,17 +426,20 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 
 	if ((err = Write(TYPE_REQUEST, COMMAND_UPDATE_TIME, 16, tsv))) {
 		debug("Failed to write to remote");
-		return 1;
+		return LC_ERROR_WRITE;
 	}
 
-	/* The response we get back after a set time appears to be garbage?
-	   But we read it anyway so the next command will work. */
 	uint8_t rsp[60];
 	unsigned int len;
 	uint8_t status;
 	if ((err = Read(status, len, rsp))) {
 		debug("failed to read from remote");
-		return 1;
+		return LC_ERROR_READ;
+	}
+
+	if (rsp[1] != TYPE_RESPONSE ||
+	    rsp[2] != COMMAND_UPDATE_TIME) {
+	    	return LC_ERROR;
 	}
 
 	return 0;
