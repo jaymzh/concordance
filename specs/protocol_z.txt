@@ -66,7 +66,7 @@ Since the only ones we're interested are commands in the CLIENT Command Type,
 all of these are assumed to be that.. Thus they will start with 20, and we only
 include the LSB.
 
-GET_SYSTEM_INFO 0x61 (97)
+COMMAND_GET_SYSTEM_INFO 0x61 (97)
 message type: 0x80 (128)
 parameters: 0
 notes: only from server
@@ -92,7 +92,7 @@ parameters: 8
 notes: sometimes the connection is closed right after this response
 
 
-GET_GUID 0x67 (103)
+COMMAND_GET_GUID 0x67 (103)
 message type: 0x80 (128)
 parameters: 0
 notes: from server, after 0x2061
@@ -105,7 +105,7 @@ parameters: 1 (guid)
       60 ed 07 db c8 26 45 7c  8d ff 47 4f 61 b5 3a 0f
       db fa 5c 2e 27 6a 4a 5a  8a 03 39 ad 10 ab 98 5c
 
-GET_REGION_IDS 0x6e (110)
+COMMAND_GET_REGION_IDS 0x6e (110)
 message type: 0x80 (128)
 parameters: 1
   parameter 1: 1 bytes (flag of some sort)
@@ -120,7 +120,7 @@ parameters: 1
 notes: this is variable-length array, which we've observed to be 10 bytes,
 usually?
 
-GET_REGION_VERSION 0x6f (111)
+COMMAND_GET_REGION_VERSION 0x6f (111)
 message type: 0x80 (128)
 parameters: 1 (region ID)
   parameter 1: 1 byte
@@ -146,7 +146,7 @@ parameters: 1 (version?)
       05 03 (sent in response to 0e)
       00 01 (sent in response to 0f)
 
-GET_HOME_ID 0x89 (137)
+COMMAND_GET_HOME_ID 0x89 (137)
 message type: 0x80
 parameters: 0
 notes: sent after all 0x206f commands, but not required (1 trace lacked this)
@@ -156,7 +156,7 @@ parameters: 1 Home ID (integer)
   parameter 1: 4 bytes
     sample values: 01 4f fb 2d
 
-GET_NODE_ID 0x87 (135)
+COMMAND_GET_NODE_ID 0x87 (135)
 message type: 0x80
 parameters: 0
 
@@ -165,14 +165,14 @@ parameters: 1 Node ID (byte)
   parameter 1: 1 byte
     sample values: 00
 
-PING_UDP 0x12 (18)
+COMMAND_PING_UDP 0x12 (18)
 message type: 0x80
 parameters: 0
 
 message type: 0x01
 parameters: 0
 
-START_UPDATE 0x41 (65)
+COMMAND_START_UPDATE 0x41 (65)
 message type: 0x80
 parameters: 2
   parameter 1: 1 byte (flags)
@@ -183,7 +183,7 @@ parameters: 2
 message type: 0x01
 parameters: 0
 
-WRITE_UPDATE_HEADER 0x42 (66)
+COMMAND_WRITE_UPDATE_HEADER 0x42 (66)
 message type: 0x80
 parameters: 2
   parameter 1: 4 bytes (size)
@@ -195,7 +195,7 @@ parameters: 2
 message type: 0x01
 parameters: 0
 
-WRITE_UPDATE_DATA 0x43 (67)
+COMMAND_WRITE_UPDATE_DATA 0x43 (67)
 message type: 0x80
 parameters: 3
   parameter 1: 1 byte (region ID)
@@ -211,7 +211,7 @@ notes:
 message type: 0x01
 parameters: 0
 
-WRITE_UPDATE_DATA_DONE 0x44 (68)
+COMMAND_WRITE_UPDATE_DATA_DONE 0x44 (68)
 message type: 0x80
 parameters: 1
   parameter 1: 1 byte (region ID)
@@ -221,7 +221,7 @@ notes: sent after all 0x2043 commands
 message type: 0x01
 parameters: 0
 
-GET_UPDATE_CHECKSUM 0x45 (69)
+COMMAND_GET_UPDATE_CHECKSUM 0x45 (69)
 message type: 0x80
 parameters: 2
   parameter 1: 2 bytes (seed)
@@ -235,7 +235,7 @@ parameters: 1
     sample values: 00 02
     sample values: dc 52
 
-FINISH_UPDATE 0x46 (70)
+COMMAND_FINISH_UPDATE 0x46 (70)
 message type: 0x80
 parameters: 2
   parameter 1: 1 byte (validate - 0 or 1)
@@ -246,7 +246,7 @@ parameters: 2
 message type: 0x01
 parameters: 0
 
-RESET 0x1b (27)
+COMMAND_RESET 0x1b (27)
 message type: 0x80
 parameters: 0
 notes: sent after 0x2046 commands
@@ -254,7 +254,7 @@ notes: sent after 0x2046 commands
 message type: 0x01
 parameters: 0
 
-UPDATE_TIME 0x71 (113)
+COMMAND_UPDATE_TIME 0x71 (113)
 message type: 0x80
 parameters: 12 (0x0c)
   parameter 1: 2 bytes
