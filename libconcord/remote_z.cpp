@@ -29,6 +29,15 @@
 #include "usblan.h"
 #include "protocol_z.h"
 
+/*
+ * The HID-based zwave remotes have two modes: so called "UDP" and "TCP". Do
+ * not confuse these with the network protocols of similar names.
+ *
+ * The non-HID based zwave remotes only use "TCP".
+ *
+ * For more information on the various Read/Write functions here and how they
+ * fit together, see the specs/protocol_z.txt file.
+ */
 int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
@@ -210,6 +219,10 @@ int CRemoteZ_TCP::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 int CRemoteZ_Base::Reset(uint8_t kind)
 {
 	int err = 0;
+	/*
+	 * TODO: I odn't believe the zwaves have a "kind" of reset
+	 * ... is this needed here?
+	 */
 	if (kind != 2) {
 		return LC_ERROR;
 	}
@@ -225,6 +238,19 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 		debug("Failed to read to remote");
 		return LC_ERROR_READ;
 	}
+
+	/*
+	 * TODO: Either the remote is gone at this point, and reading
+	 * will fail, or we need a "finalize action" command afterwards,
+	 * in which case we should check the actual return status from
+	 * the remote.
+	 */
+	/*
+	if (time[1] != TYPE_RESPONSE || time[2] != COMMAND_Z_RESET) {
+		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+	}
+	*/
+
 	return 0;
 }
 
@@ -384,6 +410,12 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 		debug("Failed to read to remote");
 		return LC_ERROR_READ;
 	}
+
+	if (time[1] != TYPE_RESPONSE || time[2] != COMMAND_GET_CURRENT_TIME) {
+		debug("Incorrect response type from Get Time");
+		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+	}
+
 	CRemoteZ_Base::TParamList pl;
 	ParseParams(len, time, pl);
 
@@ -437,8 +469,7 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 		return LC_ERROR_READ;
 	}
 
-	if (rsp[1] != TYPE_RESPONSE ||
-	    rsp[2] != COMMAND_UPDATE_TIME) {
+	if (rsp[1] != TYPE_RESPONSE || rsp[2] != COMMAND_UPDATE_TIME) {
 	    	return LC_ERROR;
 	}
 
