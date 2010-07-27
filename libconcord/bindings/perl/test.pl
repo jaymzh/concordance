@@ -115,10 +115,17 @@ sub upload_config
 		exit(1);
 	}
 	print "done\n";
+	print "Preparing for config update ";
+	concord::prep_config();
+	if ($err) {
+		print "Failed to prepare for config update";
+		exit(1);
+	}
+	print "done\n";
 	print "Invalidating flash ";
 	concord::invalidate_flash();
 	if ($err) {
-		print "Failed to invlidate flash";
+		print "Failed to invalidate flash";
 		exit(1);
 	}
 	print "done\n";
@@ -142,6 +149,13 @@ sub upload_config
 		print "Failed to write config to remote";
 		exit(1);
 	}
+	print "Finalizing config update ";
+	concord::finish_config();
+	if ($err) {
+		print "Failed to finalize config update";
+		exit(1);
+	}
+	print "done\n";
 
 	concord::delete_blob($blob);
 	print "done\n";

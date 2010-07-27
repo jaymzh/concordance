@@ -391,7 +391,22 @@ int CRemoteZ_Base::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 	return 0;
 }
 
-int CRemoteZ_Base::RestartConfig()
+int CRemoteZ_Base::PrepFirmware(const TRemoteInfo &ri)
+{
+	return 0;
+}
+
+int CRemoteZ_Base::FinishFirmware(const TRemoteInfo &ri)
+{
+	return 0;
+}
+
+int CRemoteZ_Base::PrepConfig(const TRemoteInfo &ri)
+{
+	return 0;
+}
+
+int CRemoteZ_Base::FinishConfig(const TRemoteInfo &ri)
 {
 	return 0;
 }

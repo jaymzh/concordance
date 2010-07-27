@@ -636,6 +636,18 @@ verify_remote_config = _create_func(
     _in('cb_arg', py_object)
 )
 
+# int prep_config();
+prep_config = _create_func(
+    'prep_config',
+    _ret_lc_concord()
+)
+
+# int finish_config();
+finish_config = _create_func(
+    'finish_config',
+    _ret_lc_concord()
+)
+
 # int erase_config(uint32_t size, lc_callback cb, void *cb_arg);
 erase_config = _create_func(
     'erase_config',

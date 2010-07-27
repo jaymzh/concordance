@@ -24,9 +24,7 @@
 #ifndef REMOTE_H
 #define REMOTE_H
 
-#define FLASH_EEPROM_ADDR 0x10
-#define FLASH_SERIAL_ADDR 0x000110
-#define FLASH_SIZE 48
+#define SERIAL_SIZE 48
 /*
  * limits for IR signal learning, stop when any is reached:
  * timeouts in milliseconds, length in number of mark/space durations
@@ -74,7 +72,11 @@ struct TFlash {
 	const char		*part;
 };
 
+#define SERIAL_LOCATION_EEPROM 1
+#define SERIAL_LOCATION_FLASH  2
 struct TArchInfo {
+	int		serial_location;
+	uint32_t	serial_address;
 	uint32_t	flash_base;
 	uint32_t	firmware_base;
 	uint32_t	config_base;
@@ -149,7 +151,10 @@ public:
 		lc_callback cb=NULL, void *cb_arg=NULL)=0;
 	virtual int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)=0;
 	virtual int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)=0;
-	virtual int RestartConfig()=0;
+	virtual int PrepFirmware(const TRemoteInfo &ri) = 0;
+	virtual int FinishFirmware(const TRemoteInfo &ri) = 0;
+	virtual int PrepConfig(const TRemoteInfo &ri)=0;
+	virtual int FinishConfig(const TRemoteInfo &ri)=0;
 
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
 	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)=0;
@@ -188,7 +193,10 @@ public:
 		void *cb_arg=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
-	int RestartConfig();
+	int PrepFirmware(const TRemoteInfo &ri);
+	int FinishFirmware(const TRemoteInfo &ri);
+	int PrepConfig(const TRemoteInfo &ri);
+	int FinishConfig(const TRemoteInfo &ri);
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
@@ -230,7 +238,10 @@ public:
 		void *cb_arg=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
-	int RestartConfig();
+	int PrepFirmware(const TRemoteInfo &ri);
+	int FinishFirmware(const TRemoteInfo &ri);
+	int PrepConfig(const TRemoteInfo &ri);
+	int FinishConfig(const TRemoteInfo &ri);
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);

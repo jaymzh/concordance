@@ -467,6 +467,11 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 			post_preconfig(data, size);
 	}
 
+	printf("Preparing Update:    ");
+	if ((err = prep_config())) {
+		return err;
+	}
+	printf("                     done\n");
 	/*
 	 * We must invalidate flash before we erase and write so that
 	 * nothing will attempt to reference it while we're working.
@@ -499,6 +504,12 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 		return err;
 	}
 	printf("       done\n");
+
+	printf("Finalizing Update:   ");
+	if ((err = finish_config())) {
+		return err;
+	}
+	printf("                     done\n");
 
 	if ((*options).noreset) {
 		return 0;

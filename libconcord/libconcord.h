@@ -275,6 +275,21 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
 	void *cb_arg);
 /*
+ * Preps the remote for a config upgrade.
+ *
+ * Note that this and finish_config are NO-OPs for most remotes, and even on
+ * remotes where it is implemented, testing implies that it's not necessary.
+ * However, calling these functions is necessary to completely match the
+ * original Windows software, and future remotes may require these functions
+ * to be executed to operate correctly.
+ */
+int prep_config();
+/*
+ * Tells the remote the config upgrade was successful and that it should
+ * use the new config upon next reboot.
+ */
+int finish_config();
+/*
  * Flash can be changed to 0, but not back to 1, so you must erase the
  * flash (to 1) in order to write the flash.
  */

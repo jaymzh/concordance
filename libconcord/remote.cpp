@@ -103,7 +103,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	const unsigned int rx_len = rsp[0] & 0x0F;
 
 	if ((rsp[0] & 0xF0) != RESPONSE_VERSION_DATA ||
-	    (rx_len != 7 && rx_len != 5)) {
+	    (rx_len != 5 && rx_len != 7 && rx_len != 8)) {
 		debug("Bogus ident response: %02X", rsp[1]);
 		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
 	}
@@ -117,7 +117,13 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	ri.architecture = rx_len < 6 ? 2 : rsp[5] >> 4;
 	ri.fw_type = rx_len < 6 ? 0 : rsp[5] & 0x0F;
 	ri.skin = rx_len < 6 ? 2 : rsp[6];
-	ri.protocol = rx_len < 7 ? 0 : rsp[7];
+	if (rx_len < 7) {
+		ri.protocol = 0;
+	} else if (rx_len < 8) {
+		ri.protocol = rsp[7];
+	} else {
+		ri.protocol = ri.architecture;
+	}
 
 	setup_ri_pointers(ri);
 
@@ -156,12 +162,20 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	}
 		
 	// read serial (see specs/protocol.txt for details)
-	if ((err = (ri.architecture == 2)
-		// The old 745 stores the serial number in EEPROM
-		? ReadMiscByte(FLASH_EEPROM_ADDR, FLASH_SIZE,
-			COMMAND_MISC_EEPROM, rsp)
-		// All newer models store it in Flash
-		: ReadFlash(FLASH_SERIAL_ADDR, 48, rsp, ri.protocol))) {
+	switch (ri.arch->serial_location) {
+	case SERIAL_LOCATION_EEPROM:
+		err = ReadMiscByte(ri.arch->serial_address, SERIAL_SIZE,
+			COMMAND_MISC_EEPROM, rsp);
+		break;
+	case SERIAL_LOCATION_FLASH:
+		err = ReadFlash(ri.arch->serial_address, SERIAL_SIZE, rsp,
+			ri.protocol);
+		break;
+	default:
+		debug("Invalid TArchInfo\n");
+		return LC_ERROR_READ;
+	}
+	if (err) {
 		debug("Couldn't read serial\n");
 		return LC_ERROR_READ;
 	}
@@ -344,11 +358,107 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 	return err;
 }
 
-int CRemote::RestartConfig()
+int CRemote::PrepFirmware(const TRemoteInfo &ri)
 {
+	int err = 0;
 	uint8_t data[1] = { 0x00 };
 
-	return WriteMiscByte(0x09, 1, COMMAND_MISC_RESTART_CONFIG, data);
+	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
+		/*
+		 * The preperation for where the staging area IS the config
+		 * area.
+		 *    restart config
+		 *    write "1" to flash addr 200000
+		 */
+		if ((err = WriteMiscByte(0x09, 1, COMMAND_MISC_RESTART_CONFIG, data)))
+			return LC_ERROR;
+		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
+				NULL)))
+			return LC_ERROR;
+	} else {
+		/*
+		 * The preperation for where the staging area is distinct.
+		 *    write "1" to ram addr 0
+		 *    read it back
+		 */
+		if ((err = WriteRam(0, 1, data)))
+			return LC_ERROR_WRITE;
+		if ((err = ReadRam(0, 1, data)))
+			return LC_ERROR_WRITE;
+		if (data[0] != 0)
+			return LC_ERROR_VERIFY;
+	}
+
+	return 0;
+}
+
+int CRemote::FinishFirmware(const TRemoteInfo &ri)
+{
+	int err = 0;
+
+	uint8_t data[1];
+	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
+		data[0] = 0x02;
+		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
+			NULL)))
+			return LC_ERROR;
+	} else {
+		data[0] = 0x02;
+		if ((err = WriteRam(0, 1, data))) {
+			debug("Failed to write 2 to RAM 0");
+			return LC_ERROR_WRITE;
+		}
+		if ((err = ReadRam(0, 1, data))) {
+			debug("Failed to from RAM 0");
+			return LC_ERROR_WRITE;
+		}
+		if (data[0] != 2) {
+			printf("byte is %d\n",data[0]);
+			debug("Finalize byte didn't match");
+			return LC_ERROR_VERIFY;
+		}
+	}
+
+	return 0;
+}
+
+int CRemote::PrepConfig(const TRemoteInfo &ri)
+{
+	int err;
+	uint8_t data_zero[1] = { 0x00 };
+
+	if (ri.architecture != 14) {
+		return 0;
+	}
+
+	if ((err = WriteMiscByte(0x02, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
+		return err;
+	}
+	if ((err = WriteMiscByte(0x05, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
+		return err;
+	}
+
+	return 0;
+}
+
+int CRemote::FinishConfig(const TRemoteInfo &ri)
+{
+	int err;
+	uint8_t data_one[1]  = { 0x01 };
+	uint8_t data_zero[1] = { 0x00 };
+
+	if (ri.architecture != 14) {
+		return 0;
+	}
+
+	if ((err = WriteMiscByte(0x03, 1, COMMAND_MISC_RESTART_CONFIG, data_one))) {
+		return err;
+	}
+	if ((err = WriteMiscByte(0x06, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
+		return err;
+	}
+
+	return 0;
 }
 
 int CRemote::WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)

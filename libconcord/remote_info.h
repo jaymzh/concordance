@@ -84,7 +84,20 @@ static const TModel ModelList[]={
 	{ MFG_HAR,	"Harmony 670",		NULL },				// 50
 	{ MFG_COOL,	"Harmony 552",		"Mocha Grande" },
 	{ MFG_HAR,	"Harmony 1000i",	"Cognac" },
-	{ MFG_UNK,	"Unknown",			NULL }
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },			// 60
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony 700",		"Molson" }
 };
 
 static const unsigned int max_model=sizeof(ModelList)/sizeof(TModel)-1;
@@ -110,39 +123,300 @@ static const uint32_t sectors3[]={ 0x010000, 0x020000,	0x030000, 0x040000, 0 };
 static const uint32_t sectors4[]={ 0x010000, 0x020000,	0x030000, 0x040000, 0x050000,
 	0x060000, 0x070000, 0x080000, 0 };
 
+// 1c:15 EON F16-100HIP (Uniform Sectors)
+// Manufacturer 1c, flash 15. But, firmware returns these swapped
+static const uint32_t sectors5[]={
+	0x010000, 0x020000, 0x030000, 0x040000, 0x050000, 0x060000, 0x070000, 0x080000,
+	0x090000, 0x0a0000, 0x0b0000, 0x0c0000, 0x0d0000, 0x0e0000, 0x0f0000, 0x100000,
+	0x110000, 0x120000, 0x130000, 0x140000, 0x150000, 0x160000, 0x170000, 0x180000,
+	0x190000, 0x1a0000, 0x1b0000, 0x1c0000, 0x1d0000, 0x1e0000, 0x1f0000, 0x200000,
+	0x210000, 0x220000, 0x230000, 0x240000, 0x250000, 0x260000, 0x270000, 0x280000,
+	0x290000, 0x2a0000, 0x2b0000, 0x2c0000, 0x2d0000, 0x2e0000, 0x2f0000, 0x300000,
+	0x310000, 0x320000, 0x330000, 0x340000, 0x350000, 0x360000, 0x370000, 0x380000,
+	0x390000, 0x3a0000, 0x3b0000, 0x3c0000, 0x1d0000, 0x3e0000, 0x3f0000, 0x400000,
+	0 };
+
 static const TFlash FlashList[]={
 	{ 0x01,		0x37,	1024,	8,	sectors1,	"AMD Am29LV008B" },
 	{ 0x01,		0x49,	2048,	16,	sectors2,	"AMD Am29LV160BB" },
 	{ 0x01,		0x4C,	2048,	8,	sectors2,	"AMD Am29LV116DB" },
+	{ 0x15,		0x1C,	4096,	8,	sectors5,	"EON F16-100HIP" },
 	{ 0xFF,		0x11,	256,	1,	sectors3,	"25F020" },
 	{ 0xFF,		0x12,	512,	1,	sectors4,	"25F040" } ,
 	{ 0,		0,		0,		0,	NULL,		"" }
 };
 
-static const TArchInfo ArchList[11]={
-//        fl_base,  fw_base,    config_base,    fw_up_base,	fw_4847_off,	cookie,		ck_sz,	endvec, micro,		fl_sz,	ram_sz, ee_sz, usb
-// 0
-	{ 0,        0,		0,		0,		0,		0,		0,	0,	"",		0,	0,	0,	"" },
-// 1
-	{ 0,	    0,		0,		0,		0,		0,		0,	0,	"",		0,	0,	0,	"" },
-// 2 - 745
-	{ 0x000000, 0,		0x006000,	0,		0,		0x03A5,		2,	2,	"PIC16LF877",	8,	368,	256,	"USBN9603" },
-// 3 - 748, 768
-	{ 0x000000, 0x010000,	0x020000,	0x020000,	2,		0x0369,		2,	2,	"PIC18LC801",	0,	1536,	0,	"USBN9604" },
-// 4
-	{ 0,	    0,		0,		0,		0,		0,		0,	0,	"",		0,	0,	0,	"" },
-// 5
-	{ 0,	    0,		0,		0,		0,		0,		0,	0,	"",		0,	0,	0,	"" },
-// 6
-	{ 0,	    0,		0,		0,		0,		0,		0,	0,	"",		0,	0,	0,	"" },
-// 7 - 6xx
-	{ 0x000000, 0x010000,	0x020000,	0x020000,	2,		0x4D424D42,	4,	5,	"PIC18LC801",	0,	1536,	0,	"USBN9604" },
-// 8 - 880
-	{ 0x000000, 0x010000,	0x020000,	0x1D0000,	4,		0x50545054,	4,	4,	"PIC18LC801",	0,	1536,	0,	"USBN9604" },
-// 9 - 360, 52x, 55x
-	{ 0x800000, 0x810000,	0x820000,	0x810000,	4,		0x4D434841,	4,	4,	"PIC18LF4550",	16,	2048,	256,	"Internal" },
-// 10 - 890
-	{ 0x000000, 0x010000,	0x020000,	0,		0,		0x1, /*hack*/ 	4,	4,	"PIC18LC801",	0,	1536,	0,	"USBN9604" },
+static const TArchInfo ArchList[]={
+	/* arch 0 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 1 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 2: 745 */
+	{
+		SERIAL_LOCATION_EEPROM,		// serial_location
+		0x10,				// serial_address
+		0x000000,			// flash_base
+		0,				// firmware_base
+		0x006000,			// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0x03A5,				// cookie
+		2,				// cookie_size
+		2,				// end_vector
+		"PIC16LF877",			// micro
+		8,				// flash_size
+		368,				// ram_size
+		256,				// eeprom_size
+		"USBN9603",				// usb
+	},
+	/* arch 3: 748, 768 */
+	{
+		SERIAL_LOCATION_FLASH,		// serial_location
+		0x000110,			// serial_address
+		0x000000,			// flash_base
+		0x010000,			// firmware_base
+		0x020000,			// config_base
+		0x020000,			// firmware_update_base
+		2,				// firmware_4847_offset
+		0x0369,				// cookie
+		2,				// cookie_size
+		2,				// end_vector
+		"PIC18LC801",			// micro
+		0,				// flash_size
+		1536,				// ram_size
+		0,				// eeprom_size
+		"USBN9604",			// usb
+	},
+	/* arch 4 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 5 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 6 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 7: 6xx */
+	{
+		SERIAL_LOCATION_FLASH,		// serial_location
+		0x000110,			// serial_address
+		0x000000,			// flash_base
+		0x010000,			// firmware_base
+		0x020000,			// config_base
+		0x020000,			// firmware_update_base
+		2,				// firmware_4847_offset
+		0x4D424D42,			// cookie
+		4,				// cookie_size
+		5,				// end_vector
+		"PIC18LC801",			// micro
+		0,				// flash_size
+		1536,				// ram_size
+		0,				// eeprom_size
+		"USBN9604",			// usb
+	},
+	/* arch 8: 880 */
+	{
+		SERIAL_LOCATION_FLASH,		// serial_location
+		0x000110,			// serial_address
+		0x000000,			// flash_base
+		0x010000,			// firmware_base
+		0x020000,			// config_base
+		0x1D0000,			// firmware_update_base
+		2,				// firmware_4847_offset
+		0x50545054,			// cookie
+		4,				// cookie_size
+		5,				// end_vector
+		"PIC18LC801",			// micro
+		0,				// flash_size
+		1536,				// ram_size
+		0,				// eeprom_size
+		"USBN9604",			// usb
+	},
+	/* arch 9: 360, 52x, 55x */
+	{
+		SERIAL_LOCATION_FLASH,		// serial_location
+		0x000110,			// serial_address
+		0x000000,			// flash_base
+		0x810000,			// firmware_base
+		0x820000,			// config_base
+		0x810000,			// firmware_update_base
+		2,				// firmware_4847_offset
+		0x4D434841,			// cookie
+		4,				// cookie_size
+		4,				// end_vector
+		"PIC18LF4550",			// micro
+		0,				// flash_size
+		2048,				// ram_size
+		256,				// eeprom_size
+		"Internal",			// usb
+	},
+	/* arch 10: 890 */
+	{
+		SERIAL_LOCATION_FLASH,		// serial_location
+		0x000110,			// serial_address
+		0x000000,			// flash_base
+		0x010000,			// firmware_base
+		0x020000,			// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0x1, /* hack */			// cookie
+		4,				// cookie_size
+		4,				// end_vector
+		"PIC18LC801",			// micro
+		0,				// flash_size
+		1536,				// ram_size
+		0,				// eeprom_size
+		"USBN9604",			// usb
+	},
+	/* arch 11 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 12 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 13 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0,				// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 14: 700 */
+	{
+		SERIAL_LOCATION_FLASH,		// serial_location
+		0xfff400,			// serial_address
+		0x000000,			// flash_base
+		0x000000,			// firmware_base (0x010000 but not yet supported)
+		0x030000,			// config_base
+		0,				// firmware_update_base
+		8,				// firmware_4847_offset
+		0x4D505347, 			// cookie
+		4,				// cookie_size
+		4,				// end_vector
+		"PIC18F67J50",			// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"Internal",			// usb
+	}
 };
 
 #endif
