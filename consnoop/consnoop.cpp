@@ -32,9 +32,15 @@ typedef unsigned char uint8_t;
 #include <getopt.h>
 #endif
 
+// TODO: Once we figure this stuff out, move it to someplace more useful.
+#define TYPE_TCP_ACK 0x40
+#define TYPE_TCP_FIN 0x20
+#define TYPE_TCP_SYN 0x80
+
 using namespace std;
 
 #include "../libconcord/protocol.h"
+#include "../libconcord/protocol_z.h"
 
 static const unsigned int rxlenmap0[16] =
 	{  0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14 };
@@ -110,7 +116,8 @@ void decode(const uint8_t * const data, int proto)
 			printf("Get   Version\n");
 			break;
 		case RESPONSE_VERSION_DATA & COMMAND_MASK:
-			printf("Get   Version Response %02X %02X %02X %02X %02X %02X %02X\n",
+			printf("Get   Version Response %02X %02X %02X %02X %02X"
+				"%02X %02X\n",
 				data[1],data[2],data[3],data[4],data[5],
 				data[6],data[7]);
 			break;
@@ -198,6 +205,256 @@ void decode(const uint8_t * const data, int proto)
 	}
 }
 
+void print_z_params(const uint8_t * const data, const uint8_t length)
+{
+	for (int i = 4; i <= length; i++) {
+		printf(" %02X", data[i]);
+	}
+}
+
+void decode_z_net_tcp(int *mode, const uint8_t * const data)
+{
+	//const uint8_t numparams = data[3];
+	if ((data[0] & 0xF0) != 0x20) {
+		printf("Skipping family %02X command %02X\n", data[0], data[1]);
+		return;
+	}
+
+	switch (data[1]) {
+		case COMMAND_INITIATE_ZWAVE_TCP_CHANNEL:
+			if (!data[2]) {
+				printf("Initiate ZWave TCP Channel\n");
+				break;
+			}
+			printf("Initiate ZWave TCP Channel Response");
+			//print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_EXECUTE_ACTION:
+			if (!data[2]) {
+				printf("Execute Action\n");
+				break;
+			}
+			printf("Execute Action Response");
+			//print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_INITIATE_UPDATE_TCP_CHANNEL:
+			if (!data[2]) {
+				printf("Initiate Update TCP Channel\n");
+				break;
+			}
+			printf("Initiate Update TCP Channel Response");
+			//print_z_params(data, length);
+			printf("\n");
+			break;
+
+
+			
+		default:
+			printf("Unknown TCP command: %02X\n", data[1]);
+			break;
+			
+	}
+}
+
+void decode_z_hid_tcp(int *mode, const uint8_t * const data)
+{
+	
+	printf("B1: %02X, ", data[0]);
+	printf("FLAGS:");
+
+	if ((data[1] & 0xE0 & TYPE_TCP_SYN) != 0) {
+		printf(" SYN");
+	}
+	if ((data[1] & 0xE0 & TYPE_TCP_FIN) != 0) {
+		printf(" FIN");
+	}
+	if ((data[1] & 0xE0 & TYPE_TCP_ACK) != 0) {
+		printf(" ACK");
+	}
+	printf(",");
+
+	printf(" SEQ: %02X, ACK: %02X\n", data[2], data[3]);
+
+	printf("   DATA:");
+	// starts printing at data+4
+	print_z_params(data, 60);
+
+	printf("\n");
+}
+
+void decode_z_hid_udp(int *mode, const uint8_t * const data)
+{
+	// Note: The uninteresting stuff is commented out
+	const uint8_t length = data[0];
+	switch (data[3]) {
+		case COMMAND_GET_SYSTEM_INFO:
+			if (!data[2]) {
+				printf("Get System Info\n");
+				break;
+			}
+			printf("Get System Info Response:");
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_GET_GUID:
+			if (!data[2]) {
+				printf("Get GUID\n");
+				break;
+			}
+			printf("Get GUID Response:");
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_GET_REGION_IDS:
+			if (!data[2]) {
+				printf("Get Region IDs\n");
+				break;
+			}
+			printf("Get Region IDs Response:");
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_GET_REGION_VERSION:
+			if (!data[2]) {
+				// has params
+				printf("Get Region Version:");
+			} else {
+				printf("Get Region Version Response:");
+			}
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_GET_HOME_ID:
+			if (!data[2]) {
+				printf("Get Home ID\n");
+				break;
+			}
+			printf("Get Home ID Response:");
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_GET_NODE_ID:
+			if (!data[2]) {
+				printf("Get Node ID\n");
+				break;
+			}
+			printf("Get Node ID Response:\n");
+			print_z_params(data, length);
+			break;
+		case COMMAND_UDP_PING:
+			if (!data[2]) {
+				printf("Get UDP\n");
+				break;
+			}
+			printf("Get UDP Response\n");
+			break;
+		case COMMAND_START_UPDATE:
+			if (!data[2]) {
+				printf("Start Update:");
+				print_z_params(data, length);
+				printf("\n");
+				break;
+			}
+			printf("Start Update Response\n");
+			break;
+		case COMMAND_WRITE_UPDATE_HEADER:
+			if (!data[2]) {
+				printf("Write Update Header:");
+				print_z_params(data, length);
+				printf("\n");
+				break;
+			}
+			printf("Write Update Header Response\n");
+			break;
+		case COMMAND_WRITE_UPDATE_DATA:
+			if (!data[2]) {
+				printf("Write Update Data:");
+				printf(" Omitting data\n");
+				break;
+			}
+			printf("Write Update Data Response:\n");
+			break;
+		case COMMAND_WRITE_UPDATE_DATA_DONE:
+			if (!data[2]) {
+				printf("Write Update Data Done:");
+				print_z_params(data, length);
+				printf("\n");
+				break;
+			}
+			printf("Write Update Data Done Response\n");
+			break;
+		case COMMAND_GET_UPDATE_CHECKSUM:
+			if (!data[2]) {
+				printf("Get Update Checksum:");
+			} else {
+				printf("Get Update Checksum Response:");
+			}
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		case COMMAND_FINISH_UPDATE:
+			if (!data[2]) {
+				printf("Write Finish Update:");
+				print_z_params(data, length);
+				printf("\n");
+				break;
+			}
+			printf("Finish Update Response\n");
+			break;
+		case COMMAND_RESET:
+			if (!data[2]) {
+				printf("Reset\n");
+				break;
+			}
+			printf("Reset Response\n");
+			break;
+		case COMMAND_UPDATE_TIME:
+			if (!data[2]) {
+				printf("Update Time:");
+				print_z_params(data, length);
+				printf("\n");
+				break;
+			}
+			printf("Update Time Response\n");
+			break;
+		case COMMAND_GET_CURRENT_TIME:
+			if (!data[2]) {
+				printf("Get Time\n");
+				break;
+			}
+			printf("Get Time Response:");
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		/* still needs to be documented */
+		case COMMAND_INITIATE_UPDATE_TCP_CHANNEL:
+			*mode = 1;
+			if (!data[2]) {
+				printf("Initiate Update TCP Channel\n");
+				break;
+			}
+			printf("Initiate Update TCP Channel Response");
+			print_z_params(data, length);
+			printf("\n");
+			break;
+		default:
+			printf("Unknown UDP command: %02X\n", data[3]);
+			break;
+	}
+}
+
+void decode_z(int *mode, const uint8_t * const data)
+{
+	if (*mode) {
+		decode_z_hid_tcp(mode, data);
+	} else {
+		decode_z_hid_udp(mode, data);
+	}
+}
+
+
 void help()
 {
 	printf("Usage: consnoop <options>\n\n");
@@ -207,14 +464,17 @@ void help()
 	printf("\t-d\tDebug. Print full data for all decoded packets.\n");
 	printf("\t-f <file>\tFilename to parse.\n");
 	printf("\t-h\tThis help.\n\n");
+	printf("\t-z\tDecode using z-wave HID.\n\n");
 }
 
 int main(int argc, char *argv[])
 {
 	int tmpint = 0;
 	int proto = 1;
+	int zwave = 0;
+	int zwave_hid_mode = 0;
 	char *file_name = NULL;
-	while ((tmpint = getopt(argc, argv, "dhf:v")) != EOF) {
+	while ((tmpint = getopt(argc, argv, "dhf:vz")) != EOF) {
 		switch (tmpint) {
 		case 'd':
 			debug = true;
@@ -234,6 +494,9 @@ int main(int argc, char *argv[])
 			break;
 		case '0':
 			proto = 0;
+			break;
+		case 'z':
+			zwave = 1;
 			break;
 		}
 	}
@@ -278,7 +541,11 @@ int main(int argc, char *argv[])
 				}
 				printf("\n");
 			}
-			decode(data, proto);
+			if (zwave) {
+				decode_z(&zwave_hid_mode, data);
+			} else {
+				decode(data, proto);
+			}
 		}
 	}
 	infile.close();
