@@ -261,7 +261,7 @@ void decode_z_net_tcp(int *mode, const uint8_t * const data)
 void decode_z_hid_tcp(int *mode, const uint8_t * const data)
 {
 	
-	printf("B1: %02X, ", data[0]);
+	printf("LEN: %02X, ", data[0]);
 	printf("FLAGS:");
 
 	if ((data[1] & 0xE0 & TYPE_TCP_SYN) != 0) {
@@ -279,7 +279,7 @@ void decode_z_hid_tcp(int *mode, const uint8_t * const data)
 
 	printf("   DATA:");
 	// starts printing at data+4
-	print_z_params(data, 60);
+	print_z_params(data, data[0]);
 
 	printf("\n");
 }
