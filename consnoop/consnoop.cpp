@@ -260,11 +260,11 @@ void decode_z_net_tcp(int *mode, const uint8_t * const data)
 
 void decode_z_hid_udp(int *mode, const uint8_t * const data)
 {
-	uint8_t length = data[0];
+	uint8_t length = data[0]+1;
 
 	uint8_t cmd, type;
 	uint8_t * param_ptr = const_cast<uint8_t*>(data);
-	if (*mode) {
+	if (*mode == 2) {
 		type = data[4];
 		cmd = data[5];
 		param_ptr = param_ptr+2;
@@ -419,11 +419,12 @@ void decode_z_hid_udp(int *mode, const uint8_t * const data)
 			break;
 		/* still needs to be documented */
 		case COMMAND_INITIATE_UPDATE_TCP_CHANNEL:
-			*mode = 1;
 			if (!type) {
+				*mode = 1;
 				printf("Initiate Update TCP Channel\n");
 				break;
 			}
+			* mode = 2;
 			printf("Initiate Update TCP Channel Response");
 			print_z_params(param_ptr, length);
 			printf("\n");
@@ -440,23 +441,34 @@ void decode_z_hid_tcp(int *mode, const uint8_t * const data)
 	printf("LEN: %02X, ", data[0]);
 	printf("FLAGS:");
 
+	bool have_flags = false;
+
 	if ((data[1] & 0xE0 & TYPE_TCP_SYN) != 0) {
+		have_flags = true;
 		printf(" SYN");
 	}
 	if ((data[1] & 0xE0 & TYPE_TCP_FIN) != 0) {
+		have_flags = true;
 		printf(" FIN");
 	}
 	if ((data[1] & 0xE0 & TYPE_TCP_ACK) != 0) {
+		have_flags = true;
 		printf(" ACK");
+	}
+	if (!have_flags) {
+		printf(" (%02X)", data[1]);
 	}
 	printf(",");
 
 	printf(" SEQ: %02X, ACK: %02X\n", data[2], data[3]);
 
 	if (data[0] < 5) {
+		if (data[0] == 4) {
+			printf("DATA: %02X\n", data[4]);
+		}
 		return;
 	}
-
+		
 	if (data[5] != 0xFF) {
 		printf("\t");
 		decode_z_hid_udp(mode, data);
@@ -464,14 +476,14 @@ void decode_z_hid_tcp(int *mode, const uint8_t * const data)
 	}
 	printf("   DATA:");
 	// starts printing at data+4
-	print_z_params(data, data[0]);
+	print_z_params(data, data[0]+1);
 
 	printf("\n");
 }
 
 void decode_z(int *mode, const uint8_t * const data)
 {
-	if (*mode) {
+	if (*mode > 1) {
 		decode_z_hid_tcp(mode, data);
 	} else {
 		decode_z_hid_udp(mode, data);
@@ -496,6 +508,7 @@ int main(int argc, char *argv[])
 	int tmpint = 0;
 	int proto = 1;
 	int zwave = 0;
+	// 0 - UDP, 1 - transitioning to TCP, 2 - TCP
 	int zwave_hid_mode = 0;
 	char *file_name = NULL;
 	while ((tmpint = getopt(argc, argv, "dhf:vz")) != EOF) {
