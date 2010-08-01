@@ -21,7 +21,8 @@ source, see the instructions below.
 1. BUILD THE SOFTARE
 
    As a normal user...
-     A. ***IF**** You are building from CVS, run "autoreconf --install"
+     A. ***IF**** You are building from CVS, run:
+        mkdir m4; autoreconf --install
      B. Run "./configure"
      C. Run "make"
 

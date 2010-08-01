@@ -16,7 +16,8 @@ package - usually libusb-dev or libusb-devel, depending on your distribution.
 1. BUILD LIBCONCORD
 
    As a normal user...
-     A. ***IF**** You are building from CVS, run "autoreconf --install"
+     A. ***IF**** You are building from CVS, run:
+        mkdir m4; autoreconf --install
      B. Run "./configure"
      C. Run "make"
 
