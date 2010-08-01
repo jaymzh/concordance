@@ -299,10 +299,10 @@ static const TArchInfo ArchList[]={
 		0x010000,			// firmware_base
 		0x020000,			// config_base
 		0x1D0000,			// firmware_update_base
-		2,				// firmware_4847_offset
+		4,				// firmware_4847_offset
 		0x50545054,			// cookie
 		4,				// cookie_size
-		5,				// end_vector
+		4,				// end_vector
 		"PIC18LC801",			// micro
 		0,				// flash_size
 		1536,				// ram_size
@@ -317,12 +317,12 @@ static const TArchInfo ArchList[]={
 		0x810000,			// firmware_base
 		0x820000,			// config_base
 		0x810000,			// firmware_update_base
-		2,				// firmware_4847_offset
+		4,				// firmware_4847_offset
 		0x4D434841,			// cookie
 		4,				// cookie_size
 		4,				// end_vector
 		"PIC18LF4550",			// micro
-		0,				// flash_size
+		16,				// flash_size
 		2048,				// ram_size
 		256,				// eeprom_size
 		"Internal",			// usb
