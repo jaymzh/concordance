@@ -21,6 +21,10 @@ NOTE TO LINUX USERS: This assumes you have proper udev support setup
 (see the INSTALL.Linux file in the libconcord source). If not, you'll
 need to use sudo or be root.
 
+NOTE TO LINUX USERS OF HARMONY 700: You need a kernel patch you can find here:
+https://sourceforge.net/tracker/index.php?func=detail&aid=3011845&group_id=201579&atid=978130
+It will be included in 2.6.36.
+
 0. I got a file from the website, do something useful with it.
 
   $ concordance <filename>
@@ -98,3 +102,5 @@ THIS SOFTWARE IS NOT SUPPORTED BY OR IN ANY WAY RELATED TO LOGITECH!
 
 - Phil Dibowitz
 
+
+vim:textwidth=78:

@@ -112,7 +112,7 @@ int set_canon(int flag)
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.21+CVS";
+const char * const VERSION = "0.22";
 
 struct options_t {
 	int binary;
