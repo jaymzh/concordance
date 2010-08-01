@@ -7,16 +7,18 @@
 
 +++ PACKET FORMAT
 
-For ZWave remotes, there are two types. The kind that use HID and the kind that
-use IP-over-USB. Each has it's own payload format, but the command structure is
-the same for all of them.
+For ZWave remotes, there are two basic types of remotes, each of with their own
+packet formats: HID-based remotes (89x), and usbnet-based remotes (1000 and
+later).
 
-The 89x uses HID, while the rest all seem to use IP-over-USB (usbnet).
+HID-BASED REMOTES
 
-For HID remotes, the format is as follows:
+The HID based remotes used two different packet formats. The basic one is
+referred to by the remotes as "UDP" - but is unrelated to the network protocol.
+We'll always refer to this as HID-UDP. It's format is as follows:
 
   byte1: Number of the last byte (i.e. length - 1)
-  byte2: 1 (which appears to represent "udp")
+  byte2: 1
   byte3: Message Type
   byte4: Command
   .....: Parameters
@@ -25,7 +27,54 @@ Message Type is
   0x00 for Command (from software)
   0x01 for Response (from device)
 
-The payload for the IP-over-USB remotes is as follows:
+This format use used for all the most basic commands. However, once any
+reasonable amount of data needs to be sent, it switches to something that the
+remotes refer to as "TCP" - but it bears very little resemblance to the
+networking protocol by the same name. We'll refer to this as HID-TCP.
+
+HID-TCP is a connection-oriented wrapper around HID-UDP. The payload of HID-TCP
+packets is in fact a HID-UDP packet without the first two bytes (which are
+unnecessary since the information is available at the HID-TCP level). The format
+for HID-TCP packets is as follows:
+
+  byte1: Number of the last byte (i.e. length - 1)
+  byte2: Flags (0x20 is FIN, 0x40 is ACK, and 0x80 is SYN)
+  byte3: Sequence Number
+  byte4: Acknowledgment Number
+  .....: HID-UDP packet, minus the first two bytes
+
+Sequence numbers and Acknowledgment numbers use this formula:
+
+  SEQ = previous guy's ACK number (or random if we haven't seen one?)
+  ACK = previous guy's SEQ number + number of *data* bytes (first byte - 3)
+
+The exception to this is that the first ACK the software sends adds one to the
+sequence number as a way of acknolwedging the SYN.
+
+The HID-TCP session is setup using the HID-UDP command
+INITIATE_UPDATE_TCP_CHANNEL, to which the remote will respond with the
+INITIATE_UPDATE_TCP_CHANNEL response over HID-UDP, and then all further
+communication must be over HID-TCP.
+
+This part we're still not 100% sure, but we believe it works like this:
+
+At this point the remote sends SYN packets with the sequence number FO and the
+ack number FF. We can then send our first command in a SYN+ACK packet. We use a
+random seq number and our ack is their seq + 1.
+
+Based in this HID-UDP command we send in this packet, there remote expects a
+sequence of events (e.g., START_UPDATE is followed by WRITE_UPDATE_HEADER,
+WRITE_UPDATE_DATA, WRITE_UPDATE_DATA_DONE, GET_UPDATE_CHECKSUM, and
+WRITE_FINISH_UPDATE). Once we send whatever the appropriate "FINISH" command is,
+the remote response with a FIN+ACK, the software ACKs that which is ACK'd, and
+then HID-UDP is resumed.
+
+
+NETUSB-BASED REMOTES
+
+The 1000 and later series use IP-over-USB, aka usbnet.
+
+The payload for these is as follows:
 
   byte1: MSN = Command Type
          LSN = 0
@@ -62,9 +111,12 @@ Numver of Parameters is encoded as follows:
 
 +++ COMMANDS
 
-Since the only ones we're interested are commands in the CLIENT Command Type,
-all of these are assumed to be that.. Thus they will start with 20, and we only
-include the LSB.
+These commands are shared between both HID-based and netusb-based remotes. For
+netusb-based remotes they fall under the "client" family.
+
+For the usbnet-based remotes, since these are all CLIENT command type, the first
+byte of these will always be 0x20, and we only include the LSB, which is common
+between both families of remotes.
 
 COMMAND_GET_SYSTEM_INFO 0x61 (97)
 message type: 0x80 (128)
