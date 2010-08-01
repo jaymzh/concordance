@@ -54,3 +54,4 @@ such, software utilizing libusb (and hence software utilizing libconcord) do
 not need to have root access to use libusb.
 
 
+vim:textwidth=78:

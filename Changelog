@@ -1,22 +1,23 @@
-CVS
-Released:
+0.22
+Released: 08/01/10
 phil@ipom.com
 - concordance: Update README to point to the supported models page rather
   than list specifics about support (thanks to wolfgang@rohdewald.de)
 - libconcord: Update INSTALL.linux to explain that by default udev files don't
-  go into /etc. Fixes bug 2788066
+  go into /etc. Fixes bug 2788066.
 - libconcord: Fix minor memory leak.
-- specs: zwave protocol specs, with special thanks to Ian Flanigan
+- specs: ZWave protocol specs, with special thanks to Ian Flanigan
   <flan@lean.to> and "Phrozen" for their invaluable work and contributions to
   making this possible.
 - libconcord: Better error reporting for libusb
-- libconcord: Get the code for HID-based reads/writes working for z-wave remotes,
-  as well as get-identity, and get-time working (89x series).
-- libconcord: Error checking added to zwave code.
-- libconcord: 89x SetTime() support
+- libconcord: Get the code for ZWave HID-based reads/writes working,
+  as well as get-identity, get-time and set-time working (89x series).
+- libconcord: Error checking added to ZWave code.
 
 s-t-concordance@wwwdotorg.org:
 - libconcord: Fix error reporting in python bindings
+- Harmony 700 support. Fixes bug 3011845.
+
 
 0.21
 Released: 03/08/09

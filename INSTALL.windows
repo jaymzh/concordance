@@ -34,3 +34,5 @@ Now you should see four Projects in your Workspace/Solution-Tree
 1) If you want to use this version of the library, you'll also need the libusb
 development package (http://sourceforge.net/projects/libusb-win32/)
 
+
+vim:textwidth=78:

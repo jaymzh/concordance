@@ -5,12 +5,12 @@
       - use libtool versioning
     * libconcord.py
       - only need the _current_ part of the version
-    * setup.py
 
 - Bump concordance version number
   * concordance/concordance.c
   * concordance/configure.ac
   * libconcord/configure.ac
+  * libconcord/bindings/python/setup.py
 
 - Check for old version:
   * fgrep -R '0.20' *
@@ -25,10 +25,13 @@
   cd /tmp
   cvs export -r $tag -d concordance-$version concordance
   cd concordance-$version/libconcord
-  autoreconf -i
+  mkir m4; autoreconf -i
   cd ../concordance
-  autoreconf -i
+  mkdir m4; autoreconf -i
   cd ../..
   tar jcf concordance-$version.tar.bz2 concordance-$version
 
 - test compile, upload
+
+
+vim:textwidth=78:

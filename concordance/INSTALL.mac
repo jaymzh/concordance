@@ -44,3 +44,4 @@ Unlike other libusb platforms, you do not have to have root access to use
 libusb, thus you can run concordance as an ordinary user.
 
 
+vim:textwidth=78:
