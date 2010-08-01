@@ -23,6 +23,10 @@
 #ifndef PROTOCOL_Z_H
 #define PROTOCOL_Z_H
 
+#define TYPE_TCP_ACK 0x40
+#define TYPE_TCP_FIN 0x20
+#define TYPE_TCP_SYN 0x80
+
 // 1000 only
 #define SERVICE_FAMILY_CLIENT 2
 // 1000 only

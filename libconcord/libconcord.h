@@ -479,6 +479,8 @@ void delete_encoded_signal(char *encoded_signal);
 int post_new_code(uint8_t *data, uint32_t size, 
 	char *key_name, char *encoded_signal);
 
+int update_zwave_config();
+
 #ifdef __cplusplus
 }
 #endif

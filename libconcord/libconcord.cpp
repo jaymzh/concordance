@@ -1417,3 +1417,10 @@ void report_net_error(const char *msg)
 	debug("Net error: %s failed with error %s", msg, strerror(errno));
 #endif
 }
+
+/* GOD AWFUL HACK FOR DEV */
+int update_zwave_config()
+{
+	return rmt->UpdateConfig(0x00, 0x00, NULL, NULL);
+}
+

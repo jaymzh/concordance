@@ -137,7 +137,8 @@ enum {
 	MODE_GET_TIME,
 	MODE_SET_TIME,
 	MODE_PRINT_INFO,
-	MODE_VERSION
+	MODE_VERSION,
+	MODE_ZWAVETEST
 };
 
 
@@ -442,6 +443,13 @@ void print_time(int action)
 		get_time_second(), get_time_utc_offset(), get_time_timezone());
 }
 
+
+
+int zwave_test()
+{
+	update_zwave_config();
+	return 0;
+}
 
 
 /*
@@ -759,6 +767,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 		{"verbose", no_argument, 0, 'v'},
 		{"version", no_argument, 0, 'V'},
 		{"no-web", no_argument, 0, 'w'},
+		{"zwave-test", no_argument, 0, 'Z'},
 		{0,0,0,0} /* terminating null entry */
 	};
 
@@ -774,7 +783,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 	tmpint = 0;
 	option_index = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVw",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVwZ",
 				long_options, &option_index)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -868,6 +877,9 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			break;
 		case 'w':
 			(*options).noweb = 1;
+			break;
+		case 'Z':
+			set_mode(mode, MODE_ZWAVETEST);
 			break;
 		default:
 			exit(1);
@@ -1274,6 +1286,11 @@ int main(int argc, char *argv[])
 	 */
 
 	switch (mode) {
+		case MODE_ZWAVETEST:
+			printf("zwave test\n");
+			zwave_test();
+			break;
+
 		case MODE_PRINT_INFO:
 			err = print_version_info(&options);
 			break;

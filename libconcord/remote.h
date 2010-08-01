@@ -155,6 +155,8 @@ public:
 	virtual int FinishFirmware(const TRemoteInfo &ri) = 0;
 	virtual int PrepConfig(const TRemoteInfo &ri)=0;
 	virtual int FinishConfig(const TRemoteInfo &ri)=0;
+	virtual int UpdateConfig(const uint32_t len,
+		const uint8_t *wr, lc_callback cb, void *arg)=0;
 
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
 	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)=0;
@@ -197,6 +199,8 @@ public:
 	int FinishFirmware(const TRemoteInfo &ri);
 	int PrepConfig(const TRemoteInfo &ri);
 	int FinishConfig(const TRemoteInfo &ri);
+	virtual int UpdateConfig(const uint32_t len,
+		const uint8_t *wr, lc_callback cb, void *arg) {};
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
@@ -274,6 +278,8 @@ protected:
 public:
 	CRemoteZ_HID() {};
 	virtual ~CRemoteZ_HID() {};
+	int UpdateConfig(const uint32_t len,
+		const uint8_t *wr, lc_callback cb, void *arg);
 };
 
 // 1000, 1000i

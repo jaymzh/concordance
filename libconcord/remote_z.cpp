@@ -29,6 +29,12 @@
 #include "usblan.h"
 #include "protocol_z.h"
 
+/* Have we acked the syn packet yet? */
+static bool SYN_ACKED = false;
+static unsigned int last_seq;
+static unsigned int last_ack;
+static unsigned int last_payload_bytes;
+
 /*
  * The HID-based zwave remotes have two modes: so called "UDP" and "TCP". Do
  * not confuse these with the network protocols of similar names.
@@ -82,10 +88,69 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
-	return 0;
+	uint8_t pkt[68];
+
+	/*
+	 * Note: It's the caller's responsibility to ensure we've already
+	 * seen the SYN packet.
+	 */
+
+	uint8_t seq;
+	uint8_t ack;
+	uint8_t flags;
+
+	if (!SYN_ACKED) {
+		seq = 0x28;
+		ack = last_seq + 1;
+		flags = TYPE_TCP_ACK | TYPE_TCP_SYN;
+		SYN_ACKED = true;
+	} else {
+		seq = last_ack;
+		ack = last_seq + last_payload_bytes;
+		flags = TYPE_TCP_ACK;
+	}
+
+	if (len > 60)
+		return LC_ERROR;
+	pkt[0] = 5+len;
+	pkt[1] = flags;
+	pkt[2] = seq;
+	pkt[3] = ack;
+	pkt[4] = typ;
+	pkt[5] = cmd;
+	if (data && len)
+		memcpy(pkt + 6, data, len);
+
+	debug("Writing packet. First 10 bytes: %02X %02X %02X %02X %02X %02X"
+		" %02X %02X %02X %02X\n",
+		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5], pkt[6], pkt[7],
+		pkt[8], pkt[9]);
+
+	return HID_WriteReport(pkt);
 }
+
+
 int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
+	uint8_t pkt[68];
+	int err;
+	if ((err = HID_ReadReport(pkt))) {
+		return LC_ERROR_READ;
+	}
+	debug("Reading packet. First 10 bytes: %02X %02X %02X %02X %02X %02X"
+		" %02X %02X %02X %02X\n",
+		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5], pkt[6], pkt[7],
+		pkt[8], pkt[9]);
+	if (pkt[0] < 3) {
+		return LC_ERROR;
+	}
+	len = pkt[0] - 4;
+	last_seq = pkt[2];
+	last_ack = pkt[3];
+	last_payload_bytes = len - 2;
+	//if(!len) return 0;
+	//memcpy(data, pkt + 6, len);
+	memcpy(data, pkt + 1, len+3);
 	return 0;
 }
 
@@ -489,6 +554,65 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 	}
 
 	return 0;
+}
+
+int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
+	lc_callback cb, void *arg)
+{
+	int err = 0;
+
+	/* Start a TCP transfer */
+	if ((err = Write(TYPE_REQUEST, COMMAND_INITIATE_UPDATE_TCP_CHANNEL))) {
+		debug("Failed to write to remote");
+		return LC_ERROR_WRITE;
+	}
+
+	uint8_t rsp[60];
+	unsigned int rlen;
+	uint8_t status;
+
+	/* Make sure the remote is ready to start the TCP transfer */
+	if ((err = Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	if (rsp[1] != TYPE_RESPONSE || rsp[2] !=
+		COMMAND_INITIATE_UPDATE_TCP_CHANNEL) {
+		return LC_ERROR;
+	}
+
+	/* Look for a SYN packet */
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	if (rsp[0] != TYPE_TCP_SYN) {
+		debug("Not a SYN packet!");
+		return LC_ERROR;
+	}
+
+	/* ACK it with a command to start an update */
+	uint8_t cmd[60] = { 0x00, 0x04, 0x00 };
+	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_START_UPDATE, 2, cmd))) {
+		debug("Failed to write to remote");
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+		rsp[4] != COMMAND_START_UPDATE) {
+		debug("Not expected ack");
+		return LC_ERROR;
+	}
+
+	return 0;
+
 }
 
 int CRemoteZ_Base::LearnIR(uint32_t *freq, uint32_t **ir_signal,
