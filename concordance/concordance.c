@@ -445,9 +445,26 @@ void print_time(int action)
 
 
 
-int zwave_test()
+int zwave_test(uint8_t *data, uint32_t size, struct options_t *options,
+	lc_callback cb, void *cb_arg)
 {
-	update_zwave_config();
+	int err, i;
+
+	uint8_t *binary_data;
+	uint32_t binary_size;
+
+	binary_data = data;
+	binary_size = size;
+
+	if (!(*options).binary) {
+		printf("Binary mode REQUIRED for zwaves\n");
+		return LC_ERROR;
+	}
+
+	if ((err = update_zwave_config(binary_data, binary_size, cb,
+			(void *)1))) {
+		return err;
+	}
 	return 0;
 }
 
@@ -767,7 +784,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 		{"verbose", no_argument, 0, 'v'},
 		{"version", no_argument, 0, 'V'},
 		{"no-web", no_argument, 0, 'w'},
-		{"zwave-test", no_argument, 0, 'Z'},
+		{"zwave-test", required_argument, 0, 'Z'},
 		{0,0,0,0} /* terminating null entry */
 	};
 
@@ -783,7 +800,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 	tmpint = 0;
 	option_index = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVwZ",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVwZ:",
 				long_options, &option_index)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -880,6 +897,9 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			break;
 		case 'Z':
 			set_mode(mode, MODE_ZWAVETEST);
+			if (optarg != NULL) {
+				*file_name = optarg;
+			}
 			break;
 		default:
 			exit(1);
@@ -1190,6 +1210,11 @@ int main(int argc, char *argv[])
 	data = 0;
 	size = 0;
 
+	if (MODE_ZWAVETEST) {
+		options.binary = 1;
+		options.noweb = 1;
+	}
+
 	/*
  	 * Alright, at this point, if there's going to be a filename,
  	 * we have one, so lets read the file.
@@ -1288,7 +1313,8 @@ int main(int argc, char *argv[])
 	switch (mode) {
 		case MODE_ZWAVETEST:
 			printf("zwave test\n");
-			zwave_test();
+			zwave_test(data, size, &options, cb_print_percent_status,
+				NULL);
 			break;
 
 		case MODE_PRINT_INFO:

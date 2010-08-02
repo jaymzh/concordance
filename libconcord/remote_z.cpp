@@ -22,6 +22,7 @@
  */
 
 #include <string.h>
+#include <unistd.h>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"
@@ -34,6 +35,35 @@ static bool SYN_ACKED = false;
 static unsigned int last_seq;
 static unsigned int last_ack;
 static unsigned int last_payload_bytes;
+
+int TCP_Ack(bool increment_ack) {
+	uint8_t pkt[68];
+
+	/*
+	 * Note: It's the caller's responsibility to ensure we've already
+	 * seen the SYN packet.
+	 */
+
+	uint8_t seq;
+	uint8_t ack;
+	uint8_t flags;
+
+	seq = 0x28;
+	ack = last_seq + 1;
+	flags = TYPE_TCP_ACK;
+	pkt[0] = 3;
+	pkt[1] = flags;
+	pkt[2] = seq;
+	pkt[3] = ack;
+
+	debug("Writing packet. First 10 bytes: %02X %02X %02X %02X %02X %02X"
+		" %02X %02X %02X %02X\n",
+		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5], pkt[6], pkt[7],
+		pkt[8], pkt[9]);
+
+	return HID_WriteReport(pkt);
+}
+
 
 /*
  * The HID-based zwave remotes have two modes: so called "UDP" and "TCP". Do
@@ -121,10 +151,19 @@ int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	if (data && len)
 		memcpy(pkt + 6, data, len);
 
+	
+	debug("Writing packet:");
+	for (int i = 0; i <= pkt[0]; i++) {
+		fprintf(stderr, "%02X ", pkt[i]);
+	}
+	fprintf(stderr, "\n");
+		
+	/*
 	debug("Writing packet. First 10 bytes: %02X %02X %02X %02X %02X %02X"
 		" %02X %02X %02X %02X\n",
 		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5], pkt[6], pkt[7],
 		pkt[8], pkt[9]);
+	*/
 
 	return HID_WriteReport(pkt);
 }
@@ -137,17 +176,24 @@ int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 	if ((err = HID_ReadReport(pkt))) {
 		return LC_ERROR_READ;
 	}
+	debug("Reading packet:");
+	for (int i = 0; i <= pkt[0]; i++) {
+		fprintf(stderr, "%02X ", pkt[i]);
+	}
+	fprintf(stderr, "\n");
+	/*
 	debug("Reading packet. First 10 bytes: %02X %02X %02X %02X %02X %02X"
 		" %02X %02X %02X %02X\n",
 		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5], pkt[6], pkt[7],
 		pkt[8], pkt[9]);
+	*/
 	if (pkt[0] < 3) {
 		return LC_ERROR;
 	}
 	len = pkt[0] - 4;
 	last_seq = pkt[2];
 	last_ack = pkt[3];
-	last_payload_bytes = len - 2;
+	last_payload_bytes = len + 1; // tcp payload size
 	//if(!len) return 0;
 	//memcpy(data, pkt + 6, len);
 	memcpy(data, pkt + 1, len+3);
@@ -583,8 +629,9 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	/* Look for a SYN packet */
+	debug("Looking for syn");
 	if ((err = TCP_Read(status, rlen, rsp))) {
-		debug("Failed to read from remote");
+		debug("Failed to read syn from remote");
 		return LC_ERROR_READ;
 	}
 
@@ -594,9 +641,10 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	/* ACK it with a command to start an update */
-	uint8_t cmd[60] = { 0x00, 0x04, 0x00 };
+	debug("START_UPDATE");
+	uint8_t cmd[60] = { 0x00, 0x04 };
 	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_START_UPDATE, 2, cmd))) {
-		debug("Failed to write to remote");
+		debug("Failed to write start-update to remote");
 		return LC_ERROR_WRITE;
 	}
 
@@ -605,11 +653,135 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR_READ;
 	}
 
+	/* make sure ot says 'start update response' */
 	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
 		rsp[4] != COMMAND_START_UPDATE) {
 		debug("Not expected ack");
 		return LC_ERROR;
 	}
+
+	/* write update-header */
+	debug("UPDATE_HEADER");
+	unsigned char *size_ptr = (unsigned char *)&len;
+	for (int i = 0; i < 4; i++) {
+		cmd[i] = size_ptr[i];
+	}
+	cmd[4] = 0x04;
+	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_WRITE_UPDATE_HEADER, 5,
+			cmd))) {
+		debug("Failed to write update-header to remote");
+		return LC_ERROR_WRITE;
+	}
+
+#if 0
+	sleep(1);
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* make sure we got an ack */
+	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+		rsp[4] != COMMAND_WRITE_UPDATE_HEADER) {
+		debug("Failed to read update-header ack");
+		return LC_ERROR;
+	}
+#endif
+
+	/* write data - TCP_Write should split this up for us */
+	debug("UPDATE_DATA");
+	int pkt_len;
+	int tlen = len;
+	int count = 0;
+	while (tlen) {
+		pkt_len = 58;
+		if (tlen < pkt_len) {
+			pkt_len = tlen;
+		}
+		tlen -= pkt_len;
+		debug("DATA %d", count++);
+		if ((err = TCP_Write(TYPE_REQUEST, COMMAND_WRITE_UPDATE_DATA,
+			tlen, const_cast<uint8_t*>(wr)))) {
+			debug("Failed to write update data!");
+			return LC_ERROR_WRITE;
+		}
+
+		if ((err = TCP_Read(status, rlen, rsp))) {
+			debug("Failed to read from remote");
+			return LC_ERROR_READ;
+		}
+
+		/* make sure we got an ack */
+		if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE) {
+			debug("Failed to read update-header ack");
+			return LC_ERROR;
+		}
+	}
+
+	/* write update-done */
+	debug("UPDATE_DATA_DONE");
+	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_WRITE_UPDATE_DATA_DONE))) {
+		debug("Failed to write update-done to remote");
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* make sure we got an ack */
+	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+		rsp[4] != COMMAND_WRITE_UPDATE_DATA_DONE) {
+		debug("Failed to read update-done ack");
+		return LC_ERROR;
+	}
+
+	/* send get-cheksum */
+	debug("GET_CHECKSUM");
+	cmd[0] = 0xFF;
+	cmd[1] = 0xFF;
+	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_GET_UPDATE_CHECKSUM, 2,
+			cmd))) {
+		debug("Failed to write get-checksum to remote");
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* make sure we got an ack */
+	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+		rsp[4] != COMMAND_GET_UPDATE_CHECKSUM) {
+		debug("Failed to read get-checksum ack");
+		return LC_ERROR;
+	}
+
+	/* send finish-update */
+	debug("FINISH_UPDATE");
+	cmd[0] = 0x01;
+	cmd[1] = 0x04;
+	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_FINISH_UPDATE, 2,
+			cmd))) {
+		debug("Failed to write finish-update to remote");
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* make sure we got an ack */
+	if (rsp[0] != (TYPE_TCP_ACK | TYPE_TCP_FIN) ||
+			rsp[3] != TYPE_RESPONSE) {
+		debug("Failed to read finish-update ack");
+		return LC_ERROR;
+	}
+
+	TCP_Ack(true);
 
 	return 0;
 

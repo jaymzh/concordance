@@ -1419,8 +1419,19 @@ void report_net_error(const char *msg)
 }
 
 /* GOD AWFUL HACK FOR DEV */
-int update_zwave_config()
+int update_zwave_config(uint8_t *in, uint32_t size, lc_callback cb,
+	void *cb_arg)
 {
-	return rmt->UpdateConfig(0x00, 0x00, NULL, NULL);
+	int err = 0;
+
+	if (!cb_arg) {
+		cb_arg = (void *)true;
+	}
+
+	if ((err = rmt->UpdateConfig(size, in, cb, cb_arg))) {
+		return LC_ERROR_WRITE;
+	}
+
+	return 0;
 }
 
