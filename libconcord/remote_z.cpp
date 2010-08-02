@@ -23,6 +23,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"
@@ -662,7 +663,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 
 	/* write update-header */
 	debug("UPDATE_HEADER");
-	unsigned char *size_ptr = (unsigned char *)&len;
+	uint32_t nlen = htonl(len);
+	unsigned char *size_ptr = (unsigned char *)&nlen;
 	for (int i = 0; i < 4; i++) {
 		cmd[i] = size_ptr[i];
 	}
@@ -673,7 +675,6 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR_WRITE;
 	}
 
-#if 0
 	sleep(1);
 	if ((err = TCP_Read(status, rlen, rsp))) {
 		debug("Failed to read from remote");
@@ -686,7 +687,6 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		debug("Failed to read update-header ack");
 		return LC_ERROR;
 	}
-#endif
 
 	/* write data - TCP_Write should split this up for us */
 	debug("UPDATE_DATA");
