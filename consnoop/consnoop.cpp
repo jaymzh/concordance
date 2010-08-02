@@ -268,7 +268,7 @@ void decode_z_hid_udp(int *mode, const uint8_t * const data)
 		type = data[4];
 		cmd = data[5];
 		param_ptr = param_ptr+2;
-		length = length - 2;
+		length = length - 3;
 	} else {
 		type = data[2];
 		cmd = data[3];
