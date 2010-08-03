@@ -1312,9 +1312,15 @@ int main(int argc, char *argv[])
 
 	switch (mode) {
 		case MODE_ZWAVETEST:
-			printf("zwave test\n");
-			zwave_test(data, size, &options, cb_print_percent_status,
-				NULL);
+			printf("zwave test:");
+			err = zwave_test(data, size, &options,
+				cb_print_percent_status, NULL);
+			if (err != 0) {
+				printf("Failed to write config: %s\n",
+					lc_strerror(err));
+			} else {
+				printf("       done\n");
+			}
 			break;
 
 		case MODE_PRINT_INFO:

@@ -1429,7 +1429,7 @@ int update_zwave_config(uint8_t *in, uint32_t size, lc_callback cb,
 	}
 
 	if ((err = rmt->UpdateConfig(size, in, cb, cb_arg))) {
-		return LC_ERROR_WRITE;
+		return err;
 	}
 
 	return 0;

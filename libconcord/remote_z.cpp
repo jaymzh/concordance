@@ -37,7 +37,7 @@ static unsigned int last_seq;
 static unsigned int last_ack;
 static unsigned int last_payload_bytes;
 
-int TCP_Ack(bool increment_ack) {
+int TCP_Ack(bool increment_ack=false, bool fin=false) {
 	uint8_t pkt[68];
 
 	/*
@@ -49,9 +49,13 @@ int TCP_Ack(bool increment_ack) {
 	uint8_t ack;
 	uint8_t flags;
 
-	seq = 0x28;
-	ack = last_seq + 1;
+	seq = last_ack;
+	ack = last_seq + last_payload_bytes;
+	if (increment_ack)
+		ack++;
 	flags = TYPE_TCP_ACK;
+	if (fin)
+		flags |= TYPE_TCP_FIN;
 	pkt[0] = 3;
 	pkt[1] = flags;
 	pkt[2] = seq;
@@ -693,18 +697,21 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	int pkt_len;
 	int tlen = len;
 	int count = 0;
+	uint8_t *wr_ptr = const_cast<uint8_t*>(wr);
 	while (tlen) {
 		pkt_len = 58;
 		if (tlen < pkt_len) {
 			pkt_len = tlen;
 		}
 		tlen -= pkt_len;
-		debug("DATA %d", count++);
+		debug("DATA %d, sending %d bytes, %d bytes left", count++,
+			pkt_len, tlen);
 		if ((err = TCP_Write(TYPE_REQUEST, COMMAND_WRITE_UPDATE_DATA,
-			tlen, const_cast<uint8_t*>(wr)))) {
+			pkt_len, wr_ptr))) {
 			debug("Failed to write update data!");
 			return LC_ERROR_WRITE;
 		}
+		wr_ptr += pkt_len;
 
 		if ((err = TCP_Read(status, rlen, rsp))) {
 			debug("Failed to read from remote");
@@ -775,16 +782,38 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	/* make sure we got an ack */
-	if (rsp[0] != (TYPE_TCP_ACK | TYPE_TCP_FIN) ||
-			rsp[3] != TYPE_RESPONSE) {
+	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+		rsp[4] != COMMAND_FINISH_UPDATE) {
 		debug("Failed to read finish-update ack");
 		return LC_ERROR;
 	}
 
-	TCP_Ack(true);
+	/* fin-ack */
+	debug("FIN-ACK");
+	if ((err = TCP_Ack(false, true))) {
+		debug("Failed to send fin-ack");
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* make sure we got an ack */
+	/*
+	if (rsp[0] != TYPE_TCP_ACK) {
+		debug("Failed to read finish-update ack");
+		return LC_ERROR;
+	}
+	*/
+
+	if ((err = TCP_Ack(false, false))) {
+		debug("Failed to ack the ack of our fin-ack");
+		return LC_ERROR_WRITE;
+	}
 
 	return 0;
-
 }
 
 int CRemoteZ_Base::LearnIR(uint32_t *freq, uint32_t **ir_signal,
