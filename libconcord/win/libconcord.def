@@ -70,6 +70,8 @@ read_config_from_remote
 write_config_to_remote
 write_config_to_file
 verify_remote_config
+prep_config
+finish_config
 erase_config
 find_config_binary
 
