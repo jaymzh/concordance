@@ -25,7 +25,7 @@
   cd /tmp
   cvs export -r $tag -d concordance-$version concordance
   cd concordance-$version/libconcord
-  mkir m4; autoreconf -i
+  mkdir m4; autoreconf -i
   cd ../concordance
   mkdir m4; autoreconf -i
   cd ../..
