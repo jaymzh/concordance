@@ -61,10 +61,11 @@ int TCP_Ack(bool increment_ack=false, bool fin=false) {
 	pkt[2] = seq;
 	pkt[3] = ack;
 
-	debug("Writing packet. First 10 bytes: %02X %02X %02X %02X %02X %02X"
-		" %02X %02X %02X %02X\n",
-		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5], pkt[6], pkt[7],
-		pkt[8], pkt[9]);
+	debug("Writing packet:");
+	for (int i = 0; i <= pkt[0]; i++) {
+		fprintf(stderr, "%02X ", pkt[i]);
+	}
+	fprintf(stderr, "\n");
 
 	return HID_WriteReport(pkt);
 }
@@ -92,8 +93,13 @@ int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	if (data && len)
 		memcpy(pkt + 4, data, len);
 
-	debug("Writing packet. First 5 bytes: %02X %02X %02X %02X %02X\n",
-		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]);
+	debug("Writing packet:");
+	for (int i = 0; i <= pkt[0]; i++) {
+		fprintf(stderr, "%02X ", pkt[i]);
+	}
+	fprintf(stderr, "\n");
+	//debug("Writing packet. First 5 bytes: %02X %02X %02X %02X %02X\n",
+	//	pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]);
 
 	return HID_WriteReport(pkt);
 }
@@ -105,8 +111,13 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 	if ((err = HID_ReadReport(pkt))) {
 		return LC_ERROR_READ;
 	}
-	debug("Reading packet. First 5 bytes: %02X %02X %02X %02X %02X\n",
-		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]);
+	debug("Reading packet:");
+	for (int i = 0; i <= pkt[0]; i++) {
+		fprintf(stderr, "%02X ", pkt[i]);
+	}
+	fprintf(stderr, "\n");
+	//debug("Reading packet. First 5 bytes: %02X %02X %02X %02X %02X\n",
+//		pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]);
 	if (pkt[0] < 4) {
 		return LC_ERROR;
 	}
@@ -667,7 +678,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 
 	/* write update-header */
 	debug("UPDATE_HEADER");
-	uint32_t nlen = htonl(len);
+//	uint32_t nlen = htonl(len);
+	uint32_t nlen = len;
 	unsigned char *size_ptr = (unsigned char *)&nlen;
 	for (int i = 0; i < 4; i++) {
 		cmd[i] = size_ptr[i];
@@ -679,7 +691,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR_WRITE;
 	}
 
-	sleep(1);
+	sleep(10);
+
 	if ((err = TCP_Read(status, rlen, rsp))) {
 		debug("Failed to read from remote");
 		return LC_ERROR_READ;
@@ -744,19 +757,52 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR;
 	}
 
-	/* send get-cheksum */
-	debug("GET_CHECKSUM");
-	cmd[0] = 0xFF;
-	cmd[1] = 0xFF;
-	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_GET_UPDATE_CHECKSUM, 2,
-			cmd))) {
-		debug("Failed to write get-checksum to remote");
+	/* Funky ACK exchange - part 1 */
+	debug("FUNKY-ACK");
+	if ((err = TCP_Ack(false, false))) {
+		debug("Failed to send funky-ack");
 		return LC_ERROR_WRITE;
 	}
 
 	if ((err = TCP_Read(status, rlen, rsp))) {
 		debug("Failed to read from remote");
 		return LC_ERROR_READ;
+	}
+
+	/* Funky ACK exchange - part 2 */
+	debug("FUNKY-ACK");
+	if ((err = TCP_Ack(false, false))) {
+		debug("Failed to send funky-ack");
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* send get-cheksum */
+	debug("GET_CHECKSUM");
+	cmd[0] = 0xFF;
+	cmd[1] = 0xFF;
+	cmd[2] = 0x04;
+	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_GET_UPDATE_CHECKSUM, 3,
+			cmd))) {
+		debug("Failed to write get-checksum to remote");
+		return LC_ERROR_WRITE;
+	}
+
+	err = 1;
+	int max_secs = 120;
+	int secs = 0;
+	while (err) {
+		secs++;
+		debug("Attempt to read!");
+		err = TCP_Read(status, rlen, rsp);
+		sleep(2);
+		if (secs == max_secs) {
+			break;
+		}
 	}
 
 	/* make sure we got an ack */
