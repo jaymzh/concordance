@@ -196,6 +196,12 @@ int get_config_bytes_total()
 	return ri.max_config_size;
 }
 
+int is_z_remote()
+{
+	/* should this be in the remoteinfo struct? */
+	return rmt->IsZRemote() ? 1 : 0;
+}
+
 int get_time_second()
 {
 	return rtime.second;

@@ -163,6 +163,7 @@ public:
 
 	virtual int LearnIR(uint32_t *freq, uint32_t **ir_signal,
 		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg)=0;
+	virtual int IsZRemote()=0;
 };
 
 class CRemote : public CRemoteBase	// All non-Z-Wave remotes
@@ -207,6 +208,7 @@ public:
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
 		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
+	int IsZRemote() {return false;}
 };
 
 // Base class for all Z-Wave remotes
@@ -252,6 +254,7 @@ public:
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
 		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
+	int IsZRemote() {return true;}
 };
 
 // 890, 890Pro, AVL-300, RF Extender

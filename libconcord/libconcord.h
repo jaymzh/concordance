@@ -118,6 +118,7 @@ int get_usb_bcd();
 char *get_serial(int p);
 int get_config_bytes_used();
 int get_config_bytes_total();
+int is_z_remote();
 
 /*
  * TIME ACCESSORS

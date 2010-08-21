@@ -444,11 +444,10 @@ void print_time(int action)
 }
 
 
-
-int zwave_test(uint8_t *data, uint32_t size, struct options_t *options,
+int upload_config_zwave(uint8_t *data, uint32_t size, struct options_t *options,
 	lc_callback cb, void *cb_arg)
 {
-	int err, i;
+	int err;
 
 	uint8_t *binary_data;
 	uint32_t binary_size;
@@ -461,18 +460,20 @@ int zwave_test(uint8_t *data, uint32_t size, struct options_t *options,
 		return LC_ERROR;
 	}
 
+	printf("Writing Config:      ");
 	if ((err = update_zwave_config(binary_data, binary_size, cb,
 			(void *)1))) {
 		return err;
 	}
+	printf("       done\n");
+
 	return 0;
 }
-
 
 /*
  * Read the config from a file and write it to the remote
  */
-int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
+int upload_config_hid(uint8_t *data, uint32_t size, struct options_t *options,
 	lc_callback cb, void *cb_arg)
 {
 	int err, i;
@@ -561,6 +562,19 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 	}
 	printf("       done\n");
 
+	return 0;
+}
+
+int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
+	lc_callback cb, void *cb_arg)
+{
+	int err;
+	if (is_z_remote()) {
+		upload_config_zwave(data, size, options, cb, cb_arg);
+	} else {
+		upload_config_hid(data, size, options, cb, cb_arg);
+	}
+
 	printf("Setting Time:        ");
 	if ((err = set_time())) {
 		return err;
@@ -577,6 +591,7 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 
 	return 0;
 }
+
 
 int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 {
@@ -784,7 +799,6 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 		{"verbose", no_argument, 0, 'v'},
 		{"version", no_argument, 0, 'V'},
 		{"no-web", no_argument, 0, 'w'},
-		{"zwave-test", required_argument, 0, 'Z'},
 		{0,0,0,0} /* terminating null entry */
 	};
 
@@ -800,7 +814,7 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 	tmpint = 0;
 	option_index = 0;
 
-	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVwZ:",
+	while ((tmpint = getopt_long(argc, argv, "bc::C:df::F:hil:rs::t:kKvVw",
 				long_options, &option_index)) != EOF) {
 		switch (tmpint) {
 		case 0:
@@ -1311,18 +1325,6 @@ int main(int argc, char *argv[])
 	 */
 
 	switch (mode) {
-		case MODE_ZWAVETEST:
-			printf("zwave test:");
-			err = zwave_test(data, size, &options,
-				cb_print_percent_status, NULL);
-			if (err != 0) {
-				printf("Failed to write config: %s\n",
-					lc_strerror(err));
-			} else {
-				printf("       done\n");
-			}
-			break;
-
 		case MODE_PRINT_INFO:
 			err = print_version_info(&options);
 			break;
