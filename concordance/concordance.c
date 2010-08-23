@@ -112,7 +112,7 @@ int set_canon(int flag)
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.22";
+const char * const VERSION = "0.22+CVS";
 
 struct options_t {
 	int binary;
@@ -1183,8 +1183,8 @@ int main(int argc, char *argv[])
 	struct options_t options;
 	char *file_name;
 	int mode, file_mode, err;
-	uint8_t *data;
-	uint32_t size;
+	uint8_t *data, *xml;
+	uint32_t size, xml_size;
 
 #ifdef WIN32
 	con=GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1224,10 +1224,12 @@ int main(int argc, char *argv[])
 	data = 0;
 	size = 0;
 
-	if (MODE_ZWAVETEST) {
+/*
+	if (true) {
 		options.binary = 1;
 		options.noweb = 1;
 	}
+*/
 
 	/*
  	 * Alright, at this point, if there's going to be a filename,
@@ -1235,11 +1237,21 @@ int main(int argc, char *argv[])
  	 */
 	if (file_name && (mode != MODE_DUMP_CONFIG && mode != MODE_DUMP_FIRMWARE
 			  && mode != MODE_DUMP_SAFEMODE)) {
+/*
 		if (read_file(file_name, &data, &size)) {
 			fprintf(stderr, "ERROR: Cannot read input file: %s\n",
 				file_name);
 			exit(1);
 		}
+*/
+
+		if (read_zip_file(file_name, &data, &size, &xml,
+			&xml_size)) {
+			fprintf(stderr, "ERROR: Cannot read input file: %s\n",
+				file_name);
+			exit(1);
+		}
+
 		/*
 		 * Now that the file is read, see if we can recognize it:
 		 */

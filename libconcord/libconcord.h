@@ -261,6 +261,8 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
  * allocate a char array and point your pointer at it. Use delete_blob to
  * reclaim this memory.
  */
+int read_zip_file(char *file_name, uint8_t **data, uint32_t *data_size,
+	uint8_t **xml, uint32_t *xml_size);
 int read_file(char *file_name, uint8_t **out, uint32_t *size);
 /*
  * Given a binary-only config blob *in, write the config to a file. Unless

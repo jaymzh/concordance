@@ -29,6 +29,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <zzip/lib.h>
+#include <list>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "remote.h"
@@ -38,8 +41,6 @@
 #include "web.h"
 #include "protocol.h"
 #include "time.h"
-#include <errno.h>
-#include <list>
 
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
@@ -444,6 +445,34 @@ int identify_file(uint8_t *in, uint32_t size, int *type)
 	 * Findings didn't match a single file type; indicate a problem
 	 */
 	return LC_ERROR;
+}
+
+int read_zip_file(char *file_name, uint8_t **data, uint32_t *data_size,
+	uint8_t **xml, uint32_t *xml_size)
+{
+	/* TODO: error checking */
+	zzip_error_t zip_err;
+	ZZIP_DIR *dir = zzip_dir_open(file_name, &zip_err);
+	if (dir) {
+		ZZIP_DIRENT dirent;
+		while (zzip_dir_read(dir, &dirent)) {
+			ZZIP_FILE *fh = zzip_file_open(dir, dirent.d_name, 0);
+			if (strcmp(dirent.d_name, "Data.xml") == 0) {
+				*xml_size = dirent.st_size;
+				*xml = new uint8_t[*xml_size];
+				zzip_size_t len = zzip_file_read(fh, *xml,
+					*xml_size);
+			} else {
+				*data_size = dirent.st_size;
+				*data = new uint8_t[*data_size];
+				zzip_size_t len = zzip_file_read(fh, *data,
+					*data_size);
+			}
+			zzip_file_close(fh);
+		}
+	}
+	zzip_dir_close(dir);
+	return 0;
 }
 
 /*
