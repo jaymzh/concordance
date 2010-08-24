@@ -337,24 +337,29 @@ void delete_blob(uint8_t *ptr)
 	delete[] ptr;
 }
 
-int identify_file(uint8_t *in, uint32_t size, int *type)
+int identify_file(uint8_t *in, uint32_t size, int *type, int xml_only)
 {
 	int err;
+	uint8_t *start_info_ptr, *end_info_ptr;
 
 	/*
 	 * Validate this is a remotely sane XML file
 	 */
-	uint8_t *start_info_ptr;
-	err = GetTag("INFORMATION", in, size, start_info_ptr);
-	if (err == -1) {
-		return LC_ERROR;
-	}
+	if (xml_only) {
+		start_info_ptr = in;
+		end_info_ptr = start_info_ptr + size;
+	} else {
+		err = GetTag("INFORMATION", in, size, start_info_ptr);
+		if (err == -1) {
+			return LC_ERROR;
+		}
 
-	uint8_t *end_info_ptr;
-	err = GetTag("/INFORMATION", in, size, end_info_ptr);
-	if (err == -1) {
-		return LC_ERROR;
+		err = GetTag("/INFORMATION", in, size, end_info_ptr);
+		if (err == -1) {
+			return LC_ERROR;
+		}
 	}
+	debug("start/end pointers populated");
 
 	/*
 	 * Determine size of binary data following /INFORMATION
@@ -364,7 +369,7 @@ int identify_file(uint8_t *in, uint32_t size, int *type)
 	 * Account for CRLF after /INFORMATION>
 	 * But, don't screw up if it's missing
 	 */
-	if (data_len >= 2) {
+	if (data_len >= 2 && !xml_only) {
 		data_len -= 2;
 	}
 
@@ -379,6 +384,7 @@ int identify_file(uint8_t *in, uint32_t size, int *type)
 		string tag_s;
 		err = GetTag("KEY", tmp_data, tmp_size, tag_ptr, &tag_s);
 		if (err == -1) {
+			debug("not a connectivity test file");
 			break;
 		}
 		if (!stricmp(tag_s.c_str(), "GETZAPSONLY")) {
@@ -400,6 +406,7 @@ int identify_file(uint8_t *in, uint32_t size, int *type)
 		string tag_s;
 		err = GetTag("TYPE", tmp_data, tmp_size, tag_ptr, &tag_s);
 		if (err == -1) {
+			debug("not a firmware file");
 			break;
 		}
 		if (!stricmp(tag_s.c_str(), "Firmware_Main")) {
@@ -425,8 +432,8 @@ int identify_file(uint8_t *in, uint32_t size, int *type)
 		*type = LC_FILE_TYPE_CONNECTIVITY;
 		return 0;
 	}
-	if (!found_get_zaps_only && (data_len >= 16) && !found_firmware &&
-		!found_learn_ir) {
+	if (!found_get_zaps_only && (data_len >= 16 || xml_only) &&
+		!found_firmware && !found_learn_ir) {
 		*type = LC_FILE_TYPE_CONFIGURATION;
 		return 0;
 	}
@@ -470,6 +477,8 @@ int read_zip_file(char *file_name, uint8_t **data, uint32_t *data_size,
 			}
 			zzip_file_close(fh);
 		}
+	} else {
+		return LC_ERROR;
 	}
 	zzip_dir_close(dir);
 	return 0;

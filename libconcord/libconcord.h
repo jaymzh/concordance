@@ -161,7 +161,7 @@ void delete_blob(uint8_t *ptr);
  * the return value. If the file can be identified, the type of the file
  * will be written to *mode.
  */
-int identify_file(uint8_t *in, uint32_t size, int *type);
+int identify_file(uint8_t *in, uint32_t size, int *type, int xml_only);
 
 /*
  * GENERAL REMOTE INTERACTIONS

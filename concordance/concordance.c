@@ -449,20 +449,8 @@ int upload_config_zwave(uint8_t *data, uint32_t size, struct options_t *options,
 {
 	int err;
 
-	uint8_t *binary_data;
-	uint32_t binary_size;
-
-	binary_data = data;
-	binary_size = size;
-
-	if (!(*options).binary) {
-		printf("Binary mode REQUIRED for zwaves\n");
-		return LC_ERROR;
-	}
-
 	printf("Writing Config:      ");
-	if ((err = update_zwave_config(binary_data, binary_size, cb,
-			(void *)1))) {
+	if ((err = update_zwave_config(data, size, cb, (void *)1))) {
 		return err;
 	}
 	printf("       done\n");
@@ -565,14 +553,21 @@ int upload_config_hid(uint8_t *data, uint32_t size, struct options_t *options,
 	return 0;
 }
 
-int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
-	lc_callback cb, void *cb_arg)
+int upload_config(uint8_t *data, uint32_t data_size, uint8_t *xml,
+	uint32_t xml_size, struct options_t *options, lc_callback cb,
+	void *cb_arg)
 {
 	int err;
 	if (is_z_remote()) {
-		upload_config_zwave(data, size, options, cb, cb_arg);
+		if ((err = upload_config_zwave(data, data_size, options, cb,
+			cb_arg))) {
+			return err;
+		}
 	} else {
-		upload_config_hid(data, size, options, cb, cb_arg);
+		if ((err = upload_config_hid(data, data_size, options, cb,
+			cb_arg))) {
+			return err;
+		}
 	}
 
 	printf("Setting Time:        ");
@@ -583,8 +578,14 @@ int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
 
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
-		if ((err = post_postconfig(data, size))) {
-			return err;
+		if (is_z_remote()) {
+			if ((err = post_postconfig(xml, xml_size))) {
+				return err;
+			}
+		} else {
+			if ((err = post_postconfig(data, data_size))) {
+				return err;
+			}
 		}
 		printf("                     done\n");
 	}
@@ -933,12 +934,12 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 
 }
 
-int detect_mode(uint8_t *data, uint32_t size, int *mode)
+int detect_mode(uint8_t *data, uint32_t size, int *mode, int xml_only)
 {
 	int err, type;
 
 	*mode = MODE_UNSET;
-	err = identify_file(data, size, &type);
+	err = identify_file(data, size, &type, xml_only);
 	if (err) {
 		return err;
 	}
@@ -1182,9 +1183,9 @@ int main(int argc, char *argv[])
 {
 	struct options_t options;
 	char *file_name;
-	int mode, file_mode, err;
+	int mode, file_mode, err, is_zipfile;
 	uint8_t *data, *xml;
-	uint32_t size, xml_size;
+	uint32_t data_size, xml_size;
 
 #ifdef WIN32
 	con=GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1219,17 +1220,25 @@ int main(int argc, char *argv[])
 	}
 
 	/*
+	 * We used to delay remote initialization until after all the figuring
+	 * out the mode and read the file stuff... but with zwave support we
+	 * need to know what type of remote we're dealing with early on.
+	 */
+
+	err = init_concord();
+	if (err != 0) {
+		fprintf(stderr, "ERROR: Couldn't initializing libconcord: %s\n",
+			lc_strerror(err));
+		exit(1);
+	}
+
+	/*
 	 * OK, if we have a filename go ahead and read the file...
 	 */
-	data = 0;
-	size = 0;
-
-/*
-	if (true) {
-		options.binary = 1;
-		options.noweb = 1;
-	}
-*/
+	data = NULL;
+	data_size = 0;
+	xml = NULL;
+	xml_size = 0;
 
 	/*
  	 * Alright, at this point, if there's going to be a filename,
@@ -1237,28 +1246,35 @@ int main(int argc, char *argv[])
  	 */
 	if (file_name && (mode != MODE_DUMP_CONFIG && mode != MODE_DUMP_FIRMWARE
 			  && mode != MODE_DUMP_SAFEMODE)) {
-/*
-		if (read_file(file_name, &data, &size)) {
-			fprintf(stderr, "ERROR: Cannot read input file: %s\n",
-				file_name);
-			exit(1);
+		if (is_z_remote() && !options.binary) {
+			if (read_zip_file(file_name, &data, &data_size, &xml,
+				&xml_size)) {
+				is_zipfile = 0;
+			} else {
+				is_zipfile = 1;
+			}
 		}
-*/
 
-		if (read_zip_file(file_name, &data, &size, &xml,
-			&xml_size)) {
-			fprintf(stderr, "ERROR: Cannot read input file: %s\n",
-				file_name);
-			exit(1);
+		if (!is_zipfile) {
+			if (read_file(file_name, &data, &data_size)) {
+				fprintf(stderr,
+					"ERROR: Cannot read input file: %s\n",
+					file_name);
+				exit(1);
+			}
 		}
 
 		/*
 		 * Now that the file is read, see if we can recognize it:
 		 */
-		if (detect_mode(data, size, &file_mode)) {
-			fprintf(stderr, "WARNING: Cannot determine mode of");
-			fprintf(stderr, " operation from file.\n");
+		if (detect_mode(is_zipfile ? xml : data,
+				is_zipfile ? xml_size : data_size,
+			&file_mode, 1)) {
+			fprintf(stderr, "WARNING: Cannot determine ");
+			fprintf(stderr, "mode of operation from file.");
+			fprintf(stderr, "\n");
 		}
+
 		/*
 		 * If we don't have a mode, lets detect that mode based on
 		 * the file.
@@ -1294,12 +1310,6 @@ int main(int argc, char *argv[])
 		populate_default_filename(mode, options.binary, &file_name);
 	}
 
-	err = init_concord();
-	if (err != 0) {
-		fprintf(stderr, "ERROR: Couldn't initializing libconcord: %s\n",
-			lc_strerror(err));
-		exit(1);
-	}
 
 	/*
 	 * If we're in reset mode, not only do we not need to read and print
@@ -1342,10 +1352,12 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_CONNECTIVITY:
-			if (!options.noweb)
+			if (!options.noweb) {
 				printf("Contacting website:  ");
-				err = post_connect_test_success(data, size);
+				err = post_connect_test_success(data,
+					data_size);
 				printf("                     done\n");
+			}
 			break;
 
 		case MODE_DUMP_CONFIG:
@@ -1361,8 +1373,8 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_WRITE_CONFIG:
-			err = upload_config(data, size, &options,
-				cb_print_percent_status, NULL);
+			err = upload_config(data, data_size, xml, xml_size,
+				&options, cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to upload config: %s\n",
 					lc_strerror(err));
@@ -1382,7 +1394,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_WRITE_FIRMWARE:
-			err = upload_firmware(data, size, &options,
+			err = upload_firmware(data, data_size, &options,
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to upload firmware: %s\n",
@@ -1403,7 +1415,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_LEARN_IR:
-			err = learn_ir_commands(data, size, &options);
+			err = learn_ir_commands(data, data_size, &options);
 			break;
 
 		case MODE_GET_TIME:
