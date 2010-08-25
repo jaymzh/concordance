@@ -763,7 +763,8 @@ int post_postfirmware(uint8_t *data, uint32_t size)
 
 int post_postconfig(uint8_t *data, uint32_t size)
 {
-	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, true);
+	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, true,
+		false, is_z_remote() ? true: false, NULL, NULL);
 }
 
 int post_connect_test_success(uint8_t *data, uint32_t size)
@@ -1441,7 +1442,7 @@ int post_new_code(uint8_t *data, uint32_t size,
 	learn_key = key_name;
 	learn_seq = encoded_signal;
 
-	return Post(data, size, "POSTOPTIONS", ri, true, false,
+	return Post(data, size, "POSTOPTIONS", ri, true, false, false,
 			&learn_seq, &learn_key);
 }
 

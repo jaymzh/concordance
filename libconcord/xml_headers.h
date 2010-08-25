@@ -131,6 +131,9 @@ const char *config_header="\
 </INFORMATION>\r\n";
 
 
+
+//User-Agent: HarmonyBrowser/7.7.0 (Build 0; UpdatedFrom 7.3.0.15; Skin logitech; Windows Vista 6.1; x86; en; rv: 1.8.0.2) Gecko/20060125\r\n\
+
 const char *post_header="\
 POST /%s HTTP/1.1\r\n\
 User-Agent: HarmonyBrowser/7.3.0 (Build 15; UpdatedFrom 7.3.0.15; Skin logitech; Windows XP 5.1; x86; en; rv: 1.8.0.2) Gecko/20060125\r\n\
@@ -159,5 +162,42 @@ const char *post_xml="\
 </VERSION>\
 </VERSIONINFORMATION>\
 </EASYZAPPERDATA>\r\n";
+
+const char *z_post_xml="\
+<DATA>\
+<STATUS>Success</STATUS>\
+<INFORMATION>Initializing services</INFORMATION>\
+<INFORMATION>Getting remote control information</INFORMATION>\
+<INFORMATION>Logitech Harmony Remote Software version: 7.7.0</INFORMATION>\
+<INFORMATION>Hardware version: Board %i.%i.0 (0x%02X:0x%02X)</INFORMATION>\
+<INFORMATION>Firmware version: %i.%i</INFORMATION>\
+<INFORMATION>Getting remote control information - Successful</INFORMATION>\
+<INFORMATION>Checking version information</INFORMATION>\
+<INFORMATION>Checking version information - Successful</INFORMATION>\
+<INFORMATION>Waking the remote control</INFORMATION>\
+<INFORMATION>Waking the remote control - Successful</INFORMATION>\
+<INFORMATION>Getting remote control states</INFORMATION>\
+<INFORMATION>Getting remote control states - Successful</INFORMATION>\
+<INFORMATION>Uploading remote control information to web</INFORMATION>\
+<INFORMATION>Initializing the remote control.  Please wait...</INFORMATION>\
+<INFORMATION>Uploading remote control information to web - Successful</INFORMATION>\
+<INFORMATION>Uploading...</INFORMATION>\
+<INFORMATION>Starting communication</INFORMATION>\
+<INFORMATION>Starting communication - Successful</INFORMATION>\
+<INFORMATION>Estimating time to update remote control</INFORMATION>\
+<INFORMATION>Estimated time to update remote control : 2 minutes</INFORMATION>\
+<INFORMATION>Estimating time to update remote control - Successful</INFORMATION>\
+<INFORMATION>Updating region</INFORMATION>\
+<INFORMATION>Verifying the data written to the remote control</INFORMATION>\
+<INFORMATION>Verifying the data written to the remote control - Successful</INFORMATION>\
+<INFORMATION>Updating region - Successful</INFORMATION>\
+<INFORMATION>Verifying the data written to the remote control</INFORMATION>\
+<INFORMATION>Verifying the data written to the remote control - Successful</INFORMATION>\
+<INFORMATION>Terminating communication</INFORMATION>\
+<INFORMATION>Terminating communication - Successful</INFORMATION>\
+<INFORMATION>Updated state variables.</INFORMATION>\
+<INFORMATION>Updated state variables. - Successful</INFORMATION>\
+<INFORMATION>Updating remote control time</INFORMATION>\
+<INFORMATION>Updating remote control time - Successful</INFORMATION></DATA>";
 
 #endif

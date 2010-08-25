@@ -476,9 +476,6 @@ int upload_config_hid(uint8_t *data, uint32_t size, struct options_t *options,
 		if ((err = find_config_binary(data, size,
 					       &binary_data, &binary_size)))
 			return LC_ERROR;
-
-		if (!(*options).noweb)
-			post_preconfig(data, size);
 	}
 
 	printf("Preparing Update:    ");
@@ -558,24 +555,43 @@ int upload_config(uint8_t *data, uint32_t data_size, uint8_t *xml,
 	void *cb_arg)
 {
 	int err;
-	if (is_z_remote()) {
-		if ((err = upload_config_zwave(data, data_size, options, cb,
-			cb_arg))) {
-			return err;
+
+	/*
+	 * Tell the website we're going to start. This, it seems creates a
+	 * session object on their side, because if you miss the pre-config
+	 * communication, you get a no-session error.
+	 */
+	if (!(*options).binary && !(*options).noweb) {
+		printf("Contacting website:  ");
+		if (is_z_remote()) {
+			if ((err = post_preconfig(xml, xml_size)))
+				return err;
+		} else {
+			if ((err = post_preconfig(data, data_size)))
+				return err;
 		}
-	} else {
-		if ((err = upload_config_hid(data, data_size, options, cb,
-			cb_arg))) {
-			return err;
-		}
+		printf("                     done\n");
 	}
 
+	/* Do the actual update */
+	if (is_z_remote()) {
+		if ((err = upload_config_zwave(data, data_size, options, cb,
+			cb_arg)))
+			return err;
+	} else {
+		if ((err = upload_config_hid(data, data_size, options, cb,
+			cb_arg)))
+			return err;
+	}
+
+	/* Set the time */
 	printf("Setting Time:        ");
 	if ((err = set_time())) {
 		return err;
 	}
 	printf("                     done\n");
 
+	/* Tell the website we're done */
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
 		if (is_z_remote()) {
@@ -1239,6 +1255,7 @@ int main(int argc, char *argv[])
 	data_size = 0;
 	xml = NULL;
 	xml_size = 0;
+	is_zipfile = 0;
 
 	/*
  	 * Alright, at this point, if there's going to be a filename,

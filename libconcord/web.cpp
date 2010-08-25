@@ -69,7 +69,13 @@ static void UrlEncode(const char *in, string &out)
 	const size_t len = strlen(in);
 	for(size_t i = 0; i < len; ++i) {
 		const char c = in[i];
-		if(urlencodemap[c>>3] & (1 << (c & 7))) {
+		if (c == ' ') {
+			out += '+';
+		} else if (c == '(') {
+			out += "%28";
+		} else if (c == ')') {
+			out += "%29";
+		} else if(urlencodemap[c>>3] & (1 << (c & 7))) {
 			char hex[4];
 			sprintf(hex, "%%%02X", c);
 			out += hex;
@@ -252,7 +258,7 @@ int encode_ir_signal(uint32_t carrier_clock,
 
 
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
-	bool has_userid, bool add_cookiekeyval = false,
+	bool has_userid, bool add_cookiekeyval = false, bool z_post=false,
 	string *learn_seq = NULL, string *learn_key = NULL)
 {
 
@@ -297,11 +303,18 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 		char serial[144];
 		sprintf(serial, "%s%s%s", ri.serial1, ri.serial2, ri.serial3);
 		char post_data[2000];
-		sprintf(post_data, post_xml,
-			ri.fw_ver_major, ri.fw_ver_minor, ri.fw_type,
-			serial, ri.hw_ver_major, ri.hw_ver_minor,
-			ri.flash_mfg, ri.flash_id, ri.protocol,
-			ri.architecture, ri.skin);
+		if (z_post) {
+			sprintf(post_data, z_post_xml,
+				ri.hw_ver_major, ri.hw_ver_minor,
+				ri.flash_mfg, ri.flash_id,
+				ri.fw_ver_major, ri.fw_ver_minor);
+		} else {
+			sprintf(post_data, post_xml,
+				ri.fw_ver_major, ri.fw_ver_minor, ri.fw_type,
+				serial, ri.hw_ver_major, ri.hw_ver_minor,
+				ri.flash_mfg, ri.flash_id, ri.protocol,
+				ri.architecture, ri.skin);
+		}
 
 		debug("post data: %s",post_data);
 
