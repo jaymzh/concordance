@@ -810,21 +810,6 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR_READ;
 	}
 
-#if 0
-	err = 1;
-	int max_secs = 120;
-	int secs = 0;
-	while (err) {
-		secs++;
-		debug("Attempt to read!");
-		err = TCP_Read(status, rlen, rsp);
-		sleep(2);
-		if (secs == max_secs) {
-			break;
-		}
-	}
-#endif
-
 	/* make sure we got an ack */
 	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
 		rsp[4] != COMMAND_GET_UPDATE_CHECKSUM) {

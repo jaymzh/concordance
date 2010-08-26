@@ -450,7 +450,7 @@ int upload_config_zwave(uint8_t *data, uint32_t size, struct options_t *options,
 	int err;
 
 	printf("Writing Config:      ");
-	if ((err = update_zwave_config(data, size, cb, (void *)1))) {
+	if ((err = write_config_to_remote(data, size, cb, (void *)1))) {
 		return err;
 	}
 	printf("       done\n");

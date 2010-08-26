@@ -857,9 +857,13 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
 		cb_arg = (void *)true;
 	}
 
-	if ((err = rmt->WriteFlash(ri.arch->config_base, size, in,
-			ri.protocol, cb, cb_arg))) {
-		return LC_ERROR_WRITE;
+	if (is_z_remote()) {
+		if ((err = rmt->UpdateConfig(size, in, cb, cb_arg)))
+			return LC_ERROR_WRITE;
+	} else {
+		if ((err = rmt->WriteFlash(ri.arch->config_base, size, in,
+			ri.protocol, cb, cb_arg)))
+			return LC_ERROR_WRITE;
 	}
 
 	return 0;
@@ -1462,21 +1466,3 @@ void report_net_error(const char *msg)
 	debug("Net error: %s failed with error %s", msg, strerror(errno));
 #endif
 }
-
-/* GOD AWFUL HACK FOR DEV */
-int update_zwave_config(uint8_t *in, uint32_t size, lc_callback cb,
-	void *cb_arg)
-{
-	int err = 0;
-
-	if (!cb_arg) {
-		cb_arg = (void *)true;
-	}
-
-	if ((err = rmt->UpdateConfig(size, in, cb, cb_arg))) {
-		return err;
-	}
-
-	return 0;
-}
-
