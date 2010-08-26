@@ -138,7 +138,6 @@ enum {
 	MODE_SET_TIME,
 	MODE_PRINT_INFO,
 	MODE_VERSION,
-	MODE_ZWAVETEST
 };
 
 
@@ -925,12 +924,6 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 			break;
 		case 'w':
 			(*options).noweb = 1;
-			break;
-		case 'Z':
-			set_mode(mode, MODE_ZWAVETEST);
-			if (optarg != NULL) {
-				*file_name = optarg;
-			}
 			break;
 		default:
 			exit(1);
