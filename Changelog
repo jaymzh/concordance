@@ -1,3 +1,12 @@
+0.23
+Released: 08/28/10
+s-t-concordance@wwwdotorg.org:
+- libconcord: Add windows support for {prep,finish}_config
+
+phil@ipom.com:
+- libconcord: Properly bump so-version
+
+
 0.22
 Released: 08/01/10
 phil@ipom.com
