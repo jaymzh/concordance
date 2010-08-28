@@ -112,7 +112,7 @@ int set_canon(int flag)
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.22+CVS";
+const char * const VERSION = "0.23+CVS";
 
 struct options_t {
 	int binary;
@@ -607,7 +607,6 @@ int upload_config(uint8_t *data, uint32_t data_size, uint8_t *xml,
 
 	return 0;
 }
-
 
 int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 {
