@@ -271,6 +271,8 @@ private:
 	int TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data);
 
 protected:
+	int TCPSendAndCheck(uint8_t cmd, uint32_t len=0, uint8_t *data=NULL,
+		bool ackonly=false);
 	virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
 		uint8_t *data=NULL);
 	virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data);

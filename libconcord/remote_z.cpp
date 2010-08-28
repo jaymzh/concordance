@@ -629,6 +629,34 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 	return 0;
 }
 
+int CRemoteZ_HID::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data,
+	bool ackonly)
+{
+	int err = 0;
+	uint8_t status;
+	unsigned int rlen;
+	uint8_t rsp[60];
+
+	if ((err = TCP_Write(TYPE_REQUEST, cmd, len, data))) {
+		debug("Failed to send request %02X", cmd);
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* make sure it was the response we expected */
+	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+		(ackonly == false && rsp[4] != cmd)) {
+		debug("Did not get the expected response packet");
+		return LC_ERROR;
+	}
+
+	return 0;
+}
+
 int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	lc_callback cb, void *arg)
 {
@@ -696,22 +724,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		cmd[i] = size_ptr[i];
 	}
 	cmd[4] = 0x04;
-	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_WRITE_UPDATE_HEADER, 5,
-			cmd))) {
-		debug("Failed to write update-header to remote");
-		return LC_ERROR_WRITE;
-	}
-
-	if ((err = TCP_Read(status, rlen, rsp))) {
-		debug("Failed to read from remote");
-		return LC_ERROR_READ;
-	}
-
-	/* make sure we got an ack */
-	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
-		rsp[4] != COMMAND_WRITE_UPDATE_HEADER) {
-		debug("Failed to read update-header ack");
-		return LC_ERROR;
+	if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_HEADER, 5, cmd))) {
+		return err;
 	}
 
 	/* write data - TCP_Write should split this up for us */
@@ -727,25 +741,16 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 			pkt_len = tlen;
 		}
 		tlen -= pkt_len;
+
 		debug("DATA %d, sending %d bytes, %d bytes left", count,
 			pkt_len, tlen);
-		if ((err = TCP_Write(TYPE_REQUEST, COMMAND_WRITE_UPDATE_DATA,
-			pkt_len, wr_ptr))) {
-			debug("Failed to write update data!");
-			return LC_ERROR_WRITE;
+
+		if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_DATA, pkt_len,
+			wr_ptr, true))) {
+			return err;
 		}
 		wr_ptr += pkt_len;
 
-		if ((err = TCP_Read(status, rlen, rsp))) {
-			debug("Failed to read from remote");
-			return LC_ERROR_READ;
-		}
-
-		/* make sure we got an ack */
-		if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE) {
-			debug("Failed to read update-header ack");
-			return LC_ERROR;
-		}
 		if (cb) {
 			cb(count++, (int)(wr_ptr - wr), len, arg);
 		}
@@ -753,21 +758,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 
 	/* write update-done */
 	debug("UPDATE_DATA_DONE");
-	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_WRITE_UPDATE_DATA_DONE))) {
-		debug("Failed to write update-done to remote");
-		return LC_ERROR_WRITE;
-	}
-
-	if ((err = TCP_Read(status, rlen, rsp))) {
-		debug("Failed to read from remote");
-		return LC_ERROR_READ;
-	}
-
-	/* make sure we got an ack */
-	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
-		rsp[4] != COMMAND_WRITE_UPDATE_DATA_DONE) {
-		debug("Failed to read update-done ack");
-		return LC_ERROR;
+	if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_DATA_DONE))) {
+		return err;
 	}
 
 	/* Funky ACK exchange - part 1 */
@@ -799,48 +791,21 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	cmd[0] = 0xFF;
 	cmd[1] = 0xFF;
 	cmd[2] = 0x04;
-	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_GET_UPDATE_CHECKSUM, 3,
-			cmd))) {
-		debug("Failed to write get-checksum to remote");
-		return LC_ERROR_WRITE;
-	}
-
-	if ((err = TCP_Read(status, rlen, rsp))) {
-		debug("Failed to read from remote");
-		return LC_ERROR_READ;
-	}
-
-	/* make sure we got an ack */
-	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
-		rsp[4] != COMMAND_GET_UPDATE_CHECKSUM) {
-		debug("Failed to read get-checksum ack");
-		return LC_ERROR;
+	if ((err = TCPSendAndCheck(COMMAND_GET_UPDATE_CHECKSUM, 3, cmd))) {
+		return err;
 	}
 
 	/* send finish-update */
 	debug("FINISH_UPDATE");
 	cmd[0] = 0x01;
 	cmd[1] = 0x04;
-	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_FINISH_UPDATE, 2,
-			cmd))) {
-		debug("Failed to write finish-update to remote");
-		return LC_ERROR_WRITE;
-	}
-
 	/*
 	 * OK, this is a bit weird. We will eventually get a response to the
 	 * FINISH_UPDATE, but first we get an "empty" ack, do another funky-ack
-	 * exchange, and then we'll get the response to the FINISH_UPDATE.
+	 * exchange, and then we'll get the real response to this FINISH_UPDATE.
 	 */
-	if ((err = TCP_Read(status, rlen, rsp))) {
-		debug("Failed to read from remote");
-		return LC_ERROR_READ;
-	}
-
-	/* make sure we got an ack */
-	if (rsp[0] != TYPE_TCP_ACK) {
-		debug("Failed to read ack");
-		return LC_ERROR;
+	if ((err = TCPSendAndCheck(COMMAND_FINISH_UPDATE, 2, cmd, true))) {
+		return err;
 	}
 
 	/* Funky ACK exchange */
@@ -873,7 +838,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR;
 	}
 
-	/* fin-ack */
+	/* FIN-ACK */
 	debug("FIN-ACK");
 	if ((err = TCP_Ack(false, true))) {
 		debug("Failed to send fin-ack");
@@ -885,7 +850,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR_READ;
 	}
 
-	/* make sure we got an ack */
+	/* Make sure we got an ack */
 	if (rsp[0] != (TYPE_TCP_ACK | TYPE_TCP_FIN)) {
 		debug("Failed to read finish-update ack");
 		return LC_ERROR;
