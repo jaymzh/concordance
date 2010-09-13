@@ -26,6 +26,17 @@
  *   - phil    Sat Aug 18 22:49:48 PDT 2007
  */
 
+/* STATUS:
+ *   OK, we need to re-re-re-factor, again. Pull the read-and-parse logic into a
+ *   new class. We can still call it through the remote object, but there will
+ *   be a "get-file-data" call which we can use to re-init a new remote object.
+ *
+ *   OR
+ *
+ *   perhaps we just add a re-init to the remote object rather than destroying
+ *   it?
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -41,13 +52,18 @@
 #include "web.h"
 #include "protocol.h"
 #include "time.h"
+#include "operationfile.h"
 
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
 
 #define FIRMWARE_MAX_SIZE 64*1024
 
+#define MAX_WAIT_FOR_BOOT 5
+#define WAIT_FOR_BOOT_SLEEP 5
+
 static class CRemoteBase *rmt;
+static class OperationFile *of;
 static struct TRemoteInfo ri;
 static struct THIDINFO hid_info;
 static struct THarmonyTime rtime;
@@ -388,6 +404,7 @@ int identify_file(uint8_t *in, uint32_t size, int *type, int xml_only)
 			break;
 		}
 		if (!stricmp(tag_s.c_str(), "GETZAPSONLY")) {
+			debug("is a connectivity test file");
 			found_get_zaps_only = true;
 			break;
 		}
@@ -429,21 +446,25 @@ int identify_file(uint8_t *in, uint32_t size, int *type, int xml_only)
 	 */
 	if (found_get_zaps_only && !data_len && !found_firmware &&
 		!found_learn_ir) {
+		debug("returning connectivity");
 		*type = LC_FILE_TYPE_CONNECTIVITY;
 		return 0;
 	}
 	if (!found_get_zaps_only && (data_len >= 16 || xml_only) &&
 		!found_firmware && !found_learn_ir) {
+		debug("returning config");
 		*type = LC_FILE_TYPE_CONFIGURATION;
 		return 0;
 	}
 	if (!found_get_zaps_only && !data_len && found_firmware &&
 		!found_learn_ir) {
+		debug("returning firmware");
 		*type = LC_FILE_TYPE_FIRMWARE;
 		return 0;
 	}
 	if (!found_get_zaps_only && !data_len && !found_firmware &&
 		found_learn_ir) {
+		debug("returning ir");
 		*type = LC_FILE_TYPE_LEARN_IR;
 		return 0;
 	}
@@ -484,6 +505,117 @@ int read_zip_file(char *file_name, uint8_t **data, uint32_t *data_size,
 	return 0;
 }
 
+int read_and_parse_file(char *filename)
+{
+	debug("Calling RAPOF");
+	of = new OperationFile;
+	return of->ReadAndParseOpFile(filename);
+}
+
+int update_configuration_zwave(lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	printf("Writing Config:      ");
+	if ((err = write_config_to_remote(cb, (void *)1))) {
+		return err;
+	}
+	printf("       done\n");
+
+	return 0;
+}
+
+int update_configuration_hid(lc_callback cb, void *cb_arg) {
+	int err;
+
+	printf("Preparing Update:    ");
+	if ((err = prep_config())) {
+		return err;
+	}
+	printf("                     done\n");
+	/*
+	 * We must invalidate flash before we erase and write so that
+	 * nothing will attempt to reference it while we're working.
+	 */
+	printf("Invalidating Flash:  ");
+	if ((err = invalidate_flash())) {
+		return err;
+	}
+	printf("                     done\n");
+	/*
+	 * Flash can be changed to 0, but not back to 1, so you must
+	 * erase the flash (to 1) in order to write the flash.
+	 */
+	printf("Erasing Flash:       ");
+	if ((err = erase_config(cb, (void *)0))) {
+		return err;
+	}
+	printf("       done\n");
+
+	printf("Writing Config:      ");
+	if ((err = write_config_to_remote(cb, (void *)1))) {
+		return err;
+	}
+	printf("       done\n");
+
+	printf("Verifying Config:    ");
+	if ((err = verify_remote_config(cb, (void *)1))) {
+		return err;
+	}
+	printf("       done\n");
+
+	printf("Finalizing Update:   ");
+	if ((err = finish_config())) {
+		return err;
+	}
+	printf("                     done\n");
+
+	return 0;
+}
+
+
+int update_configuration(lc_callback cb, void *cb_arg, int noreset)
+{
+	int err;
+	if (is_z_remote()) {
+		err = update_configuration_zwave(cb, cb_arg);
+	} else {
+		err = update_configuration_hid(cb, cb_arg);
+	}
+
+	if (err != 0)
+		return err;
+
+	if (noreset) {
+		return 0;
+	}
+
+	printf("Resetting Remote:    ");
+	reset_remote();
+
+	deinit_concord();
+	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
+		sleep(WAIT_FOR_BOOT_SLEEP);
+		err = init_concord();
+		if (err == 0) {
+			/* fix lack of callback */
+			err = get_identity(NULL, NULL);
+			if (err == 0) {
+				break;
+			}
+			deinit_concord();
+		}
+	}
+
+	if (err != 0) {
+		return err;
+	}
+	printf("       done\n");
+
+	return 0;
+}
+
+#if 0
 /*
  * Common routine to read contents of file named *file_name into
  * byte buffer **out. Get size from file and return out[size] 
@@ -513,6 +645,7 @@ int read_file(char *file_name, uint8_t **out, uint32_t *size)
 	}
 	return 0;
 }
+#endif
 
 
 /*
@@ -751,23 +884,25 @@ int invalidate_flash()
 	return 0;
 }
 
-int post_preconfig(uint8_t *data, uint32_t size)
+int post_preconfig()
 {
-	return Post(data, size, "POSTOPTIONS", ri, true);
+	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true);
 }
 
-int post_postfirmware(uint8_t *data, uint32_t size)
+int post_postfirmware()
 {
-	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, false);
+	return Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
+			false);
 }
 
-int post_postconfig(uint8_t *data, uint32_t size)
+int post_postconfig()
 {
-	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, true,
-		false, is_z_remote() ? true: false, NULL, NULL);
+	return Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
+			true, false, false, NULL, NULL);
+		/*true, false, is_z_remote() ? true : false, NULL, NULL);*/
 }
 
-int post_connect_test_success(uint8_t *data, uint32_t size)
+int post_connect_test_success()
 {
 	/*
 	 * If we arrived, we can talk to the remote - so if it's
@@ -784,7 +919,8 @@ int post_connect_test_success(uint8_t *data, uint32_t size)
 		add_cookiekeyval = true;
 	}
 
-	return Post(data, size, "POSTOPTIONS", ri, true, add_cookiekeyval);
+	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
+		add_cookiekeyval);
 }
 
 int get_time()
@@ -848,8 +984,7 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
 	return 0;
 }
 
-int write_config_to_remote(uint8_t *in, uint32_t size,
-	lc_callback cb, void *cb_arg)
+int write_config_to_remote(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
@@ -858,11 +993,13 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
 	}
 
 	if (is_z_remote()) {
-		if ((err = rmt->UpdateConfig(size, in, cb, cb_arg)))
+		if ((err = rmt->UpdateConfig(of->GetDataSize(), of->GetData(),
+				cb, cb_arg)))
 			return LC_ERROR_WRITE;
 	} else {
-		if ((err = rmt->WriteFlash(ri.arch->config_base, size, in,
-			ri.protocol, cb, cb_arg)))
+		if ((err = rmt->WriteFlash(ri.arch->config_base,
+			of->GetDataSize(), of->GetData(), ri.protocol, cb,
+			cb_arg)))
 			return LC_ERROR_WRITE;
 	}
 
@@ -916,13 +1053,12 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 	return 0;
 }
 
-int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
-	void *cb_arg)
+int verify_remote_config(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->ReadFlash(ri.arch->config_base, size, in,
-			ri.protocol, true, cb, cb_arg))) {
+	if ((err = rmt->ReadFlash(ri.arch->config_base, of->GetDataSize(),
+			of->GetData(), ri.protocol, true, cb, cb_arg))) {
 		return LC_ERROR_VERIFY;
 	}
 
@@ -951,68 +1087,13 @@ int finish_config()
 	return 0;
 }
 
-int erase_config(uint32_t size, lc_callback cb, void *cb_arg)
+int erase_config(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->EraseFlash(ri.arch->config_base, size, ri, cb,
-			cb_arg))) {
+	if ((err = rmt->EraseFlash(ri.arch->config_base, of->GetDataSize(),
+			ri, cb, cb_arg))) {
 		return LC_ERROR_ERASE;
-	}
-
-	return 0;
-}
-
-int find_config_binary(uint8_t *config, uint32_t config_size,
-	uint8_t **binary_ptr, uint32_t *binary_size)
-{
-	int err;
-
-        err = GetTag("/INFORMATION", config, config_size, *binary_ptr);
-	if (err == -1)
-		return LC_ERROR;
-
-	*binary_ptr += 2;
-	*binary_size = config_size - (*binary_ptr - config);
-
-        // Limit tag searches to XML portion
-        config_size -= *binary_size;
-
-	string binary_tag_size_s;
-	uint8_t *n = 0;
-	err = GetTag("BINARYDATASIZE", config, config_size, n,
-		&binary_tag_size_s);
-	if (err == -1)
-		return LC_ERROR;
-        uint32_t binary_tag_size = (uint32_t)atoi(binary_tag_size_s.c_str());
-
-	debug("actual data size %i", *binary_size);
-	debug("reported data size %i", binary_tag_size);
-
-	if (*binary_size != binary_tag_size) {
-		debug("Config data size mismatch");
-		return LC_ERROR;
-	}
-
-	string s;
-	err = GetTag("CHECKSUM", config, config_size, n, &s);
-	if (err != 0)
-		return err;
-	const uint8_t checksum = atoi(s.c_str());
-
-	// Calculate checksum
-	uint32_t u = *binary_size;
-	uint8_t calc_checksum = 0x69;
-	uint8_t *pc = *binary_ptr;
-	while (u--)
-		calc_checksum ^= *pc++;
-
-	debug("reported checksum %i %02x", checksum, checksum);
-	debug("actual checksum %i %02x", calc_checksum, calc_checksum);
-
-	if (calc_checksum != checksum) {
-		debug("Config checksum mismatch");
-		return LC_ERROR;
 	}
 
 	return 0;
@@ -1306,22 +1387,21 @@ int _next_key_name(uint8_t **start, uint8_t *inputparams_end, string *keyname)
 }
 
 
-int get_key_names(uint8_t *data, uint32_t size,
-	char ***key_names, uint32_t *key_names_length)
+int get_key_names(char ***key_names, uint32_t *key_names_length)
 {
 	using namespace std;
-	uint8_t *cursor = data;
+	uint8_t *cursor = of->GetXml();
 	uint8_t *inputparams_end;
 	uint32_t key_index = 0;
 	list<string> key_list;
 	string key_name;
 	
-	if ((data == NULL) || (size == 0) || (key_names == NULL)
-		     	|| (key_names_length == NULL)) {
+	if ((key_names == NULL) || (key_names_length == NULL)) {
 		return LC_ERROR;
 	}
 	/* setup data scanning, locating start and end of keynames section: */
-	if (_init_key_scan(data, size, &cursor, &inputparams_end) != 0) {
+	if (_init_key_scan(of->GetXml(), of->GetXmlSize(), &cursor,
+		&inputparams_end) != 0) {
 		return LC_ERROR;
 	}
 	
@@ -1406,8 +1486,8 @@ int encode_for_posting(uint32_t carrier_clock,
 {
 	int err = 0;
 	string encoded;
-	if ((ir_signal == NULL) || (ir_signal_length == 0)
-			|| (encoded_signal == NULL)) {
+	if (ir_signal == NULL || ir_signal_length == 0
+			|| encoded_signal == NULL) {
 		return LC_ERROR;	/* cannot do anything without */
 	}
 	err = encode_ir_signal(carrier_clock, 
@@ -1432,22 +1512,20 @@ void delete_encoded_signal(char *encoded_signal)
  * information from XML data[size] to Logitech.
  * Returns 0 for success, error code for failure.
  */
-int post_new_code(uint8_t *data, uint32_t size, 
-	char *key_name, char *encoded_signal)
+int post_new_code(char *key_name, char *encoded_signal)
 {
 	string learn_key;
 	string learn_seq;
 
-	if ((key_name == NULL) || (encoded_signal == NULL)
-			|| (data == NULL) || (size == 0)) {
+	if (key_name == NULL || encoded_signal == NULL) {
 		return LC_ERROR_POST;	/* cannot do anything without */
 	}
 
 	learn_key = key_name;
 	learn_seq = encoded_signal;
 
-	return Post(data, size, "POSTOPTIONS", ri, true, false, false,
-			&learn_seq, &learn_key);
+	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
+			false, false, &learn_seq, &learn_key);
 }
 
 /*

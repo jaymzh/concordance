@@ -65,7 +65,6 @@ void make_serial(uint8_t *ser, TRemoteInfo &ri)
 	make_guid(ser+32, ri.serial3);
 }
 
-
 int CRemote::Reset(uint8_t kind)
 {
 	uint8_t reset_cmd[64] = { COMMAND_RESET, kind };

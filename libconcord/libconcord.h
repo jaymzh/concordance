@@ -39,23 +39,23 @@ typedef unsigned __int64 uint64_t;
 
 #endif /* end if win32/else */
 
-#define LC_ERROR 1
-#define LC_ERROR_INVALID_DATA_FROM_REMOTE 2
-#define LC_ERROR_READ 3
-#define LC_ERROR_WRITE 4
-#define LC_ERROR_INVALIDATE 5
-#define LC_ERROR_ERASE 6
-#define LC_ERROR_VERIFY 7
-#define LC_ERROR_POST 8
-#define LC_ERROR_GET_TIME 9
-#define LC_ERROR_SET_TIME 10
-#define LC_ERROR_CONNECT 11
-#define LC_ERROR_OS 12
-#define LC_ERROR_OS_NET 13
-#define LC_ERROR_OS_FILE 14
-#define LC_ERROR_UNSUPP 15
-#define LC_ERROR_INVALID_CONFIG 16
-#define LC_ERROR_IR_OVERFLOW 17
+#define LC_ERROR -1
+#define LC_ERROR_INVALID_DATA_FROM_REMOTE -2
+#define LC_ERROR_READ -3
+#define LC_ERROR_WRITE -4
+#define LC_ERROR_INVALIDATE -5
+#define LC_ERROR_ERASE -6
+#define LC_ERROR_VERIFY -7
+#define LC_ERROR_POST -8
+#define LC_ERROR_GET_TIME -9
+#define LC_ERROR_SET_TIME -10
+#define LC_ERROR_CONNECT -11
+#define LC_ERROR_OS -12
+#define LC_ERROR_OS_NET -13
+#define LC_ERROR_OS_FILE -14
+#define LC_ERROR_UNSUPP -15
+#define LC_ERROR_INVALID_CONFIG -16
+#define LC_ERROR_IR_OVERFLOW -17
 
 /*
  * Filetypes, used by identity_file()
@@ -119,6 +119,7 @@ char *get_serial(int p);
 int get_config_bytes_used();
 int get_config_bytes_total();
 int is_z_remote();
+int read_and_parse_file(char *filename);
 
 /*
  * TIME ACCESSORS
@@ -202,24 +203,24 @@ int set_time();
  * successful. A Connectivity.EZHex file must be passed in so that we
  * can get the URL, cookie information, etc.
  */
-int post_connect_test_success(uint8_t *data, uint32_t size);
+int post_connect_test_success();
 /*
  * Prior to updating the config, if you want to interact with the website
  * you have to send it some initial data. This does that. The data passed
  * in here is a pointer to the config data config block (with XML - this
  * should NOT be the pointer result from find_binary_start().
  */
-int post_preconfig(uint8_t *data, uint32_t size);
+int post_preconfig();
 /*
  * After writing the config to the remote, this should be called to tell
  * the members.harmonyremote.com website that it was successful.
  */
-int post_postconfig(uint8_t *data, uint32_t size);
+int post_postconfig();
 /*
  * After writing a new firmware to the remote, this should be called to tell
  * the members.harmonyremote.com website that it was successful.
  */
-int post_postfirmware(uint8_t *data, uint32_t size);
+int post_postfirmware();
 /*
  * This sends the remote a command to tell it we're about to start
  * writing to it's flash area and that it shouldn't read from it.
@@ -250,8 +251,7 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
  * it to the remote. This should be *just* the binary blob (see
  * find_binary_start()). CB info above.
  */
-int write_config_to_remote(uint8_t *in, uint32_t size,
-	lc_callback cb, void *cb_arg);
+int write_config_to_remote(lc_callback cb, void *cb_arg);
 /*
  * Read the in a file. If it's a standard XML file from the
  * membersharmonyremote.com website, the XML will be included. If it's just
@@ -275,8 +275,7 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
  * After doing a write_config_to_remote(), this should be called to verify
  * that config. The data will be compared to what's in *in.
  */
-int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
-	void *cb_arg);
+int verify_remote_config(lc_callback cb, void *cb_arg);
 /*
  * Preps the remote for a config upgrade.
  *
@@ -296,7 +295,7 @@ int finish_config();
  * Flash can be changed to 0, but not back to 1, so you must erase the
  * flash (to 1) in order to write the flash.
  */
-int erase_config(uint32_t size, lc_callback cb, void *cb_arg);
+int erase_config(lc_callback cb, void *cb_arg);
 /*
  * Determine the location of binary data within an XML configuration file.
  * (aka skip past the XML portion).
@@ -434,8 +433,7 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
  * Memory allocated for the strings must be freed by the caller
  * via delete_key_names() when not needed any longer.
  */
-int get_key_names(uint8_t *data, uint32_t size,
-	char ***key_names, uint32_t *key_names_length);
+int get_key_names(char ***key_names, uint32_t *key_names_length);
 
 void delete_key_names(char **key_names, uint32_t key_names_length);
 
@@ -479,8 +477,9 @@ void delete_encoded_signal(char *encoded_signal);
  *
  * Returns 0 for success, error code for failure.
  */
-int post_new_code(uint8_t *data, uint32_t size, 
-	char *key_name, char *encoded_signal);
+int post_new_code(char *key_name, char *encoded_signal);
+
+int update_configuration(lc_callback cb, void *cb_arg, int noreset);
 
 #ifdef __cplusplus
 }

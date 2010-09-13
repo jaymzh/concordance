@@ -249,6 +249,7 @@ char get_cmd(char *prompt, char *allowed, char def) {
 	return result;
 }	
 
+#if 0
 int learn_ir_commands(uint8_t *data, uint32_t size, struct options_t *options)
 {
 	int err = 0;
@@ -376,6 +377,7 @@ int learn_ir_commands(uint8_t *data, uint32_t size, struct options_t *options)
 	delete_key_names(key_names, key_names_length);
 	return 0;
 }
+#endif
 
 /*
  * Start helper functions
@@ -442,7 +444,7 @@ void print_time(int action)
 		get_time_second(), get_time_utc_offset(), get_time_timezone());
 }
 
-
+#if 0
 int upload_config_zwave(uint8_t *data, uint32_t size, struct options_t *options,
 	lc_callback cb, void *cb_arg)
 {
@@ -602,6 +604,75 @@ int upload_config(uint8_t *data, uint32_t data_size, uint8_t *xml,
 				return err;
 			}
 		}
+		printf("                     done\n");
+	}
+
+	return 0;
+}
+#endif
+
+int upload_config2(struct options_t *options, lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	/*
+	 * Tell the website we're going to start. This, it seems creates a
+	 * session object on their side, because if you miss the pre-config
+	 * communication, you get a no-session error.
+	 */
+	if (!(*options).binary && !(*options).noweb) {
+		printf("Contacting website:  ");
+#if 0
+		if (is_z_remote()) {
+			if ((err = post_preconfig()))
+				return err;
+		} else {
+#endif
+			if ((err = post_preconfig()))
+				return err;
+/*		} */
+		printf("                     done\n");
+	}
+
+#if 0
+	/* Do the actual update */
+	if (is_z_remote()) {
+		if ((err = upload_config_zwave(data, data_size, options, cb,
+			cb_arg)))
+			return err;
+	} else {
+#endif
+		if ((err = update_configuration(cb, cb_arg,
+				(*options).noreset))) {
+			printf("FAIL!\n");
+			return err;
+		}
+/*	} */
+
+	/* Set the time */
+	printf("Setting Time:        ");
+	if ((err = set_time())) {
+		return err;
+	}
+	printf("                     done\n");
+
+	/* Tell the website we're done */
+	if (!(*options).binary && !(*options).noweb) {
+		printf("Contacting website:  ");
+#if 0
+		if (is_z_remote()) {
+			if ((err = post_postconfig(xml, xml_size))) {
+				return err;
+			}
+		} else {
+#endif
+			if ((err = post_postconfig())) {
+				printf("FAIL3!\n");
+				return err;
+			}
+#if 0
+		}
+#endif
 		printf("                     done\n");
 	}
 
@@ -1255,6 +1326,20 @@ int main(int argc, char *argv[])
  	 */
 	if (file_name && (mode != MODE_DUMP_CONFIG && mode != MODE_DUMP_FIRMWARE
 			  && mode != MODE_DUMP_SAFEMODE)) {
+
+		
+		int type = read_and_parse_file(file_name);
+
+		fprintf(stderr, "DEBUG: Returned %d\n", type);
+
+		if (type < 0) {
+			fprintf(stderr,
+				"ERROR: Cannot read input file: %s\n",
+				file_name);
+			exit(1);
+		}
+
+#if 0
 		if (is_z_remote() && !options.binary) {
 			if (read_zip_file(file_name, &data, &data_size, &xml,
 				&xml_size)) {
@@ -1282,6 +1367,25 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "WARNING: Cannot determine ");
 			fprintf(stderr, "mode of operation from file.");
 			fprintf(stderr, "\n");
+		}
+#endif
+		switch (type) {
+		case LC_FILE_TYPE_CONNECTIVITY:
+			file_mode = MODE_CONNECTIVITY;
+			break;
+		case LC_FILE_TYPE_CONFIGURATION:
+			file_mode = MODE_WRITE_CONFIG;
+			break;
+		case LC_FILE_TYPE_FIRMWARE:
+			file_mode = MODE_WRITE_FIRMWARE;
+			break;
+		case LC_FILE_TYPE_LEARN_IR:
+			file_mode = MODE_LEARN_IR;
+			break;
+		default:
+			fprintf(stderr, "FIXME ERROR");
+			exit(1);
+			break;
 		}
 
 		/*
@@ -1382,8 +1486,11 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_WRITE_CONFIG:
-			err = upload_config(data, data_size, xml, xml_size,
+			err = upload_config2(&options, cb_print_percent_status,
+					NULL);
+			/*err = upload_config(data, data_size, xml, xml_size,
 				&options, cb_print_percent_status, NULL);
+			*/
 			if (err != 0) {
 				printf("Failed to upload config: %s\n",
 					lc_strerror(err));
@@ -1423,9 +1530,11 @@ int main(int argc, char *argv[])
 			}
 			break;
 
+#if 0
 		case MODE_LEARN_IR:
 			err = learn_ir_commands(data, data_size, &options);
 			break;
+#endif
 
 		case MODE_GET_TIME:
 			err = get_time();

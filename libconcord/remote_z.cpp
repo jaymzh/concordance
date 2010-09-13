@@ -648,10 +648,19 @@ int CRemoteZ_HID::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data,
 	}
 
 	/* make sure it was the response we expected */
-	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
-		(ackonly == false && rsp[4] != cmd)) {
-		debug("Did not get the expected response packet");
+	if (rsp[0] != TYPE_TCP_ACK) {
+		debug("Packet wasn't an ACK!");
 		return LC_ERROR;
+	}
+	if (!ackonly) {
+		if (rsp[3] != TYPE_RESPONSE) {
+			debug("Packet didn't have response bit!");
+			return LC_ERROR;
+		}
+		if (rsp[4] != cmd) {
+			debug("The cmd bit didn't match our request packet");
+			return LC_ERROR;
+		}
 	}
 
 	return 0;
@@ -728,7 +737,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return err;
 	}
 
-	/* write data - TCP_Write should split this up for us */
+	/* write data */
 	debug("UPDATE_DATA");
 	int pkt_len;
 	int tlen = len;

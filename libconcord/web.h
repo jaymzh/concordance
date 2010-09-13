@@ -23,6 +23,8 @@
 #ifndef WEB_H
 #define WEB_H
 
+#include "remote.h"
+
 int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 	uint8_t *&found, string *s = NULL);
 

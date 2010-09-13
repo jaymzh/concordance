@@ -23,6 +23,8 @@
 #ifndef BINARY_H
 #define BINARY_H
 
+#include "lc_internal.h"
+
 class binaryfile {
 protected:
 	FILE *m_f;
