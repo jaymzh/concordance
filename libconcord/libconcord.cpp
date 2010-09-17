@@ -348,6 +348,57 @@ const char *lc_strerror(int err)
 	return "Unknown error";
 }
 
+const char *lc_cb_stage_str(int stage)
+{
+	switch (stage) {
+		case LC_CB_STAGE_GET_IDENTITY:
+			return "Requesting identity";
+			break;
+
+		case LC_CB_STAGE_INITIALIZE_UPDATE:
+			return "Initializing update";
+			break;
+
+		case LC_CB_STAGE_INVALIDATE_FLASH:
+			return "Invalidating Flash";
+			break;
+
+		case LC_CB_STAGE_ERASE_FLASH:
+			return "Erasing flash";
+			break;
+
+		case LC_CB_STAGE_WRITE_CONFIG:
+			return "Writing config";
+			break;
+
+		case LC_CB_STAGE_VERIFY_CONFIG:
+			return "Verifying config";
+			break;
+
+		case LC_CB_STAGE_FINALIZE_UPDATE:
+			return "Finalizing update";
+			break;
+
+		case LC_CB_STAGE_WRITE_FIRMWARE:
+			return "Writing firmware";
+			break;
+
+		case LC_CB_STAGE_RESET:
+			return "Rebooting remote";
+			break;
+
+		case LC_CB_STAGE_SET_TIME:
+			return "Setting time";
+			break;
+
+		case LC_CB_STAGE_HTTP:
+			return "Contacting website";
+			break;
+	}
+
+	return "(Unknown)";
+}
+
 void delete_blob(uint8_t *ptr)
 {
 	delete[] ptr;
@@ -511,110 +562,6 @@ int read_and_parse_file(char *filename)
 	of = new OperationFile;
 	return of->ReadAndParseOpFile(filename);
 }
-
-int update_configuration_zwave(lc_callback cb, void *cb_arg)
-{
-	int err;
-
-	printf("Writing Config:      ");
-	if ((err = write_config_to_remote(cb, (void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	return 0;
-}
-
-int update_configuration_hid(lc_callback cb, void *cb_arg) {
-	int err;
-
-	printf("Preparing Update:    ");
-	if ((err = prep_config())) {
-		return err;
-	}
-	printf("                     done\n");
-	/*
-	 * We must invalidate flash before we erase and write so that
-	 * nothing will attempt to reference it while we're working.
-	 */
-	printf("Invalidating Flash:  ");
-	if ((err = invalidate_flash())) {
-		return err;
-	}
-	printf("                     done\n");
-	/*
-	 * Flash can be changed to 0, but not back to 1, so you must
-	 * erase the flash (to 1) in order to write the flash.
-	 */
-	printf("Erasing Flash:       ");
-	if ((err = erase_config(cb, (void *)0))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Writing Config:      ");
-	if ((err = write_config_to_remote(cb, (void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Verifying Config:    ");
-	if ((err = verify_remote_config(cb, (void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Finalizing Update:   ");
-	if ((err = finish_config())) {
-		return err;
-	}
-	printf("                     done\n");
-
-	return 0;
-}
-
-
-int update_configuration(lc_callback cb, void *cb_arg, int noreset)
-{
-	int err;
-	if (is_z_remote()) {
-		err = update_configuration_zwave(cb, cb_arg);
-	} else {
-		err = update_configuration_hid(cb, cb_arg);
-	}
-
-	if (err != 0)
-		return err;
-
-	if (noreset) {
-		return 0;
-	}
-
-	printf("Resetting Remote:    ");
-	reset_remote();
-
-	deinit_concord();
-	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-		sleep(WAIT_FOR_BOOT_SLEEP);
-		err = init_concord();
-		if (err == 0) {
-			/* fix lack of callback */
-			err = get_identity(NULL, NULL);
-			if (err == 0) {
-				break;
-			}
-			deinit_concord();
-		}
-	}
-
-	if (err != 0) {
-		return err;
-	}
-	printf("       done\n");
-
-	return 0;
-}
-
 #if 0
 /*
  * Common routine to read contents of file named *file_name into
@@ -680,7 +627,7 @@ int _write_fw_to_remote(uint8_t *in, uint32_t size, uint32_t addr,
 	int err = 0;
 
 	if ((err = rmt->WriteFlash(addr, size, in,
-			ri.protocol, cb, cb_arg))) {
+			ri.protocol, cb, cb_arg, NULL))) {
 		return LC_ERROR_WRITE;
 	}
 	return 0;
@@ -846,9 +793,10 @@ int deinit_concord()
 	return 0;
 }
 
-int get_identity(lc_callback cb, void *cb_arg)
+int _get_identity(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
-	if ((rmt->GetIdentity(ri, hid_info, cb, cb_arg))) {
+	if ((rmt->GetIdentity(ri, hid_info, cb_stage, cb,
+			cb_arg))) {
 		return LC_ERROR;
 	}
 
@@ -868,13 +816,19 @@ int get_identity(lc_callback cb, void *cb_arg)
 	return 0;
 }
 
+int get_identity(lc_callback cb, void *cb_arg)
+{
+	_get_identity(cb, cb_arg, LC_CB_STAGE_GET_IDENTITY);
+}
+
 int reset_remote()
 {
 	int err = rmt->Reset(COMMAND_RESET_DEVICE);
 	return err;
 }
 
-int invalidate_flash()
+/* FIXME: This should almost certainly be rolled into prep_config() */
+int _invalidate_flash(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
@@ -884,22 +838,52 @@ int invalidate_flash()
 	return 0;
 }
 
-int post_preconfig()
+int invalidate_flash(lc_callback cb, void *cb_arg)
 {
-	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true);
+	_invalidate_flash(cb, cb_arg, LC_CB_STAGE_INVALIDATE_FLASH);
 }
 
-int post_postfirmware()
+int post_preconfig(lc_callback cb, void *cb_arg)
 {
-	return Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
-			false);
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri,
+			true))) {
+		return err;
+	}
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+	return 0;
 }
 
-int post_postconfig()
+int post_postfirmware(lc_callback cb, void *cb_arg)
 {
-	return Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
-			true, false, false, NULL, NULL);
-		/*true, false, is_z_remote() ? true : false, NULL, NULL);*/
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
+			false))) {
+		return err;
+	}
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+	return 0;
+}
+
+int post_postconfig(lc_callback cb, void *cb_arg)
+{
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
+		        true, false, is_z_remote() ? true : false, NULL, NULL)))
+	{
+		return err;
+	}
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+	return 0;
 }
 
 int post_connect_test_success()
@@ -932,10 +916,13 @@ int get_time()
 	return 0;
 }
 
-int set_time()
+int _set_time(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	const time_t t = time(NULL);
 	struct tm *lt = localtime(&t);
+
+	if (cb)
+		cb(cb_stage, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	rtime.second = lt->tm_sec;
 	rtime.minute = lt->tm_min;
@@ -951,8 +938,15 @@ int set_time()
 	if (err != 0) {
 		return err;
 	}
+	if (cb)
+		cb(cb_stage, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	return 0;
+}
+
+int set_time(lc_callback cb, void *cb_arg)
+{
+	return _set_time(cb, cb_arg, LC_CB_STAGE_SET_TIME);
 }
 
 
@@ -984,7 +978,7 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
 	return 0;
 }
 
-int write_config_to_remote(lc_callback cb, void *cb_arg)
+int _write_config_to_remote(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
@@ -994,16 +988,21 @@ int write_config_to_remote(lc_callback cb, void *cb_arg)
 
 	if (is_z_remote()) {
 		if ((err = rmt->UpdateConfig(of->GetDataSize(), of->GetData(),
-				cb, cb_arg)))
+				cb, cb_arg, cb_stage)))
 			return LC_ERROR_WRITE;
 	} else {
 		if ((err = rmt->WriteFlash(ri.arch->config_base,
-			of->GetDataSize(), of->GetData(), ri.protocol, cb,
-			cb_arg)))
+			of->GetDataSize(), of->GetData(), ri.protocol,
+			cb, cb_arg, cb_stage)))
 			return LC_ERROR_WRITE;
 	}
 
 	return 0;
+}
+
+int write_config_to_remote(lc_callback cb, void *cb_arg)
+{
+	return _write_config_to_remote(cb, cb_arg, LC_CB_STAGE_WRITE_CONFIG);
 }
 
 int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
@@ -1053,30 +1052,40 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 	return 0;
 }
 
-int verify_remote_config(lc_callback cb, void *cb_arg)
+int _verify_remote_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
 	if ((err = rmt->ReadFlash(ri.arch->config_base, of->GetDataSize(),
-			of->GetData(), ri.protocol, true, cb, cb_arg))) {
+			of->GetData(), ri.protocol, true, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_VERIFY;
 	}
 
 	return 0;
 }
 
-int prep_config()
+int verify_remote_config(lc_callback cb, void *cb_arg)
+{
+	_verify_remote_config(cb, cb_arg, LC_CB_STAGE_VERIFY_CONFIG);
+}
+
+int _prep_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
-	if ((err = rmt->PrepConfig(ri))) {
+	if ((err = rmt->PrepConfig(ri, cb, cb_arg, cb_stage))) {
 		return LC_ERROR;
 	}
 
 	return 0;
 }
 
-int finish_config()
+int prep_config(lc_callback cb, void *cb_arg)
+{
+	return _prep_config(cb, cb_arg, LC_CB_STAGE_INITIALIZE_UPDATE);
+}
+
+int _finish_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
@@ -1087,18 +1096,27 @@ int finish_config()
 	return 0;
 }
 
-int erase_config(lc_callback cb, void *cb_arg)
+int finish_config(lc_callback cb, void *cb_arg)
+{
+	return _finish_config(cb, cb_arg, LC_CB_STAGE_FINALIZE_UPDATE);
+}
+
+int _erase_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
 	if ((err = rmt->EraseFlash(ri.arch->config_base, of->GetDataSize(),
-			ri, cb, cb_arg))) {
+			ri, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_ERASE;
 	}
 
 	return 0;
 }
 
+int erase_config(lc_callback cb, void *cb_arg)
+{
+	return _erase_config(cb, cb_arg, LC_CB_STAGE_ERASE_FLASH);
+}
 
 /*
  * SAFEMODE FIRMWARE RELATED
@@ -1526,6 +1544,103 @@ int post_new_code(char *key_name, char *encoded_signal)
 
 	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
 			false, false, &learn_seq, &learn_key);
+}
+
+int _update_configuration_zwave(lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	if ((err = _write_config_to_remote(cb, cb_arg, NULL))) {
+		return err;
+	}
+
+	return 0;
+}
+
+int _update_configuration_hid(lc_callback cb, void *cb_arg) {
+	int err;
+	int cb_count = 0;
+
+	if ((err = prep_config(cb, cb_arg))) {
+		return err;
+	}
+
+	/*
+	 * We must invalidate flash before we erase and write so that
+	 * nothing will attempt to reference it while we're working.
+	 */
+	if ((err = invalidate_flash(cb, cb_arg))) {
+		return err;
+	}
+
+	/*
+	 * Flash can be changed to 0, but not back to 1, so you must
+	 * erase the flash (to 1) in order to write the flash.
+	 */
+	if ((err = erase_config(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = write_config_to_remote(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = verify_remote_config(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = finish_config(cb, cb_arg))) {
+		return err;
+	}
+
+	return 0;
+}
+
+int update_configuration(lc_callback cb, void *cb_arg, int noreset)
+{
+	int err;
+	if (is_z_remote()) {
+		err = _update_configuration_zwave(cb, cb_arg);
+	} else {
+		err = _update_configuration_hid(cb, cb_arg);
+	}
+
+	if (err != 0)
+		return err;
+
+	if (noreset) {
+		return 0;
+	}
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	reset_remote();
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	deinit_concord();
+	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
+		sleep(WAIT_FOR_BOOT_SLEEP);
+		err = init_concord();
+		if (err == 0) {
+			/* fix lack of callback */
+			err = _get_identity(NULL, NULL, NULL);
+			if (err == 0) {
+				break;
+			}
+			deinit_concord();
+		}
+	}
+
+	if (err != 0) {
+		return err;
+	}
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	return 0;
 }
 
 /*

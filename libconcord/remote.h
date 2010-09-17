@@ -137,30 +137,34 @@ public:
 	virtual ~CRemoteBase() {};
 	virtual int Reset(uint8_t kind)=0;
 	virtual int GetIdentity(TRemoteInfo &ri, struct THIDINFO &hid,
-		lc_callback cb=NULL, void *cb_arg=NULL)=0;
+		uint32_t cb_stage, lc_callback cb=NULL, void *cb_arg=NULL)=0;
 
 	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL)=0;
-	virtual int InvalidateFlash(void)=0;
+		lc_callback cb=NULL, void *cb_arg=NULL, int cb_stage=NULL)=0;
+	virtual int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=NULL)=0;
 	virtual int EraseFlash(uint32_t addr, uint32_t len,
 		const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL)=0;
+		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int WriteFlash(uint32_t addr, const uint32_t len,
-		const uint8_t *wr, unsigned int protocol,
-		lc_callback cb=NULL, void *cb_arg=NULL)=0;
+		const uint8_t *wr, unsigned int protocol, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)=0;
 	virtual int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)=0;
 	virtual int PrepFirmware(const TRemoteInfo &ri) = 0;
 	virtual int FinishFirmware(const TRemoteInfo &ri) = 0;
-	virtual int PrepConfig(const TRemoteInfo &ri)=0;
-	virtual int FinishConfig(const TRemoteInfo &ri)=0;
+	virtual int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+	virtual int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+	                void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int UpdateConfig(const uint32_t len,
-		const uint8_t *wr, lc_callback cb, void *arg)=0;
-
+		const uint8_t *wr, lc_callback cb, void *cb_arg,
+		uint32_t cb_stage)=0;
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
-	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)=0;
-
+	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+		lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=NULL)=0;
 	virtual int LearnIR(uint32_t *freq, uint32_t **ir_signal,
 		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg)=0;
 	virtual int IsZRemote()=0;
@@ -183,28 +187,33 @@ public:
 	virtual ~CRemote() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		lc_callback cb=NULL, void *cb_arg=NULL);
+		uint32_t cb_stage, lc_callback cb=NULL, void *cb_arg=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL);
-	int InvalidateFlash(void);
+		lc_callback cb=NULL, void *cb_arg=NULL, int cb_stage=NULL);
+	int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=NULL);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		lc_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-		unsigned int protocol, lc_callback cb=NULL,
-		void *cb_arg=NULL);
+		unsigned int protocol, lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
 	int PrepFirmware(const TRemoteInfo &ri);
 	int FinishFirmware(const TRemoteInfo &ri);
-	int PrepConfig(const TRemoteInfo &ri);
-	int FinishConfig(const TRemoteInfo &ri);
+	int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+	int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	virtual int UpdateConfig(const uint32_t len,
-		const uint8_t *wr, lc_callback cb, void *arg) {};
+		const uint8_t *wr, lc_callback cb, void *cb_arg,
+		uint32_t cb_stage=NULL) {};
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
-	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
+	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
 		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
@@ -231,26 +240,30 @@ public:
 	virtual ~CRemoteZ_Base() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		lc_callback cb=NULL, void *cb_arg=NULL);
+		uint32_t cb_stage, lc_callback cb=NULL, void *cb_arg=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL);
-	int InvalidateFlash(void);
+		lc_callback cb=NULL, void *cb_arg=NULL, int cb_stage=NULL);
+	int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=NULL);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		lc_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-		unsigned int protocol, lc_callback cb=NULL,
-		void *cb_arg=NULL);
+		unsigned int protocol, lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
 	int PrepFirmware(const TRemoteInfo &ri);
 	int FinishFirmware(const TRemoteInfo &ri);
-	int PrepConfig(const TRemoteInfo &ri);
-	int FinishConfig(const TRemoteInfo &ri);
+	int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+	int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
-	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht);
+	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
 		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
@@ -283,8 +296,8 @@ protected:
 public:
 	CRemoteZ_HID() {};
 	virtual ~CRemoteZ_HID() {};
-	int UpdateConfig(const uint32_t len,
-		const uint8_t *wr, lc_callback cb, void *arg);
+	int UpdateConfig(const uint32_t len, const uint8_t *wr,
+		lc_callback cb, void *cb_arg, uint32_t cb_stage);
 };
 
 // 1000, 1000i

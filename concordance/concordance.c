@@ -140,14 +140,36 @@ enum {
 	MODE_VERSION
 };
 
+/*
+ * Tack a colon onto the end, and then right-pad it out to 23-chars. This means
+ * we can have strings of up to 21 chars (21 chars, 1 colon, and 1 space before
+ * the percentages start).
+ */
+void print_stage_name(int stage_id)
+{
+	const char *stage;
+	char output[24]; /* 21 + 1 + 1 + \0 */
+	stage = lc_cb_stage_str(stage_id);
+	strcpy(output, stage);
+	strcat(output, ":");
+	/* -22 is a 23-char-wide left-aligned string */
+	printf("%-22s", output);
+	return;
+}
 
 /*
  * Start callbacks
+ *
+ *   stage_id => integer of the stage
+ *   count => number of times we've been invoked
+ *   curr => current position (bytes, precent, etc.)
+ *   total => the number 'curr' is trying to reach
+ *   counter_type => what 'curr' represents (bytes, percent, etc.)
+ *   arg => an extra value we can ask libconcord to pass us.
  */
-void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
-	void *arg)
+void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
+	uint32_t total, uint32_t counter_type, void *arg)
 {
-	int is_bytes;
 #ifdef WIN32
 	CONSOLE_SCREEN_BUFFER_INFO sbi;
 #endif
@@ -163,18 +185,21 @@ void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
 #else
 		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 #endif
+	} else {
+/*		printf("%s", lc_cb_stage_str(stage_id));*/
+		print_stage_name(stage_id);
 	}
 
-	is_bytes = 0;
-	if (arg) {
-		is_bytes = (int)(arg);
-	}
-
-	if (is_bytes) {
+	if (counter_type == LC_CB_COUNTER_TYPE_BYTES) {
 		printf("%3i%%  %4i KiB", curr*100/total, curr>>10);
 	} else {
 		printf("%3i%%          ", curr*100/total);
 	}
+
+	if (curr == total) {
+		printf("   done\n");
+	}
+
 	fflush(stdout);
 }
 
@@ -587,7 +612,7 @@ int upload_config(uint8_t *data, uint32_t data_size, uint8_t *xml,
 
 	/* Set the time */
 	printf("Setting Time:        ");
-	if ((err = set_time())) {
+	if ((err = set_time(cb, NULL))) {
 		return err;
 	}
 	printf("                     done\n");
@@ -621,59 +646,25 @@ int upload_config2(struct options_t *options, lc_callback cb, void *cb_arg)
 	 * communication, you get a no-session error.
 	 */
 	if (!(*options).binary && !(*options).noweb) {
-		printf("Contacting website:  ");
-#if 0
-		if (is_z_remote()) {
-			if ((err = post_preconfig()))
-				return err;
-		} else {
-#endif
-			if ((err = post_preconfig()))
-				return err;
-/*		} */
-		printf("                     done\n");
+		if ((err = post_preconfig(cb, cb_arg)))
+			return err;
 	}
 
-#if 0
-	/* Do the actual update */
-	if (is_z_remote()) {
-		if ((err = upload_config_zwave(data, data_size, options, cb,
-			cb_arg)))
-			return err;
-	} else {
-#endif
-		if ((err = update_configuration(cb, cb_arg,
-				(*options).noreset))) {
-			printf("FAIL!\n");
-			return err;
-		}
-/*	} */
-
-	/* Set the time */
-	printf("Setting Time:        ");
-	if ((err = set_time())) {
+	if ((err = update_configuration(cb, cb_arg,
+			(*options).noreset))) {
 		return err;
 	}
-	printf("                     done\n");
+
+	/* Set the time, after a reboot */
+	if ((err = set_time(cb, NULL))) {
+		return err;
+	}
 
 	/* Tell the website we're done */
 	if (!(*options).binary && !(*options).noweb) {
-		printf("Contacting website:  ");
-#if 0
-		if (is_z_remote()) {
-			if ((err = post_postconfig(xml, xml_size))) {
-				return err;
-			}
-		} else {
-#endif
-			if ((err = post_postconfig())) {
-				printf("FAIL3!\n");
-				return err;
-			}
-#if 0
+		if ((err = post_postconfig(cb, cb_arg))) {
+			return err;
 		}
-#endif
-		printf("                     done\n");
 	}
 
 	return 0;
@@ -700,6 +691,7 @@ int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 	return 0;
 }
 
+#if 0
 int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 	struct options_t *options, lc_callback cb, void *cb_arg)
 {
@@ -803,7 +795,7 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 		sleep(WAIT_FOR_BOOT_SLEEP);
 		err = init_concord();
 		if (err == 0) {
-			err = get_identity(cb_print_percent_status, NULL);
+			err = get_identity(cb, NULL);
 			if (err == 0) {
 				break;
 			}
@@ -816,11 +808,11 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 	}
 	printf("                     done\n");
 
-	printf("Setting Time:        ");
-	if ((err = set_time())) {
+	/*printf("Setting Time:        ");*/
+	if ((err = set_time(cb, NULL))) {
 		return err;
 	}
-	printf("                     done\n");
+	/*printf("                     done\n");*/
 
 	if (!(*options).binary && !(*options).noweb) {
 		printf("Contacting website:  ");
@@ -832,6 +824,7 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 
 	return 0;
 }
+#endif
 
 int dump_firmware(struct options_t *options, char *file_name,
 	lc_callback cb, void *cb_arg)
@@ -1330,8 +1323,6 @@ int main(int argc, char *argv[])
 		
 		int type = read_and_parse_file(file_name);
 
-		fprintf(stderr, "DEBUG: Returned %d\n", type);
-
 		if (type < 0) {
 			fprintf(stderr,
 				"ERROR: Cannot read input file: %s\n",
@@ -1444,13 +1435,13 @@ int main(int argc, char *argv[])
 	 * Get and print all the version info
 	 */
 
-	printf("Requesting Identity: ");
+	/*printf("Requesting Identity: ");*/
 	err = get_identity(cb_print_percent_status, NULL);
 	if (err != 0 && err != LC_ERROR_INVALID_CONFIG) {
 		fprintf(stderr, "ERROR: failed to requesting identity\n");
 		goto cleanup;
 	}
-	printf("       done\n");
+	/*printf("       done\n");*/
 	if (err == LC_ERROR_INVALID_CONFIG) {
 		printf("WARNING: Invalid config found\n");
 	}
@@ -1488,9 +1479,6 @@ int main(int argc, char *argv[])
 		case MODE_WRITE_CONFIG:
 			err = upload_config2(&options, cb_print_percent_status,
 					NULL);
-			/*err = upload_config(data, data_size, xml, xml_size,
-				&options, cb_print_percent_status, NULL);
-			*/
 			if (err != 0) {
 				printf("Failed to upload config: %s\n",
 					lc_strerror(err));
@@ -1509,6 +1497,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 
+#if 0
 		case MODE_WRITE_FIRMWARE:
 			err = upload_firmware(data, data_size, &options,
 				cb_print_percent_status, NULL);
@@ -1517,6 +1506,7 @@ int main(int argc, char *argv[])
 					lc_strerror(err));
 			}
 			break;
+#endif
 
 		case MODE_DUMP_SAFEMODE:
 			printf("Dumping safemode fw: ");
@@ -1542,7 +1532,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_SET_TIME:
-			err = set_time();
+			err = set_time(cb_print_percent_status, NULL);
 			print_time(1);
 			break;
 

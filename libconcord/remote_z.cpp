@@ -384,7 +384,7 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 }
 
 int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-	lc_callback cb, void *cb_arg)
+	uint32_t cb_stage, lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_SYSTEM_INFO))) {
@@ -400,7 +400,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	}
 
 	if (cb) {
-		cb(0, 1, 2, cb_arg);
+		cb(cb_stage, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 	}
 
 	CRemoteZ_Base::TParamList pl;
@@ -446,7 +446,8 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	}
 
 	if (cb) {
-		cb(1, 2, 2, cb_arg);
+		cb(LC_CB_STAGE_GET_IDENTITY, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS,
+			cb_arg);
 	}
 
 	ParseParams(len, rsp, pl);
@@ -496,25 +497,26 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 int CRemoteZ_Base::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	unsigned int protocol, bool verify, lc_callback cb,
-	void *cb_arg)
+	void *cb_arg, int cb_stage)
 {
 	return 0;
 }
 
-int CRemoteZ_Base::InvalidateFlash(void)
+int CRemoteZ_Base::InvalidateFlash(lc_callback cb, void *cb_arg,
+	uint32_t cb_stage)
 {
 	return 0;
 }
 
 int CRemoteZ_Base::EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-	lc_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	return 0;
 }
 
 int CRemoteZ_Base::WriteFlash(uint32_t addr, const uint32_t len,
-	const uint8_t *wr, unsigned int protocol, lc_callback cb,
-	void *arg)
+	const uint8_t *wr, unsigned int protocol, lc_callback cb, void *arg,
+	uint32_t cb_stage)
 {
 	return 0;
 }
@@ -539,12 +541,14 @@ int CRemoteZ_Base::FinishFirmware(const TRemoteInfo &ri)
 	return 0;
 }
 
-int CRemoteZ_Base::PrepConfig(const TRemoteInfo &ri)
+int CRemoteZ_Base::PrepConfig(const TRemoteInfo &ri, lc_callback cb,
+	void *cb_arg, uint32_t cb_stage)
 {
 	return 0;
 }
 
-int CRemoteZ_Base::FinishConfig(const TRemoteInfo &ri)
+int CRemoteZ_Base::FinishConfig(const TRemoteInfo &ri, lc_callback cb,
+	void *cb_arg, uint32_t cb_stage)
 {
 	return 0;
 }
@@ -589,7 +593,8 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	return 0;
 }
 
-int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
+int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
@@ -667,11 +672,13 @@ int CRemoteZ_HID::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data,
 }
 
 int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
-	lc_callback cb, void *arg)
+	lc_callback cb, void *arg, uint32_t cb_stage)
 {
 	int err = 0;
 	int cb_count = 0;
 
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 0, 4,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 	/* Start a TCP transfer */
 	if ((err = Write(TYPE_REQUEST, COMMAND_INITIATE_UPDATE_TCP_CHANNEL))) {
 		debug("Failed to write to remote");
@@ -692,6 +699,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		COMMAND_INITIATE_UPDATE_TCP_CHANNEL) {
 		return LC_ERROR;
 	}
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 1, 4,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* Look for a SYN packet */
 	debug("Looking for syn");
@@ -704,6 +713,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		debug("Not a SYN packet!");
 		return LC_ERROR;
 	}
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 2, 4,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* ACK it with a command to start an update */
 	debug("START_UPDATE");
@@ -724,6 +735,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		debug("Not expected ack");
 		return LC_ERROR;
 	}
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 3, 4,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* write update-header */
 	debug("UPDATE_HEADER");
@@ -736,12 +749,14 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_HEADER, 5, cmd))) {
 		return err;
 	}
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 4, 4,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+	cb_count = 0;
 
 	/* write data */
 	debug("UPDATE_DATA");
 	int pkt_len;
 	int tlen = len;
-	int count = 0;
 	int bytes_written = 0;
 	uint8_t *wr_ptr = const_cast<uint8_t*>(wr);
 	while (tlen) {
@@ -751,7 +766,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		}
 		tlen -= pkt_len;
 
-		debug("DATA %d, sending %d bytes, %d bytes left", count,
+		debug("DATA %d, sending %d bytes, %d bytes left", cb_count,
 			pkt_len, tlen);
 
 		if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_DATA, pkt_len,
@@ -761,15 +776,22 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		wr_ptr += pkt_len;
 
 		if (cb) {
-			cb(count++, (int)(wr_ptr - wr), len, arg);
+			cb(LC_CB_STAGE_WRITE_CONFIG, cb_count++,
+				(int)(wr_ptr - wr), len,
+				LC_CB_COUNTER_TYPE_BYTES, arg);
 		}
 	}
 
 	/* write update-done */
+	cb_count = 0;
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 0, 6,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 	debug("UPDATE_DATA_DONE");
 	if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_DATA_DONE))) {
 		return err;
 	}
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 1, 6,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* Funky ACK exchange - part 1 */
 	debug("FUNKY-ACK");
@@ -794,6 +816,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		debug("Failed to read from remote");
 		return LC_ERROR_READ;
 	}
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 2, 6,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* send get-cheksum */
 	debug("GET_CHECKSUM");
@@ -803,6 +827,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	if ((err = TCPSendAndCheck(COMMAND_GET_UPDATE_CHECKSUM, 3, cmd))) {
 		return err;
 	}
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 3, 6,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* send finish-update */
 	debug("FINISH_UPDATE");
@@ -816,6 +842,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	if ((err = TCPSendAndCheck(COMMAND_FINISH_UPDATE, 2, cmd, true))) {
 		return err;
 	}
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 4, 6,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* Funky ACK exchange */
 	debug("FUNKY-ACK");
@@ -846,6 +874,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		debug("Failed to read finish-update ack");
 		return LC_ERROR;
 	}
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 5, 6,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/* FIN-ACK */
 	debug("FIN-ACK");
@@ -869,6 +899,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		debug("Failed to ack the ack of our fin-ack");
 		return LC_ERROR_WRITE;
 	}
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 6, 6,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
 
 	/*
 	 * Official traces seem to show a final ack to the above ack, but for us

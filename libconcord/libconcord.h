@@ -60,10 +60,33 @@ typedef unsigned __int64 uint64_t;
 /*
  * Filetypes, used by identity_file()
  */
-#define LC_FILE_TYPE_CONNECTIVITY  0
-#define LC_FILE_TYPE_CONFIGURATION 1
-#define LC_FILE_TYPE_FIRMWARE      2
-#define LC_FILE_TYPE_LEARN_IR      3
+#define LC_FILE_TYPE_CONNECTIVITY 1
+#define LC_FILE_TYPE_CONFIGURATION 2
+#define LC_FILE_TYPE_FIRMWARE 3
+#define LC_FILE_TYPE_LEARN_IR 4
+/*
+ * Callback counter types
+ */
+#define LC_CB_COUNTER_TYPE_STEPS 5
+#define LC_CB_COUNTER_TYPE_BYTES 6
+/*
+ * Callback stages
+ */
+#define LC_CB_STAGE_GET_IDENTITY 7
+/* for config updates... */
+#define LC_CB_STAGE_INITIALIZE_UPDATE 8
+#define LC_CB_STAGE_INVALIDATE_FLASH 9
+#define LC_CB_STAGE_ERASE_FLASH 10
+#define LC_CB_STAGE_WRITE_CONFIG 11
+#define LC_CB_STAGE_VERIFY_CONFIG 12
+#define LC_CB_STAGE_FINALIZE_UPDATE 13
+/* firmware updates share most of the above, but need */
+#define LC_CB_STAGE_WRITE_FIRMWARE 14
+/* other... */
+#define LC_CB_STAGE_RESET 15
+#define LC_CB_STAGE_SET_TIME 16
+#define LC_CB_STAGE_HTTP 17
+
 
 /*
  * Actual C clients are not fully supported yet, but that's the goal...
@@ -78,14 +101,17 @@ extern "C" {
  * There is currently only one kind of callback, and it's for status
  * information. It should be a void function and takes the following
  * arguments:
+ *   uint32_t stage_id - the id of the stage
  *   uint32_t count - the amount of times this cb has been called in a
  *                    given call of a given functioin
  *   uint32_t curr  - current status (usually bytes read/written)
  *   uint32_t total - total goal status (usually bytes expected to read/write)
+ *   uint32_t counter_type - the type of counter (bytes, steps, etc.)
  *   void *arg      - opaque object you can pass to functions to have them
  *                    pass back to your callback.
  */
-typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, void*);
+typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
+	void*);
 
 /*
  * REMOTE INFORMATION ACCESSORS
@@ -147,6 +173,7 @@ const char *get_time_timezone();
  * you received, get back a string.
  */
 const char *lc_strerror(int err);
+const char *lc_cb_stage_str(int stage);
 /*
  * Many functions require you to pass in a ptr which then gets pointed
  * to data that we allocate. You should then call this to clean that
@@ -197,7 +224,7 @@ int get_time();
  * Set the time on the remote to the system time. To find out what time was
  * used, use the time accessors above.
  */
-int set_time();
+int set_time(lc_callback cb, void *cb_arg);
 /*
  * POST to the members.harmonyremote.com website that the connection test was
  * successful. A Connectivity.EZHex file must be passed in so that we
@@ -210,17 +237,17 @@ int post_connect_test_success();
  * in here is a pointer to the config data config block (with XML - this
  * should NOT be the pointer result from find_binary_start().
  */
-int post_preconfig();
+int post_preconfig(lc_callback cb, void *cb_arg);
 /*
  * After writing the config to the remote, this should be called to tell
  * the members.harmonyremote.com website that it was successful.
  */
-int post_postconfig();
+int post_postconfig(lc_callback cb, void *cb_arg);
 /*
  * After writing a new firmware to the remote, this should be called to tell
  * the members.harmonyremote.com website that it was successful.
  */
-int post_postfirmware();
+int post_postfirmware(lc_callback cb, void *cb_arg);
 /*
  * This sends the remote a command to tell it we're about to start
  * writing to it's flash area and that it shouldn't read from it.
@@ -230,7 +257,7 @@ int post_postfirmware();
  * If something goes wrong, or you change your mind after invalidating
  * flash, you should reboot the device.
  */
-int invalidate_flash();
+int invalidate_flash(lc_callback cb, void *cb_arg);
 
 /*
  * CONFIGURATION INTERACTIONS
