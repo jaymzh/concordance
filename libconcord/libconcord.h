@@ -86,6 +86,7 @@ typedef unsigned __int64 uint64_t;
 #define LC_CB_STAGE_RESET 15
 #define LC_CB_STAGE_SET_TIME 16
 #define LC_CB_STAGE_HTTP 17
+#define LC_CB_STAGE_LEARN 18
 
 
 /*
@@ -503,7 +504,8 @@ void delete_encoded_signal(char *encoded_signal);
  *
  * Returns 0 for success, error code for failure.
  */
-int post_new_code(char *key_name, char *encoded_signal);
+int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
+	void *cb_arg);
 
 int update_configuration(lc_callback cb, void *cb_arg, int noreset);
 int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct);

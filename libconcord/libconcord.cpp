@@ -392,6 +392,10 @@ const char *lc_cb_stage_str(int stage)
 		case LC_CB_STAGE_HTTP:
 			return "Contacting website";
 			break;
+
+		case LC_CB_STAGE_LEARN:
+			return "Learning IR code";
+			break;
 	}
 
 	return "(Unknown)";
@@ -1592,7 +1596,7 @@ int learn_from_remote(uint32_t *carrier_clock,
 	
 	/* try to learn code via Harmony from original remote: */
 	return rmt->LearnIR(carrier_clock, ir_signal, ir_signal_length, cb,
-		cb_arg);
+		cb_arg, LC_CB_STAGE_LEARN);
 }
 
 /*
@@ -1640,10 +1644,14 @@ void delete_encoded_signal(char *encoded_signal)
  * information from XML data[size] to Logitech.
  * Returns 0 for success, error code for failure.
  */
-int post_new_code(char *key_name, char *encoded_signal)
+int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
+	void *cb_arg)
 {
-	string learn_key;
-	string learn_seq;
+	int err;
+	string learn_key, learn_seq;
+
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	if (key_name == NULL || encoded_signal == NULL) {
 		return LC_ERROR_POST;	/* cannot do anything without */
@@ -1652,8 +1660,17 @@ int post_new_code(char *key_name, char *encoded_signal)
 	learn_key = key_name;
 	learn_seq = encoded_signal;
 
-	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
-			false, false, &learn_seq, &learn_key);
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
+			false, false, &learn_seq, &learn_key)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	return 0;
 }
 
 /*

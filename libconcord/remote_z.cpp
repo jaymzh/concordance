@@ -913,7 +913,8 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 }
 
 int CRemoteZ_Base::LearnIR(uint32_t *freq, uint32_t **ir_signal,
-	uint32_t *ir_signal_length, lc_callback cb, void *cb_arg)
+	uint32_t *ir_signal_length, lc_callback cb, void *cb_arg,
+	uint32_t cb_stage)
 {
 	return 0;
 }

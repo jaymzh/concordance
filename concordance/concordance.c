@@ -274,6 +274,135 @@ char get_cmd(char *prompt, char *allowed, char def) {
 	return result;
 }	
 
+int learn_ir_commands(struct options_t *options, lc_callback cb, void *cb_arg)
+{
+	int err = 0;
+	uint32_t carrier_clock = 0;
+	uint32_t *ir_signal = NULL;
+	uint32_t ir_signal_length = 0;
+	uint32_t index = 0;
+	char **key_names;
+	uint32_t key_names_length = 0;
+	char *post_string = NULL;
+	char user_cmd;
+
+	err = get_key_names(&key_names, &key_names_length);
+	if ((err != 0) || (key_names_length == 0)) { return err; }
+	
+	printf("Received file contains %u key names to be learned.\n",
+		key_names_length);
+	
+	while (1) {
+		if (index >= key_names_length) {
+			index--;
+			printf("Last key in list!\n");
+		}
+		printf("\nKey name : <%s> : \n", key_names[index]);
+		user_cmd = get_cmd(
+			"[L]earn, [N]ext, [P]revious, [Q]uit",
+			"LlHhNnPpQq", 'L');
+		err = -1; 
+		/* have no code yet */
+		switch (user_cmd) {
+			case 'L':
+			case 'l':
+				/* learn from remote: */
+				printf("press corresponding key ");
+				printf("on original remote within 5 sec:\n");
+				err = learn_from_remote(&carrier_clock,
+					&ir_signal, &ir_signal_length,
+					cb_print_percent_status, NULL);
+				break;
+			case 'P':
+			case 'p':
+				if (index > 0) {
+					index--;
+				} else {
+					printf("First key in list!\n");
+				}
+				break;
+			case 'N':
+			case 'n':
+				index++;
+				break;
+			default:
+				break;
+		}				
+		if ( err == 0 ) {
+			/* have new IR code: */
+			if ((*options).verbose) {
+				print_received_ir_signal(carrier_clock,
+					ir_signal, ir_signal_length, options);
+			}
+			err = encode_for_posting(carrier_clock, ir_signal,
+					ir_signal_length, &post_string);
+			/* done with learned signal, free memory: */
+			delete_ir_signal(ir_signal);
+		}
+			
+		if ( err == 0 ) {
+			/* have successfully encoded new code: */
+#ifdef _DEBUG				
+			if ((*options).verbose) {
+				printf("%s\n\n", post_string );
+			}
+#endif
+			if (!(*options).noweb) {
+				user_cmd = get_cmd(
+				"[U]pload new code, [R]etry same key, [N]ext key, [Q]uit",
+				"UuRrNnQq", 'U');
+			} else {
+				/* no upload: just skip to next key */
+				user_cmd = 'N';
+			}
+			switch (user_cmd) {
+				case 'U':
+				case 'u':
+					/*printf("Upload to website:   ");
+					cb_print_percent_status(
+						0, 0, 0, 1,
+						LC_CB_COUNTER_TYPE_STEPS, NULL);
+					*/
+					err = post_new_code(key_names[index],
+						post_string, cb, cb_arg);
+					if ( err == 0 ) {
+					/*
+						cb_print_percent_status(
+							0, 1, 1, 1,
+							LC_CB_COUNTER_TYPE_STEPS,
+							NULL);
+						printf("       done\n");*/
+						index++;
+					} else {
+						printf("       failed\n");
+					}
+					break;
+				case 'N':
+				case 'n':
+					index++;
+					break;
+				default:
+					break;
+			}
+			/* done, free memory */
+			delete_encoded_signal(post_string);
+		} else {
+			if (err > 0) {
+				fprintf(stderr, "\nERROR:Problemreceiving IR");
+				fprintf(stderr, " signal:\n\t%s \n",
+					lc_strerror(err));
+			}
+		}
+		
+		if (user_cmd == 'Q' || user_cmd == 'q') {
+			break;
+		}
+	}
+	/* done, free memory */
+	delete_key_names(key_names, key_names_length);
+	return 0;
+}
+
 #if 0
 int learn_ir_commands(uint8_t *data, uint32_t size, struct options_t *options)
 {
@@ -1226,11 +1355,10 @@ int main(int argc, char *argv[])
 			}
 			break;
 
-#if 0
 		case MODE_LEARN_IR:
-			err = learn_ir_commands(data, data_size, &options);
+			err = learn_ir_commands(&options,
+				cb_print_percent_status, NULL);
 			break;
-#endif
 
 		case MODE_GET_TIME:
 			err = get_time();

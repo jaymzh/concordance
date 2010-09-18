@@ -171,7 +171,8 @@ public:
 		lc_callback cb=NULL, void *cb_arg=NULL,
 		uint32_t cb_stage=NULL)=0;
 	virtual int LearnIR(uint32_t *freq, uint32_t **ir_signal,
-		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg)=0;
+		uint32_t *ir_signal_length, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int IsZRemote()=0;
 };
 
@@ -223,7 +224,8 @@ public:
 		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
-		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
+		uint32_t *ir_signal_length, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int IsZRemote() {return false;}
 };
 
@@ -275,7 +277,8 @@ public:
 		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
-		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
+		uint32_t *ir_signal_length, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int IsZRemote() {return true;}
 };
 
