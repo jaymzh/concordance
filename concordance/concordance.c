@@ -434,7 +434,6 @@ int dump_config(struct options_t *options, char *file_name,
 	lc_callback cb, void *cb_arg)
 {
 	int err = 0;
-
 	uint8_t *config;
 	uint32_t size = 0;
 
@@ -469,174 +468,7 @@ void print_time(int action)
 		get_time_second(), get_time_utc_offset(), get_time_timezone());
 }
 
-#if 0
-int upload_config_zwave(uint8_t *data, uint32_t size, struct options_t *options,
-	lc_callback cb, void *cb_arg)
-{
-	int err;
-
-	printf("Writing Config:      ");
-	if ((err = write_config_to_remote(data, size, cb, (void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	return 0;
-}
-
-/*
- * Read the config from a file and write it to the remote
- */
-int upload_config_hid(uint8_t *data, uint32_t size, struct options_t *options,
-	lc_callback cb, void *cb_arg)
-{
-	int err, i;
-
-	uint8_t *binary_data;
-	uint32_t binary_size;
-
-	binary_data = data;
-	binary_size = size;
-
-	if (!(*options).binary) {
-		if ((err = find_config_binary(data, size,
-					       &binary_data, &binary_size)))
-			return LC_ERROR;
-	}
-
-	printf("Preparing Update:    ");
-	if ((err = prep_config())) {
-		return err;
-	}
-	printf("                     done\n");
-	/*
-	 * We must invalidate flash before we erase and write so that
-	 * nothing will attempt to reference it while we're working.
-	 */
-	printf("Invalidating Flash:  ");
-	if ((err = invalidate_flash())) {
-		return err;
-	}
-	printf("                     done\n");
-	/*
-	 * Flash can be changed to 0, but not back to 1, so you must
-	 * erase the flash (to 1) in order to write the flash.
-	 */
-	printf("Erasing Flash:       ");
-	if ((err = erase_config(binary_size, cb, (void *)0))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Writing Config:      ");
-	if ((err = write_config_to_remote(binary_data, binary_size, cb,
-			(void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Verifying Config:    ");
-	if ((err = verify_remote_config(binary_data,
-				       binary_size, cb, (void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Finalizing Update:   ");
-	if ((err = finish_config())) {
-		return err;
-	}
-	printf("                     done\n");
-
-	if ((*options).noreset) {
-		return 0;
-	}
-
-	printf("Resetting Remote:    ");
-	reset_remote();
-
-	deinit_concord();
-	for (i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-		sleep(WAIT_FOR_BOOT_SLEEP);
-		err = init_concord();
-		if (err == 0) {
-			err = get_identity(cb_print_percent_status, NULL);
-			if (err == 0) {
-				break;
-			}
-			deinit_concord();
-		}
-	}
-
-	if (err != 0) {
-		return err;
-	}
-	printf("       done\n");
-
-	return 0;
-}
-
-int upload_config(uint8_t *data, uint32_t data_size, uint8_t *xml,
-	uint32_t xml_size, struct options_t *options, lc_callback cb,
-	void *cb_arg)
-{
-	int err;
-
-	/*
-	 * Tell the website we're going to start. This, it seems creates a
-	 * session object on their side, because if you miss the pre-config
-	 * communication, you get a no-session error.
-	 */
-	if (!(*options).binary && !(*options).noweb) {
-		printf("Contacting website:  ");
-		if (is_z_remote()) {
-			if ((err = post_preconfig(xml, xml_size)))
-				return err;
-		} else {
-			if ((err = post_preconfig(data, data_size)))
-				return err;
-		}
-		printf("                     done\n");
-	}
-
-	/* Do the actual update */
-	if (is_z_remote()) {
-		if ((err = upload_config_zwave(data, data_size, options, cb,
-			cb_arg)))
-			return err;
-	} else {
-		if ((err = upload_config_hid(data, data_size, options, cb,
-			cb_arg)))
-			return err;
-	}
-
-	/* Set the time */
-	printf("Setting Time:        ");
-	if ((err = set_time(cb, NULL))) {
-		return err;
-	}
-	printf("                     done\n");
-
-	/* Tell the website we're done */
-	if (!(*options).binary && !(*options).noweb) {
-		printf("Contacting website:  ");
-		if (is_z_remote()) {
-			if ((err = post_postconfig(xml, xml_size))) {
-				return err;
-			}
-		} else {
-			if ((err = post_postconfig(data, data_size))) {
-				return err;
-			}
-		}
-		printf("                     done\n");
-	}
-
-	return 0;
-}
-#endif
-
-int upload_config2(struct options_t *options, lc_callback cb, void *cb_arg)
+int upload_config(struct options_t *options, lc_callback cb, void *cb_arg)
 {
 	int err;
 
@@ -1330,36 +1162,6 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-#if 0
-		if (is_z_remote() && !options.binary) {
-			if (read_zip_file(file_name, &data, &data_size, &xml,
-				&xml_size)) {
-				is_zipfile = 0;
-			} else {
-				is_zipfile = 1;
-			}
-		}
-
-		if (!is_zipfile) {
-			if (read_file(file_name, &data, &data_size)) {
-				fprintf(stderr,
-					"ERROR: Cannot read input file: %s\n",
-					file_name);
-				exit(1);
-			}
-		}
-
-		/*
-		 * Now that the file is read, see if we can recognize it:
-		 */
-		if (detect_mode(is_zipfile ? xml : data,
-				is_zipfile ? xml_size : data_size,
-			&file_mode, 1)) {
-			fprintf(stderr, "WARNING: Cannot determine ");
-			fprintf(stderr, "mode of operation from file.");
-			fprintf(stderr, "\n");
-		}
-#endif
 		switch (type) {
 		case LC_FILE_TYPE_CONNECTIVITY:
 			file_mode = MODE_CONNECTIVITY;
@@ -1399,6 +1201,14 @@ int main(int argc, char *argv[])
 	 */
 	if (mode == MODE_UNSET) {
 		fprintf(stderr, "ERROR: No mode requested. No work to do.\n");
+		exit(1);
+	}
+
+	if (is_z_remote() && (mode == MODE_DUMP_CONFIG || mode ==
+			MODE_DUMP_FIRMWARE || mode == MODE_DUMP_SAFEMODE)) {
+		fprintf(stderr, "Sorry, dumping configs, firmware, or"
+			" safemode is not (yet)\n\tsupported on zwave"
+			" remotes.\n");
 		exit(1);
 	}
 
@@ -1457,10 +1267,8 @@ int main(int argc, char *argv[])
 
 		case MODE_CONNECTIVITY:
 			if (!options.noweb) {
-				printf("Contacting website:  ");
-				err = post_connect_test_success(data,
-					data_size);
-				printf("                     done\n");
+				err = post_connect_test_success(
+					cb_print_percent_status, NULL);
 			}
 			break;
 
@@ -1477,7 +1285,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_WRITE_CONFIG:
-			err = upload_config2(&options, cb_print_percent_status,
+			err = upload_config(&options, cb_print_percent_status,
 					NULL);
 			if (err != 0) {
 				printf("Failed to upload config: %s\n",

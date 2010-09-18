@@ -137,11 +137,12 @@ public:
 	virtual ~CRemoteBase() {};
 	virtual int Reset(uint8_t kind)=0;
 	virtual int GetIdentity(TRemoteInfo &ri, struct THIDINFO &hid,
-		uint32_t cb_stage, lc_callback cb=NULL, void *cb_arg=NULL)=0;
+		lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=NULL)=0;
 
 	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL, int cb_stage=NULL)=0;
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
 		uint32_t cb_stage=NULL)=0;
 	virtual int EraseFlash(uint32_t addr, uint32_t len,
@@ -187,11 +188,11 @@ public:
 	virtual ~CRemote() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		uint32_t cb_stage, lc_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL, int cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
 		uint32_t cb_stage=NULL);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
@@ -240,11 +241,11 @@ public:
 	virtual ~CRemoteZ_Base() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		uint32_t cb_stage, lc_callback cb=NULL, void *cb_arg=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL, int cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
 		uint32_t cb_stage=NULL);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,

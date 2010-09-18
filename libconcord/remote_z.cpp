@@ -384,7 +384,7 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 }
 
 int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-	uint32_t cb_stage, lc_callback cb, void *cb_arg)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_SYSTEM_INFO))) {
@@ -497,7 +497,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 int CRemoteZ_Base::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	unsigned int protocol, bool verify, lc_callback cb,
-	void *cb_arg, int cb_stage)
+	void *cb_arg, uint32_t cb_stage)
 {
 	return 0;
 }

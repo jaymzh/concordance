@@ -258,10 +258,9 @@ int encode_ir_signal(uint32_t carrier_clock,
 
 
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
-	bool has_userid, bool add_cookiekeyval = false, bool z_post=false,
-	string *learn_seq = NULL, string *learn_key = NULL)
+	bool has_userid, bool add_cookiekeyval, bool z_post,
+	string *learn_seq, string *learn_key)
 {
-
 	uint8_t *x = xml;
 	int err;
 	if ((err = GetTag(root, x, xml_size - (x - xml), x)))

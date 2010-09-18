@@ -795,8 +795,7 @@ int deinit_concord()
 
 int _get_identity(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
-	if ((rmt->GetIdentity(ri, hid_info, cb_stage, cb,
-			cb_arg))) {
+	if ((rmt->GetIdentity(ri, hid_info, cb, cb_arg, cb_stage))) {
 		return LC_ERROR;
 	}
 
@@ -862,10 +861,11 @@ int post_postfirmware(lc_callback cb, void *cb_arg)
 	int err;
 	if (cb)
 		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
 	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
-			false))) {
+			false)))
 		return err;
-	}
+
 	if (cb)
 		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 	return 0;
@@ -876,17 +876,18 @@ int post_postconfig(lc_callback cb, void *cb_arg)
 	int err;
 	if (cb)
 		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
 	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
 		        true, false, is_z_remote() ? true : false, NULL, NULL)))
-	{
 		return err;
-	}
+
 	if (cb)
 		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
 	return 0;
 }
 
-int post_connect_test_success()
+int post_connect_test_success(lc_callback cb, void *cb_arg)
 {
 	/*
 	 * If we arrived, we can talk to the remote - so if it's
@@ -898,13 +899,23 @@ int post_connect_test_success()
 	 * one cookie value, so we need to tell Post() to add it in.
 	 * Note that it ONLY does this for the connectivity test...
 	 */
+	int err;
 	bool add_cookiekeyval = false;
 	if (ri.architecture == 9) {
 		add_cookiekeyval = true;
 	}
 
-	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
-		add_cookiekeyval);
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
+			add_cookiekeyval)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	return 0;
 }
 
 int get_time()
@@ -992,8 +1003,8 @@ int _write_config_to_remote(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 			return LC_ERROR_WRITE;
 	} else {
 		if ((err = rmt->WriteFlash(ri.arch->config_base,
-			of->GetDataSize(), of->GetData(), ri.protocol,
-			cb, cb_arg, cb_stage)))
+				of->GetDataSize(), of->GetData(), ri.protocol,
+				cb, cb_arg, cb_stage)))
 			return LC_ERROR_WRITE;
 	}
 
@@ -1117,6 +1128,104 @@ int erase_config(lc_callback cb, void *cb_arg)
 {
 	return _erase_config(cb, cb_arg, LC_CB_STAGE_ERASE_FLASH);
 }
+
+int _update_configuration_zwave(lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	if ((err = _write_config_to_remote(cb, cb_arg, NULL))) {
+		return err;
+	}
+
+	return 0;
+}
+
+int _update_configuration_hid(lc_callback cb, void *cb_arg) {
+	int err;
+	int cb_count = 0;
+
+	if ((err = prep_config(cb, cb_arg))) {
+		return err;
+	}
+
+	/*
+	 * We must invalidate flash before we erase and write so that
+	 * nothing will attempt to reference it while we're working.
+	 */
+	if ((err = invalidate_flash(cb, cb_arg))) {
+		return err;
+	}
+
+	/*
+	 * Flash can be changed to 0, but not back to 1, so you must
+	 * erase the flash (to 1) in order to write the flash.
+	 */
+	if ((err = erase_config(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = write_config_to_remote(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = verify_remote_config(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = finish_config(cb, cb_arg))) {
+		return err;
+	}
+
+	return 0;
+}
+
+int update_configuration(lc_callback cb, void *cb_arg, int noreset)
+{
+	int err;
+	if (is_z_remote()) {
+		err = _update_configuration_zwave(cb, cb_arg);
+	} else {
+		err = _update_configuration_hid(cb, cb_arg);
+	}
+
+	if (err != 0)
+		return err;
+
+	if (noreset) {
+		return 0;
+	}
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	reset_remote();
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	deinit_concord();
+	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
+		sleep(WAIT_FOR_BOOT_SLEEP);
+		err = init_concord();
+		if (err == 0) {
+			/* fix lack of callback */
+			err = _get_identity(NULL, NULL, NULL);
+			if (err == 0) {
+				break;
+			}
+			deinit_concord();
+		}
+	}
+
+	if (err != 0) {
+		return err;
+	}
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	return 0;
+}
+
 
 /*
  * SAFEMODE FIRMWARE RELATED
@@ -1544,103 +1653,6 @@ int post_new_code(char *key_name, char *encoded_signal)
 
 	return Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
 			false, false, &learn_seq, &learn_key);
-}
-
-int _update_configuration_zwave(lc_callback cb, void *cb_arg)
-{
-	int err;
-
-	if ((err = _write_config_to_remote(cb, cb_arg, NULL))) {
-		return err;
-	}
-
-	return 0;
-}
-
-int _update_configuration_hid(lc_callback cb, void *cb_arg) {
-	int err;
-	int cb_count = 0;
-
-	if ((err = prep_config(cb, cb_arg))) {
-		return err;
-	}
-
-	/*
-	 * We must invalidate flash before we erase and write so that
-	 * nothing will attempt to reference it while we're working.
-	 */
-	if ((err = invalidate_flash(cb, cb_arg))) {
-		return err;
-	}
-
-	/*
-	 * Flash can be changed to 0, but not back to 1, so you must
-	 * erase the flash (to 1) in order to write the flash.
-	 */
-	if ((err = erase_config(cb, cb_arg))) {
-		return err;
-	}
-
-	if ((err = write_config_to_remote(cb, cb_arg))) {
-		return err;
-	}
-
-	if ((err = verify_remote_config(cb, cb_arg))) {
-		return err;
-	}
-
-	if ((err = finish_config(cb, cb_arg))) {
-		return err;
-	}
-
-	return 0;
-}
-
-int update_configuration(lc_callback cb, void *cb_arg, int noreset)
-{
-	int err;
-	if (is_z_remote()) {
-		err = _update_configuration_zwave(cb, cb_arg);
-	} else {
-		err = _update_configuration_hid(cb, cb_arg);
-	}
-
-	if (err != 0)
-		return err;
-
-	if (noreset) {
-		return 0;
-	}
-
-	if (cb)
-		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
-
-	reset_remote();
-
-	if (cb)
-		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
-
-	deinit_concord();
-	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-		sleep(WAIT_FOR_BOOT_SLEEP);
-		err = init_concord();
-		if (err == 0) {
-			/* fix lack of callback */
-			err = _get_identity(NULL, NULL, NULL);
-			if (err == 0) {
-				break;
-			}
-			deinit_concord();
-		}
-	}
-
-	if (err != 0) {
-		return err;
-	}
-	if (cb)
-		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
-
-	return 0;
 }
 
 /*

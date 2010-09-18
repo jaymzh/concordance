@@ -78,7 +78,7 @@ int CRemote::Reset(uint8_t kind)
  * Then populate our struct with all the relevant info.
  */
 int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-	uint32_t cb_stage, lc_callback cb, void *arg)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 	uint32_t cb_count = 0;
@@ -134,7 +134,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	}
 	if (cb) {
 		cb(cb_stage, cb_count++, 1, 2,
-			LC_CB_COUNTER_TYPE_STEPS, arg);
+			LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 	}
 
 	/*
@@ -182,7 +182,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 	if (cb) {
 		cb(cb_stage, cb_count++, 2, 2,
-			LC_CB_COUNTER_TYPE_STEPS, arg);
+			LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 	}
 
 	make_serial(rsp, ri);
@@ -192,7 +192,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	unsigned int protocol, bool verify, lc_callback cb,
-	void *cb_arg, int cb_stage)
+	void *cb_arg, uint32_t cb_stage)
 {
 
 	uint32_t cb_count = 0;

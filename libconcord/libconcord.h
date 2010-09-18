@@ -230,7 +230,7 @@ int set_time(lc_callback cb, void *cb_arg);
  * successful. A Connectivity.EZHex file must be passed in so that we
  * can get the URL, cookie information, etc.
  */
-int post_connect_test_success();
+int post_connect_test_success(lc_callback cb, void *cb_arg);
 /*
  * Prior to updating the config, if you want to interact with the website
  * you have to send it some initial data. This does that. The data passed
