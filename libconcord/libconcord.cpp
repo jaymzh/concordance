@@ -57,8 +57,6 @@
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
 
-#define FIRMWARE_MAX_SIZE 64*1024
-
 #define MAX_WAIT_FOR_BOOT 5
 #define WAIT_FOR_BOOT_SLEEP 5
 
@@ -622,12 +620,12 @@ int _is_fw_update_supported(int direct)
 }
 
 int _write_fw_to_remote(uint8_t *in, uint32_t size, uint32_t addr,
-	lc_callback cb,	void *cb_arg)
+	lc_callback cb,	void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
 	if ((err = rmt->WriteFlash(addr, size, in,
-			ri.protocol, cb, cb_arg, NULL))) {
+			ri.protocol, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_WRITE;
 	}
 	return 0;
@@ -708,22 +706,6 @@ int _fix_magic_bytes(uint8_t *in, uint32_t size)
 		in[1] = sumb;
 	}
 
-	return 0;
-}
-
-/*
- * Chunk the hex into words, tack on an '0x', and then throw
- * it through strtoul to get binary data (int) back.
- */
-int _convert_to_binary(string hex, uint8_t *&ptr)
-{
-	size_t size = hex.length();
-	for (size_t i = 0; i < size; i += 2) {
-		char tmp[6];
-		sprintf(tmp, "0x%s ", hex.substr(i, 2).c_str());
-		ptr[0] = (uint8_t)strtoul(tmp, NULL, 16);
-		ptr++;
-	}
 	return 0;
 }
 
@@ -820,10 +802,38 @@ int get_identity(lc_callback cb, void *cb_arg)
 	_get_identity(cb, cb_arg, LC_CB_STAGE_GET_IDENTITY);
 }
 
-int reset_remote()
+int reset_remote(lc_callback cb, void *cb_arg)
 {
-	int err = rmt->Reset(COMMAND_RESET_DEVICE);
-	return err;
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	if ((err = rmt->Reset(COMMAND_RESET_DEVICE)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	deinit_concord();
+	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
+		sleep(WAIT_FOR_BOOT_SLEEP);
+		err = init_concord();
+		if (err == 0) {
+			err = get_identity(NULL, NULL);
+			if (err == 0) {
+				break;
+			}
+			deinit_concord();
+		}
+	}
+
+	if (err != 0)
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
+	return 0;
 }
 
 /* FIXME: This should almost certainly be rolled into prep_config() */
@@ -831,7 +841,7 @@ int _invalidate_flash(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
-	if ((err = rmt->InvalidateFlash()))
+	if ((err = rmt->InvalidateFlash(cb, cb_arg, cb_stage)))
 		return LC_ERROR_INVALIDATE;
 
 	return 0;
@@ -1191,37 +1201,11 @@ int update_configuration(lc_callback cb, void *cb_arg, int noreset)
 	if (err != 0)
 		return err;
 
-	if (noreset) {
+	if (noreset)
 		return 0;
-	}
 
-	if (cb)
-		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
-
-	reset_remote();
-
-	if (cb)
-		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
-
-	deinit_concord();
-	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-		sleep(WAIT_FOR_BOOT_SLEEP);
-		err = init_concord();
-		if (err == 0) {
-			/* fix lack of callback */
-			err = _get_identity(NULL, NULL, NULL);
-			if (err == 0) {
-				break;
-			}
-			deinit_concord();
-		}
-	}
-
-	if (err != 0) {
+	if ((err = reset_remote(cb, cb_arg)))
 		return err;
-	}
-	if (cb)
-		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	return 0;
 }
@@ -1299,35 +1283,33 @@ int is_config_safe_after_fw()
 	}
 }
 
-int prep_firmware()
+int prep_firmware(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->PrepFirmware(ri))) {
+	if ((err = rmt->PrepFirmware(ri, cb, cb_arg,
+			LC_CB_STAGE_INITIALIZE_UPDATE))) {
 		return LC_ERROR;
 	}
 
 	return 0;
 }
 
-int finish_firmware()
+int finish_firmware(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->FinishFirmware(ri))) {
+	if ((err = rmt->FinishFirmware(ri, cb, cb_arg,
+			LC_CB_STAGE_FINALIZE_UPDATE))) {
 		return LC_ERROR;
 	}
 
 	return 0;
 }
 
-int erase_firmware(int direct, lc_callback cb, void *cb_arg)
+int _erase_firmware(int direct, lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
-
-	if (!_is_fw_update_supported(direct)) {
-		return LC_ERROR_UNSUPP;
-	}
 
 	uint32_t addr = ri.arch->firmware_update_base;
 	if (direct) {
@@ -1335,11 +1317,17 @@ int erase_firmware(int direct, lc_callback cb, void *cb_arg)
 		addr = ri.arch->firmware_base;
 	}
 
-	if ((err = rmt->EraseFlash(addr, FIRMWARE_MAX_SIZE, ri, cb, cb_arg))) {
+	if ((err = rmt->EraseFlash(addr, FIRMWARE_MAX_SIZE, ri, cb, cb_arg,
+			cb_stage))) {
 		return LC_ERROR_ERASE;
 	}
 
 	return 0;
+}
+
+int erase_firmware(int direct, lc_callback cb, void *cb_arg)
+{
+	_erase_firmware(direct, cb, cb_arg, LC_CB_STAGE_ERASE_FLASH);
 }
 
 int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
@@ -1350,17 +1338,13 @@ int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 		cb_arg);
 }
 
-int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
-	lc_callback cb,	void *cb_arg)
+int _write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg,
+	uint32_t cb_stage)
 {
 	uint32_t addr = ri.arch->firmware_update_base;
 	int err = 0;
 
-	if (!_is_fw_update_supported(direct)) {
-		return LC_ERROR_UNSUPP;
-	}
-
-	if (size > FIRMWARE_MAX_SIZE) {
+	if (of->GetDataSize() > FIRMWARE_MAX_SIZE) {
 		return LC_ERROR;
 	}
 
@@ -1369,11 +1353,18 @@ int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
 		addr = ri.arch->firmware_base;
 	}
 
-	if ((err = _fix_magic_bytes(in, size))) {
+	if ((err = _fix_magic_bytes(of->GetData(), of->GetDataSize()))) {
 		return LC_ERROR_READ;
 	}
 
-	return _write_fw_to_remote(in, size, addr, cb, cb_arg);
+	return _write_fw_to_remote(of->GetData(), of->GetDataSize(), addr, cb,
+		cb_arg, cb_stage);
+}
+
+int write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg)
+{
+	return _write_firmware_to_remote(direct, cb, cb_arg,
+		LC_CB_STAGE_WRITE_FIRMWARE);
 }
 
 int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
@@ -1428,30 +1419,40 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 	return 0;
 }
 
-int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
-	uint32_t *size)
+int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct)
 {
-	uint32_t o_size = FIRMWARE_MAX_SIZE;
-	*out = new uint8_t[o_size];
-	uint8_t *o = *out;
+	int err;
 
-	uint8_t *x = xml;
-	uint32_t x_size = xml_size;
-
-	string hex;
-	while (GetTag("DATA", x, x_size, x, &hex) == 0) {
-		uint32_t hex_size = hex.length() / 2;
-		if (hex_size > o_size) {
-			return LC_ERROR;
-		}
-
-		_convert_to_binary(hex, o);
-
-		x_size = xml_size - (x - xml);
-		o_size -= hex_size;
+	if (!_is_fw_update_supported(direct)) {
+		return LC_ERROR_UNSUPP;
 	}
 
-	*size = o - *out;
+	if (!direct) {
+		if ((err = prep_firmware(cb, cb_arg)))
+			return err;
+	}
+
+	if ((err = invalidate_flash(cb, cb_arg)))
+		return err;
+
+	if ((err = erase_firmware(direct, cb, cb_arg)))
+		return err;
+
+	if ((err = write_firmware_to_remote(direct, cb, cb_arg)))
+		return err;
+
+	if (!direct) {
+		if ((err = finish_firmware(cb, cb_arg)))
+			return err;
+	}
+
+	if (noreset)
+		return 0;
+
+	reset_remote(cb, cb_arg);
+
+	if ((err = set_time(cb, cb_arg)))
+		return err;
 
 	return 0;
 }

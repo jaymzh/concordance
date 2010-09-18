@@ -370,10 +370,14 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 	return err;
 }
 
-int CRemote::PrepFirmware(const TRemoteInfo &ri)
+int CRemote::PrepFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage)
 {
 	int err = 0;
 	uint8_t data[1] = { 0x00 };
+
+	if (cb)
+		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
 		/*
@@ -382,8 +386,13 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri)
 		 *    restart config
 		 *    write "1" to flash addr 200000
 		 */
-		if ((err = WriteMiscByte(0x09, 1, COMMAND_MISC_RESTART_CONFIG, data)))
+		if ((err = WriteMiscByte(0x09, 1, COMMAND_MISC_RESTART_CONFIG,
+				data)))
 			return LC_ERROR;
+
+		if (cb)
+			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
 		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
 				NULL, NULL)))
 			return LC_ERROR;
@@ -395,18 +404,28 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri)
 		 */
 		if ((err = WriteRam(0, 1, data)))
 			return LC_ERROR_WRITE;
+
+		if (cb)
+			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+
 		if ((err = ReadRam(0, 1, data)))
 			return LC_ERROR_WRITE;
 		if (data[0] != 0)
 			return LC_ERROR_VERIFY;
 	}
+	if (cb)
+		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	return 0;
 }
 
-int CRemote::FinishFirmware(const TRemoteInfo &ri)
+int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage)
 {
 	int err = 0;
+
+	if (cb)
+		cb(cb_stage, 0, 0, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	uint8_t data[1];
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
@@ -414,22 +433,30 @@ int CRemote::FinishFirmware(const TRemoteInfo &ri)
 		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
 			NULL, NULL)))
 			return LC_ERROR;
+		if (cb)
+			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 	} else {
 		data[0] = 0x02;
 		if ((err = WriteRam(0, 1, data))) {
 			debug("Failed to write 2 to RAM 0");
 			return LC_ERROR_WRITE;
 		}
+		if (cb)
+			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 		if ((err = ReadRam(0, 1, data))) {
 			debug("Failed to from RAM 0");
 			return LC_ERROR_WRITE;
 		}
+		if (cb)
+			cb(cb_stage, 2, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 		if (data[0] != 2) {
 			printf("byte is %d\n",data[0]);
 			debug("Finalize byte didn't match");
 			return LC_ERROR_VERIFY;
 		}
 	}
+	if (cb)
+		cb(cb_stage, 3, 3, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 	return 0;
 }

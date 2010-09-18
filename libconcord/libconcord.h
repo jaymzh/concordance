@@ -214,7 +214,7 @@ int get_identity(lc_callback cb, void *cb_arg);
 /*
  * Reboot the remote.
  */
-int reset_remote();
+int reset_remote(lc_callback cb, void *cb_arg);
 /*
  * Get the time from the remote. Use the time accessors above to access
  * the data.
@@ -384,13 +384,13 @@ int is_config_safe_after_fw();
 /*
  * Preps the remote for a firmware upgrade
  */
-int prep_firmware();
+int prep_firmware(lc_callback cb, void *cb_arg);
 /*
  * Tells the remote the firmware upgrade was successful and that it should
  * copy the firmware from the "staging" area to the live area on next reboot.
  * Don't forget to reboot.
  */
-int finish_firmware();
+int finish_firmware(lc_callback cb, void *cb_arg);
 /*
  * Make the firmware area of the flash all 1's so you can write
  * to it.
@@ -408,8 +408,7 @@ int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 /*
  * Same as write_config_to_remote(), but with the firmware instead.
  */
-int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
-	lc_callback cb,	void *cb_arg);
+int write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg);
 /*
  * Same as write_config_to_file(), but with firmware instead. Note
  * that unless binary is specified, the firmware is broken into chunks
@@ -507,6 +506,7 @@ void delete_encoded_signal(char *encoded_signal);
 int post_new_code(char *key_name, char *encoded_signal);
 
 int update_configuration(lc_callback cb, void *cb_arg, int noreset);
+int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct);
 
 #ifdef __cplusplus
 }

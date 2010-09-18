@@ -25,6 +25,8 @@
 #define REMOTE_H
 
 #define SERIAL_SIZE 48
+#define FIRMWARE_MAX_SIZE 64*1024
+
 /*
  * limits for IR signal learning, stop when any is reached:
  * timeouts in milliseconds, length in number of mark/space durations
@@ -153,12 +155,14 @@ public:
 		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)=0;
 	virtual int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)=0;
-	virtual int PrepFirmware(const TRemoteInfo &ri) = 0;
-	virtual int FinishFirmware(const TRemoteInfo &ri) = 0;
+	virtual int PrepFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL) = 0;
+	virtual int FinishFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL) = 0;
 	virtual int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
 		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
-	                void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int UpdateConfig(const uint32_t len,
 		const uint8_t *wr, lc_callback cb, void *cb_arg,
 		uint32_t cb_stage)=0;
@@ -202,8 +206,10 @@ public:
 		uint32_t cb_stage=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
-	int PrepFirmware(const TRemoteInfo &ri);
-	int FinishFirmware(const TRemoteInfo &ri);
+	int PrepFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+	int FinishFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
 		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
@@ -255,8 +261,10 @@ public:
 		uint32_t cb_stage=NULL);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
-	int PrepFirmware(const TRemoteInfo &ri);
-	int FinishFirmware(const TRemoteInfo &ri);
+	int PrepFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+	int FinishFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
 		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,

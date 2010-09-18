@@ -531,12 +531,14 @@ int CRemoteZ_Base::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 	return 0;
 }
 
-int CRemoteZ_Base::PrepFirmware(const TRemoteInfo &ri)
+int CRemoteZ_Base::PrepFirmware(const TRemoteInfo &ri, lc_callback cb,
+	void *cb_arg, uint32_t cb_stage)
 {
 	return 0;
 }
 
-int CRemoteZ_Base::FinishFirmware(const TRemoteInfo &ri)
+int CRemoteZ_Base::FinishFirmware(const TRemoteInfo &ri, lc_callback cb,
+	void *cb_arg, uint32_t cb_stage)
 {
 	return 0;
 }

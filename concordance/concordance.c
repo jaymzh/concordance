@@ -523,16 +523,9 @@ int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
 	return 0;
 }
 
-#if 0
-int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
-	struct options_t *options, lc_callback cb, void *cb_arg)
+int upload_firmware(struct options_t *options, lc_callback cb, void *cb_arg)
 {
-	int err, i;
-	uint8_t *firmware_bin;
-	uint32_t firmware_bin_size;
-
-	err = 0;
-	firmware_bin = 0;
+	int err;
 
 	if ((err = is_fw_update_supported((*options).direct))) {
 		fprintf(stderr, "Sorry, firmware upgrades are not yet");
@@ -553,110 +546,17 @@ int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
 		}
 	}
 
-	if ((*options).binary) {
-		firmware_bin = firmware;
-		firmware_bin_size = firmware_size;
-	} else {
-		if ((err = extract_firmware_binary(firmware, firmware_size,
-				&firmware_bin, &firmware_bin_size))) {
-			printf("Failed to extract firmware from file\n");
-			delete_blob(firmware_bin);
-			return err;
-		}
-	}
-
-	if (!(*options).direct) {
-		if ((err = prep_firmware())) {
-			printf("Failed to prepare remote for FW update\n");
-			if (firmware_bin != firmware) {
-				delete_blob(firmware_bin);
-			}
-			return err;
-		}
-	}
-
-	printf("Invalidating Flash:  ");
-	if ((err = invalidate_flash())) {
-		if (firmware_bin != firmware) {
-			delete_blob(firmware_bin);
-		}
+	if ((err = update_firmware(cb, cb_arg, (*options).noreset,
+			(*options).direct)))
 		return err;
-	}
-	printf("                     done\n");
-
-	printf("Erasing Flash:       ");
-	if ((err = erase_firmware((*options).direct, cb, (void *)0))) {
-		if (firmware_bin != firmware) {
-			delete_blob(firmware_bin);
-		}
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Writing firmware:    ");
-	if ((err = write_firmware_to_remote(firmware_bin, firmware_bin_size,
-			(*options).direct, cb, cb_arg))) {
-		if (firmware_bin != firmware) {
-			delete_blob(firmware_bin);
-		}
-		return err;
-	}
-	printf("       done\n");
-
-	/* Done with this... */
-	if (firmware_bin != firmware) {
-		delete_blob(firmware_bin);
-	}
-
-	if (!(*options).direct) {
-		if ((err = finish_firmware())) {
-			printf("Failed to finalize FW update\n");
-			return err;
-		}
-	}
-
-	if ((*options).noreset) {
-		return 0;
-	}
-
-	printf("Resetting Remote:    ");
-	reset_remote();
-
-	deinit_concord();
-	for (i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-		sleep(WAIT_FOR_BOOT_SLEEP);
-		err = init_concord();
-		if (err == 0) {
-			err = get_identity(cb, NULL);
-			if (err == 0) {
-				break;
-			}
-			deinit_concord();
-		}
-	}
-
-	if (err != 0) {
-		return err;
-	}
-	printf("                     done\n");
-
-	/*printf("Setting Time:        ");*/
-	if ((err = set_time(cb, NULL))) {
-		return err;
-	}
-	/*printf("                     done\n");*/
 
 	if (!(*options).binary && !(*options).noweb) {
-		printf("Contacting website:  ");
-		if ((err = post_postfirmware(firmware, firmware_size))) {
+		if ((err = post_postfirmware(cb, cb_arg)))
 			return err;
-		}
-		printf("                     done\n");
 	}
 
 	return 0;
 }
-#endif
 
 int dump_firmware(struct options_t *options, char *file_name,
 	lc_callback cb, void *cb_arg)
@@ -1237,7 +1137,7 @@ int main(int argc, char *argv[])
 	 */
 	if (mode == MODE_RESET) {
 		printf("Resetting...\n");
-		reset_remote();
+		reset_remote(NULL, NULL);
 		goto cleanup;
 	}
 
@@ -1305,16 +1205,14 @@ int main(int argc, char *argv[])
 			}
 			break;
 
-#if 0
 		case MODE_WRITE_FIRMWARE:
-			err = upload_firmware(data, data_size, &options,
-				cb_print_percent_status, NULL);
+			err = upload_firmware(&options, cb_print_percent_status,
+				NULL);
 			if (err != 0) {
 				printf("Failed to upload firmware: %s\n",
 					lc_strerror(err));
 			}
 			break;
-#endif
 
 		case MODE_DUMP_SAFEMODE:
 			printf("Dumping safemode fw: ");
