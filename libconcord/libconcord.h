@@ -80,13 +80,16 @@ typedef unsigned __int64 uint64_t;
 #define LC_CB_STAGE_WRITE_CONFIG 11
 #define LC_CB_STAGE_VERIFY_CONFIG 12
 #define LC_CB_STAGE_FINALIZE_UPDATE 13
+#define LC_CB_STAGE_READ_CONFIG 14
 /* firmware updates share most of the above, but need */
-#define LC_CB_STAGE_WRITE_FIRMWARE 14
+#define LC_CB_STAGE_WRITE_FIRMWARE 15
+#define LC_CB_STAGE_READ_FIRMWARE 16
+#define LC_CB_STAGE_READ_SAFEMODE 17
 /* other... */
-#define LC_CB_STAGE_RESET 15
-#define LC_CB_STAGE_SET_TIME 16
-#define LC_CB_STAGE_HTTP 17
-#define LC_CB_STAGE_LEARN 18
+#define LC_CB_STAGE_RESET 18
+#define LC_CB_STAGE_SET_TIME 19
+#define LC_CB_STAGE_HTTP 20
+#define LC_CB_STAGE_LEARN 21
 
 
 /*

@@ -747,7 +747,7 @@ int dump_config(struct options_t *options, char *file_name,
 	uint8_t *config;
 	uint32_t size = 0;
 
-	if ((err = read_config_from_remote(&config, &size, cb, (void *)1))) {
+	if ((err = read_config_from_remote(&config, &size, cb, NULL))) {
 		return err;
 	}
 
@@ -1145,14 +1145,11 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_DUMP_CONFIG:
-			printf("Dumping config:      ");
 			err = dump_config(&options, file_name,
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to dump config: %s\n",
 					lc_strerror(err));
-			} else {
-				printf("       done\n");
 			}
 			break;
 
@@ -1166,14 +1163,11 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_DUMP_FIRMWARE:
-			printf("Dumping firmware:    ");
 			err = dump_firmware(&options, file_name,
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to dump firmware: %s\n",
 					lc_strerror(err));
-			} else {
-				printf("       done\n");
 			}
 			break;
 
@@ -1187,14 +1181,11 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_DUMP_SAFEMODE:
-			printf("Dumping safemode fw: ");
 			err = dump_safemode(file_name, cb_print_percent_status,
 				NULL);
 			if (err != 0) {
 				printf("Failed to dump safemode: %s\n",
 					lc_strerror(err));
-			} else {
-				printf("       done\n");
 			}
 			break;
 

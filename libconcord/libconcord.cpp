@@ -372,8 +372,20 @@ const char *lc_cb_stage_str(int stage)
 			return "Finalizing update";
 			break;
 
+		case LC_CB_STAGE_READ_CONFIG:
+			return "Reading config";
+			break;
+
 		case LC_CB_STAGE_WRITE_FIRMWARE:
 			return "Writing firmware";
+			break;
+
+		case LC_CB_STAGE_READ_FIRMWARE:
+			return "Reading firmware";
+			break;
+
+		case LC_CB_STAGE_READ_SAFEMODE:
+			return "Reading safemode fw";
 			break;
 
 		case LC_CB_STAGE_RESET:
@@ -448,7 +460,7 @@ int _write_fw_to_remote(uint8_t *in, uint32_t size, uint32_t addr,
 }
 
 int _read_fw_from_remote(uint8_t *&out, uint32_t size, uint32_t addr,
-	lc_callback cb,	void *cb_arg)
+	lc_callback cb,	void *cb_arg, uint32_t cb_stage)
 {
 	out = new uint8_t[size];
 	int err = 0;
@@ -458,7 +470,7 @@ int _read_fw_from_remote(uint8_t *&out, uint32_t size, uint32_t addr,
 	}
 
 	if ((err = rmt->ReadFlash(addr, size, out,
-				ri.protocol, false, cb, cb_arg))) {
+				ri.protocol, false, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_READ;
 	}
 
@@ -839,7 +851,8 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
 	*out = new uint8_t[*size];
 
 	if ((err = rmt->ReadFlash(ri.arch->config_base, *size,
-			*out, ri.protocol, false, cb, cb_arg))) {
+			*out, ri.protocol, false, cb, cb_arg,
+			LC_CB_STAGE_READ_CONFIG))) {
 		return LC_ERROR_READ;
 	}
 
@@ -1079,7 +1092,7 @@ int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 {
 	*size = FIRMWARE_MAX_SIZE;
 	return _read_fw_from_remote(*out, *size, ri.arch->flash_base, cb,
-		cb_arg);
+		cb_arg, LC_CB_STAGE_READ_SAFEMODE);
 }
 
 int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
@@ -1170,7 +1183,7 @@ int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 {
 	*size = FIRMWARE_MAX_SIZE;
 	return _read_fw_from_remote(*out, *size, ri.arch->firmware_base, cb,
-		cb_arg);
+		cb_arg, LC_CB_STAGE_READ_FIRMWARE);
 }
 
 int _write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg,
