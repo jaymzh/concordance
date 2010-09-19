@@ -26,18 +26,8 @@
  *   - phil    Sat Aug 18 22:49:48 PDT 2007
  */
 
-/* STATUS:
- *   OK, we need to re-re-re-factor, again. Pull the read-and-parse logic into a
- *   new class. We can still call it through the remote object, but there will
- *   be a "get-file-data" call which we can use to re-init a new remote object.
- *
- *   OR
- *
- *   perhaps we just add a re-init to the remote object rather than destroying
- *   it?
- */
-
 #include <stdio.h>
+#include <string>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -287,7 +277,7 @@ const char *lc_strerror(int err)
 			break;
 
 		case LC_ERROR_INVALIDATE:
-			return 
+			return
 			"Error while asking the remote to invalidate it's flash";
 			break;
 
@@ -328,22 +318,27 @@ const char *lc_strerror(int err)
 			break;
 
 		case LC_ERROR_UNSUPP:
-			return 
+			return
 			"Model or configuration or operation unsupported";
 			break;
 
 		case LC_ERROR_INVALID_CONFIG:
-			return 
+			return
 			"The configuration present on the remote is invalid";
 			break;
 
 		case LC_ERROR_IR_OVERFLOW:
-			return 
+			return
 			"Received IR signal is too long - release key earlier";
 			break;
 	}
 
 	return "Unknown error";
+}
+
+void delete_blob(uint8_t *ptr)
+{
+	delete[] ptr;
 }
 
 const char *lc_cb_stage_str(int stage)
@@ -401,201 +396,14 @@ const char *lc_cb_stage_str(int stage)
 	return "(Unknown)";
 }
 
-void delete_blob(uint8_t *ptr)
-{
-	delete[] ptr;
-}
-
-int identify_file(uint8_t *in, uint32_t size, int *type, int xml_only)
-{
-	int err;
-	uint8_t *start_info_ptr, *end_info_ptr;
-
-	/*
-	 * Validate this is a remotely sane XML file
-	 */
-	if (xml_only) {
-		start_info_ptr = in;
-		end_info_ptr = start_info_ptr + size;
-	} else {
-		err = GetTag("INFORMATION", in, size, start_info_ptr);
-		if (err == -1) {
-			return LC_ERROR;
-		}
-
-		err = GetTag("/INFORMATION", in, size, end_info_ptr);
-		if (err == -1) {
-			return LC_ERROR;
-		}
-	}
-	debug("start/end pointers populated");
-
-	/*
-	 * Determine size of binary data following /INFORMATION
-	 */
-	uint32_t data_len = size - (end_info_ptr - in);
-	/*
-	 * Account for CRLF after /INFORMATION>
-	 * But, don't screw up if it's missing
-	 */
-	if (data_len >= 2 && !xml_only) {
-		data_len -= 2;
-	}
-
-	/*
-	 * Search for tag only in "connectivity test" files
-	 */
-	bool found_get_zaps_only = false;
-	uint8_t *tmp_data = in;
-	uint32_t tmp_size = size - data_len;
-	while (1) {
-		uint8_t *tag_ptr;
-		string tag_s;
-		err = GetTag("KEY", tmp_data, tmp_size, tag_ptr, &tag_s);
-		if (err == -1) {
-			debug("not a connectivity test file");
-			break;
-		}
-		if (!stricmp(tag_s.c_str(), "GETZAPSONLY")) {
-			debug("is a connectivity test file");
-			found_get_zaps_only = true;
-			break;
-		}
-		tmp_data = tag_ptr + tag_s.length();
-		tmp_size = end_info_ptr - tmp_data;
-	}
-
-	/*
-	 * Search for tag only in "firmware" files
-	 */
-	bool found_firmware = false;
-	tmp_data = in;
-	tmp_size = size - data_len;
-	while (1) {
-		uint8_t *tag_ptr;
-		string tag_s;
-		err = GetTag("TYPE", tmp_data, tmp_size, tag_ptr, &tag_s);
-		if (err == -1) {
-			debug("not a firmware file");
-			break;
-		}
-		if (!stricmp(tag_s.c_str(), "Firmware_Main")) {
-			found_firmware = true;
-			break;
-		}
-		tmp_data = tag_ptr + tag_s.length();
-		tmp_size = end_info_ptr - tmp_data;
-	}
-
-	/*
-	 * Search for tag only in "IR learning files.
-	 */
-	uint8_t *tag_ptr;
-	err = GetTag("CHECKKEYS", in, size - data_len, tag_ptr);
-	bool found_learn_ir = (err != -1);
-
-	/*
-	 * Check tag search results for consistency, and deduce the file type
-	 */
-	if (found_get_zaps_only && !data_len && !found_firmware &&
-		!found_learn_ir) {
-		debug("returning connectivity");
-		*type = LC_FILE_TYPE_CONNECTIVITY;
-		return 0;
-	}
-	if (!found_get_zaps_only && (data_len >= 16 || xml_only) &&
-		!found_firmware && !found_learn_ir) {
-		debug("returning config");
-		*type = LC_FILE_TYPE_CONFIGURATION;
-		return 0;
-	}
-	if (!found_get_zaps_only && !data_len && found_firmware &&
-		!found_learn_ir) {
-		debug("returning firmware");
-		*type = LC_FILE_TYPE_FIRMWARE;
-		return 0;
-	}
-	if (!found_get_zaps_only && !data_len && !found_firmware &&
-		found_learn_ir) {
-		debug("returning ir");
-		*type = LC_FILE_TYPE_LEARN_IR;
-		return 0;
-	}
-
-	/*
-	 * Findings didn't match a single file type; indicate a problem
-	 */
-	return LC_ERROR;
-}
-
-int read_zip_file(char *file_name, uint8_t **data, uint32_t *data_size,
-	uint8_t **xml, uint32_t *xml_size)
-{
-	/* TODO: error checking */
-	zzip_error_t zip_err;
-	ZZIP_DIR *dir = zzip_dir_open(file_name, &zip_err);
-	if (dir) {
-		ZZIP_DIRENT dirent;
-		while (zzip_dir_read(dir, &dirent)) {
-			ZZIP_FILE *fh = zzip_file_open(dir, dirent.d_name, 0);
-			if (strcmp(dirent.d_name, "Data.xml") == 0) {
-				*xml_size = dirent.st_size;
-				*xml = new uint8_t[*xml_size];
-				zzip_size_t len = zzip_file_read(fh, *xml,
-					*xml_size);
-			} else {
-				*data_size = dirent.st_size;
-				*data = new uint8_t[*data_size];
-				zzip_size_t len = zzip_file_read(fh, *data,
-					*data_size);
-			}
-			zzip_file_close(fh);
-		}
-	} else {
-		return LC_ERROR;
-	}
-	zzip_dir_close(dir);
-	return 0;
-}
-
-int read_and_parse_file(char *filename)
-{
-	debug("Calling RAPOF");
-	of = new OperationFile;
-	return of->ReadAndParseOpFile(filename);
-}
-#if 0
 /*
- * Common routine to read contents of file named *file_name into
- * byte buffer **out. Get size from file and return out[size] 
- * as read from file.
+ * Wrapper around the OperationFile class.
  */
-int read_file(char *file_name, uint8_t **out, uint32_t *size)
+int read_and_parse_file(char *filename, int *type)
 {
-	binaryinfile file;
-
-	if (file_name == NULL) {
-		debug("Empty file_name");
-		return LC_ERROR_OS_FILE;
-	}
-
-	if (file.open(file_name) != 0) {
-		debug("Failed to open %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	*size = file.getlength();
-	*out = new uint8_t[*size];
-	file.read(*out, *size);
-
-	if (file.close() != 0) {
-		debug("Failed to close %s\n", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-	return 0;
+	of = new OperationFile;
+	return of->ReadAndParseOpFile(filename, type);
 }
-#endif
-
 
 /*
  * PRIVATE HELPER FUNCTIONS
@@ -614,6 +422,10 @@ int _is_fw_update_supported(int direct)
 	 * Also, only allow architectures where we've figured out the
 	 * structure of the initial magic bytes.
 	 */
+	if (is_z_remote()) {
+		return 0;
+	}
+
 	if (ri.arch->firmware_base == 0
 	    || (!direct && ri.arch->firmware_update_base == 0)
 	    || (ri.arch->firmware_4847_offset == 0)) {
@@ -715,6 +527,37 @@ int _fix_magic_bytes(uint8_t *in, uint32_t size)
 
 
 /*
+ * Support helpers - needs to be below private helpers above.
+ * ZERO IS YES!!
+ */
+int is_config_dump_supported()
+{
+	return is_z_remote() ? LC_ERROR_UNSUPP: 0;
+}
+
+int is_config_update_supported()
+{
+	return 0;
+}
+
+int is_fw_dump_supported()
+{
+	return is_z_remote() ? LC_ERROR_UNSUPP: 0;
+}
+
+int is_fw_update_supported(int direct)
+{
+	/*
+	 * Currently firmware upgrades are only available certain remotes.
+	 */
+	if (_is_fw_update_supported(direct)) {
+		return 0;
+	} else {
+		return LC_ERROR_UNSUPP;
+	}
+}
+
+/*
  * GENERAL REMOTE STUFF
  */
 int init_concord()
@@ -767,7 +610,7 @@ int init_concord()
 		} else {
 			rmt = new CRemote;
 		}
-	}	
+	}
 
 	return 0;
 }
@@ -1055,7 +898,7 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 		char *ch = new char[strlen(config_header) + 200];
 		const int chlen = sprintf(ch,
 			config_header, ri.protocol,
-			ri.skin ,ri.flash_mfg,
+			ri.skin, ri.flash_mfg,
 			ri.flash_id, ri.hw_ver_major,
 			ri.hw_ver_minor, ri.fw_type,
 			ri.protocol, ri.skin,
@@ -1205,7 +1048,7 @@ int update_configuration(lc_callback cb, void *cb_arg, int noreset)
 	if (err != 0)
 		return err;
 
-	if (noreset)
+	if (noreset || is_z_remote())
 		return 0;
 
 	if ((err = reset_remote(cb, cb_arg)))
@@ -1260,18 +1103,6 @@ int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
 /*
  * FIRMWARE RELATED
  */
-
-int is_fw_update_supported(int direct)
-{
-	/*
-	 * Currently firmware upgrades are only available certain remotes.
-	 */
-	if (_is_fw_update_supported(direct)) {
-		return 0;
-	} else {
-		return LC_ERROR_UNSUPP;
-	}
-}
 
 int is_config_safe_after_fw()
 {
@@ -1477,21 +1308,21 @@ int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct)
 /*
  * locate the INPUTPARMS section in *data:
  */
-int _init_key_scan(uint8_t *data, uint32_t size, 
+int _init_key_scan(uint8_t *data, uint32_t size,
 	uint8_t **inputparams_start, uint8_t **inputparams_end)
 {
 	int err;
-		
+
 	/* locating start tag "<INPUTPARMS>" */
 	err = GetTag("INPUTPARMS", data, size, *inputparams_start);
 	if (err == 0) {
 		/* locating end tag "</INPUTPARMS>" */
-		err = GetTag("/INPUTPARMS", *inputparams_start, 
+		err = GetTag("/INPUTPARMS", *inputparams_start,
 			size - (*inputparams_start - data), *inputparams_end);
 	}
 	return err;
 }
-	
+
 int _next_key_name(uint8_t **start, uint8_t *inputparams_end, string *keyname)
 {
 	int err;
@@ -1527,7 +1358,7 @@ int get_key_names(char ***key_names, uint32_t *key_names_length)
 	uint32_t key_index = 0;
 	list<string> key_list;
 	string key_name;
-	
+
 	if ((key_names == NULL) || (key_names_length == NULL)) {
 		return LC_ERROR;
 	}
@@ -1536,19 +1367,19 @@ int get_key_names(char ***key_names, uint32_t *key_names_length)
 		&inputparams_end) != 0) {
 		return LC_ERROR;
 	}
-	
+
 	/* scan for key names and append found names to list: */
 	while (_next_key_name(&cursor, inputparams_end, &key_name) == 0) {
 		key_list.push_back(key_name);
 	}
-	
+
 	if (key_list.size() == 0) {
 		return LC_ERROR;
 	}
-	
+
 	*key_names_length = key_list.size();
 	*key_names = new char*[*key_names_length];
-			
+
 	/* copy list of found names to allocated buffer: */
 	for (
 		list<string>::const_iterator cursor = key_list.begin();
@@ -1593,7 +1424,7 @@ int learn_from_remote(uint32_t *carrier_clock,
 		/* nothing to write to: */
 		return LC_ERROR;
 	}
-	
+
 	/* try to learn code via Harmony from original remote: */
 	return rmt->LearnIR(carrier_clock, ir_signal, ir_signal_length, cb,
 		cb_arg, LC_CB_STAGE_LEARN);
@@ -1622,10 +1453,10 @@ int encode_for_posting(uint32_t carrier_clock,
 			|| encoded_signal == NULL) {
 		return LC_ERROR;	/* cannot do anything without */
 	}
-	err = encode_ir_signal(carrier_clock, 
+	err = encode_ir_signal(carrier_clock,
 			ir_signal, ir_signal_length, &encoded);
 	if (err == 0) {
-		debug("Learned code: %s",encoded.c_str());
+		debug("Learned code: %s", encoded.c_str());
 		*encoded_signal = strdup(encoded.c_str());
 	}
 	return err;

@@ -21,15 +21,16 @@
  * (C) Copyright Phil Dibowitz 2007
  */
 
+#include "remote.h"
+
 #include <string.h>
+#include <iostream>
+
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"
 #include "protocol.h"
-#include "remote.h"
 #include "remote_info.h"
-
-#include <iostream>
 
 void setup_ri_pointers(TRemoteInfo &ri)
 {
@@ -44,7 +45,7 @@ void setup_ri_pointers(TRemoteInfo &ri)
 	ri.arch = (ri.architecture < sizeof(ArchList)/sizeof(TArchInfo))
 			? &ArchList[ri.architecture] : NULL;
 
-	ri.model = (ri.skin<max_model)
+	ri.model = (ri.skin < max_model)
 			? &ModelList[ri.skin] : &ModelList[max_model];
 }
 
@@ -160,7 +161,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 		ri.config_bytes_used = 0;
 		ri.max_config_size = 1;
 	}
-		
+
 	// read serial (see specs/protocol.txt for details)
 	switch (ri.arch->serial_location) {
 	case SERIAL_LOCATION_EEPROM:
@@ -194,10 +195,8 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	unsigned int protocol, bool verify, lc_callback cb,
 	void *cb_arg, uint32_t cb_stage)
 {
-
 	uint32_t cb_count = 0;
-	const unsigned int max_chunk_len = 
-		protocol == 0 ? 700 : 1022;
+	const unsigned int max_chunk_len = protocol == 0 ? 700 : 1022;
 
 	/*
 	 * This is a mapping of the lower-half of the first command byte to
@@ -215,7 +214,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 	uint8_t *pr = rd;
 	const uint32_t end = addr+len;
-	unsigned int bytes_read=0;
+	unsigned int bytes_read = 0;
 	int err = 0;
 
 	do {
@@ -225,7 +224,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		cmd[2] = (addr >> 8) & 0xFF;
 		cmd[3] = addr & 0xFF;
 		unsigned int chunk_len = end-addr;
-		if (chunk_len > max_chunk_len) 
+		if (chunk_len > max_chunk_len)
 			chunk_len = max_chunk_len;
 		cmd[4] = (chunk_len >> 8) & 0xFF;
 		cmd[5] = chunk_len & 0xFF;
@@ -233,7 +232,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		if ((err = HID_WriteReport(cmd)))
 			break;
 
-		uint8_t seq=1;
+		uint8_t seq = 1;
 
 		do {
 			uint8_t rsp[68];
@@ -285,7 +284,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 int CRemote::InvalidateFlash(lc_callback cb, void *cb_arg, uint32_t lc_stage)
 {
-	const uint8_t ivf[64]={ COMMAND_WRITE_MISC | 0x01, 
+	const uint8_t ivf[64]={ COMMAND_WRITE_MISC | 0x01,
 				COMMAND_MISC_INVALIDATE_FLASH };
 	int err;
 
@@ -450,7 +449,7 @@ int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 		if (cb)
 			cb(cb_stage, 2, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 		if (data[0] != 2) {
-			printf("byte is %d\n",data[0]);
+			printf("byte is %d\n", data[0]);
 			debug("Finalize byte didn't match");
 			return LC_ERROR_VERIFY;
 		}
@@ -535,9 +534,8 @@ int CRemote::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 	unsigned int protocol, lc_callback cb, void *arg, uint32_t cb_stage)
 {
-
 	uint32_t cb_count = 0;
-	const unsigned int max_chunk_len = 
+	const unsigned int max_chunk_len =
 		protocol == 0 ? 749 : 3150;
 
 	/* mapping of lenghts - see specs/protocol.txt */
@@ -584,7 +582,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 			bytes_written += block_len;
 			chunk_len -= block_len;
 		}
-		
+
 		uint8_t end_cmd[64] = { COMMAND_DONE, COMMAND_WRITE_FLASH };
 		HID_WriteReport(end_cmd);
 
@@ -852,9 +850,8 @@ bool check_seq(int received_seq, uint8_t &expected_seq)
 }
 
 int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
-	uint32_t &t_on, uint32_t &t_off, uint32_t &t_total, 
-	uint32_t &ir_count,
-	uint32_t *&ir_signal, uint32_t &freq)
+	uint32_t &t_on, uint32_t &t_off, uint32_t &t_total,
+	uint32_t &ir_count, uint32_t *&ir_signal, uint32_t &freq)
 {
 	const uint32_t len = rsp[63];
 	if ((len & 1) != 0) {
@@ -918,8 +915,8 @@ int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
 						freq = static_cast<uint32_t>(
 							static_cast<uint64_t>(t)
 								*1000000/(t_on));
-						debug("%i Hz",freq);
-						debug("+%i",t_on);
+						debug("%i Hz", freq);
+						debug("+%i", t_on);
 						ir_signal[ir_count++] = t_on;
 					}
 					break;
@@ -955,7 +952,7 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 	// Time button is on and off
 	uint32_t t_on = 0;
 	uint32_t t_off = 0;
-	// total duration of received signal: 
+	// total duration of received signal:
 	// abort when > MAX_IR_SIGNAL_DURATION
 	uint32_t t_total = 0;
 
@@ -969,7 +966,7 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 	 * - signal interrupted for IR_LEARN_DONE_TIMEOUT or longer
 	 */
 	while ((err == 0) && (t_off < IR_LEARN_DONE_TIMEOUT * 1000)) {
-		if ((err = HID_ReadReport(rsp, ir_word ? 
+		if ((err = HID_ReadReport(rsp, ir_word ?
 			IR_LEARN_DONE_TIMEOUT : IR_LEARN_START_TIMEOUT))) {
 			err = LC_ERROR_READ;
 			break;
@@ -979,14 +976,14 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 			if (!check_seq(rsp[1], seq)) {
 				err = LC_ERROR;
 				break;
- 			}
+			}
 			seq += 0x10;
 			/*
 			 * This will handle the IR response including updating
 			 * t_off so we can exit the loop if long enough time
 			 * goes by without action.
 			 */
-			err = _handle_ir_response(rsp, ir_word, t_on, t_off, 
+			err = _handle_ir_response(rsp, ir_word, t_on, t_off,
 				t_total, *ir_signal_length, *ir_signal,	*freq);
 			if (err != 0) {
 				break;
@@ -1025,7 +1022,7 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 			err = LC_ERROR_READ;
 			break;
 		}
-	} while ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE); 
+	} while ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE);
 
 	if (cb && !err) {
 		cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);

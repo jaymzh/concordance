@@ -23,6 +23,8 @@
 #ifndef USBLAN_H
 #define USBLAN_H
 
+#include "lc_internal.h"
+
 int InitializeUsbLan(void);
 int ShutdownUsbLan(void);
 int FindUsbLanRemote(void);

@@ -21,8 +21,8 @@
  * (C) Copyright Kevin Timmerman 2008
  */
 
-#include "libconcord.h"
-#include "lc_internal.h"
+#include "usblan.h"
+
 #include <string.h>
 #include <errno.h>
 
@@ -39,6 +39,9 @@
 #ifdef __FreeBSD__
 #include <netinet/in.h>
 #endif
+
+#include "libconcord.h"
+#include "lc_internal.h"
 
 static SOCKET sock = SOCKET_ERROR;
 

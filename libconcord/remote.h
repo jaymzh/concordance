@@ -24,6 +24,9 @@
 #ifndef REMOTE_H
 #define REMOTE_H
 
+#include "lc_internal.h"
+#include "libconcord.h"
+
 #define SERIAL_SIZE 48
 #define FIRMWARE_MAX_SIZE 64*1024
 

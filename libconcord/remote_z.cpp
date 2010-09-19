@@ -37,7 +37,7 @@ static unsigned int last_seq;
 static unsigned int last_ack;
 static unsigned int last_payload_bytes;
 
-int TCP_Ack(bool increment_ack=false, bool fin=false) {
+int TCP_Ack(bool increment_ack = false, bool fin = false) {
 	uint8_t pkt[68];
 
 	/*
@@ -171,7 +171,6 @@ int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	if (data && len)
 		memcpy(pkt + 6, data, len);
 
-	
 	debug("Writing packet:");
 #ifdef _DEBUG
 	for (int i = 0; i <= pkt[0]; i++) {
@@ -179,7 +178,7 @@ int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	}
 	fprintf(stderr, "\n");
 #endif
-		
+
 	return HID_WriteReport(pkt);
 }
 
@@ -332,7 +331,7 @@ int CRemoteZ_TCP::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 #ifdef _DEBUG
 		fprintf(stderr, "DEBUG (%s): %3i:", __FUNCTION__, param_len);
 		for(unsigned int j = 0; j < param_len; ++j)
-			fprintf(stderr, " %02X",data[i+j]);
+			fprintf(stderr, " %02X", data[i+j]);
 		fprintf(stderr, "\n");
 #endif
 		i += param_len;
@@ -349,7 +348,7 @@ int CRemoteZ_Base::Reset(uint8_t kind)
 {
 	int err = 0;
 	/*
-	 * TODO: I odn't believe the zwaves have a "kind" of reset
+	 * TODO: I don't believe the zwaves have a "kind" of reset
 	 * ... is this needed here?
 	 */
 	if (kind != 2) {
@@ -435,7 +434,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	ri.protocol = 0;
 
 	setup_ri_pointers(ri);
-	
+
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_GUID))) {
 		debug("Failed to write to remote");
 		return LC_ERROR_WRITE;
@@ -487,7 +486,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 				return LC_ERROR;
 			}
 			CRemoteZ_Base::TParamList rp;
-			ParseParams(len,rgv,rp);
+			ParseParams(len, rgv, rp);
 		}
 	}
 #endif
@@ -508,8 +507,8 @@ int CRemoteZ_Base::InvalidateFlash(lc_callback cb, void *cb_arg,
 	return 0;
 }
 
-int CRemoteZ_Base::EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-	lc_callback cb, void *cb_arg, uint32_t cb_stage)
+int CRemoteZ_Base::EraseFlash(uint32_t addr, uint32_t len,
+	const TRemoteInfo &ri, lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	return 0;
 }
