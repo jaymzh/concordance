@@ -72,6 +72,7 @@ typedef unsigned __int64 uint64_t;
 /*
  * Callback stages
  */
+#define LC_CB_STAGE_NUM_STAGES 0xFF
 #define LC_CB_STAGE_GET_IDENTITY 7
 /* for config updates... */
 #define LC_CB_STAGE_INITIALIZE_UPDATE 8

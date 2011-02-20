@@ -170,6 +170,14 @@ void print_stage_name(int stage_id)
 void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
 	uint32_t total, uint32_t counter_type, void *arg)
 {
+
+#if _DEBUG
+	if (stage_id == LC_CB_STAGE_NUM_STAGES) {
+		printf("Num stages: %d\n", count);
+		return;
+	}
+#endif
+
 #ifdef WIN32
 	CONSOLE_SCREEN_BUFFER_INFO sbi;
 #endif
@@ -1117,13 +1125,11 @@ int main(int argc, char *argv[])
 	 * Get and print all the version info
 	 */
 
-	/*printf("Requesting Identity: ");*/
 	err = get_identity(cb_print_percent_status, NULL);
 	if (err != 0 && err != LC_ERROR_INVALID_CONFIG) {
 		fprintf(stderr, "ERROR: failed to requesting identity\n");
 		goto cleanup;
 	}
-	/*printf("       done\n");*/
 	if (err == LC_ERROR_INVALID_CONFIG) {
 		printf("WARNING: Invalid config found\n");
 	}

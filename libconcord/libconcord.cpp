@@ -353,7 +353,7 @@ const char *lc_cb_stage_str(int stage)
 			break;
 
 		case LC_CB_STAGE_INVALIDATE_FLASH:
-			return "Invalidating Flash";
+			return "Invalidating flash";
 			break;
 
 		case LC_CB_STAGE_ERASE_FLASH:
@@ -569,6 +569,11 @@ int is_fw_update_supported(int direct)
 	}
 }
 
+void _report_number_of_stages(lc_callback cb, void *cb_arg, int num) {
+        cb(LC_CB_STAGE_NUM_STAGES, num, NULL, NULL, NULL, cb_arg);
+}
+
+
 /*
  * GENERAL REMOTE STUFF
  */
@@ -658,6 +663,7 @@ int _get_identity(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 
 int get_identity(lc_callback cb, void *cb_arg)
 {
+        _report_number_of_stages(cb, cb_arg, 1);
 	_get_identity(cb, cb_arg, LC_CB_STAGE_GET_IDENTITY);
 }
 
@@ -678,7 +684,7 @@ int reset_remote(lc_callback cb, void *cb_arg)
 		sleep(WAIT_FOR_BOOT_SLEEP);
 		err = init_concord();
 		if (err == 0) {
-			err = get_identity(NULL, NULL);
+			err = _get_identity(NULL, NULL, NULL);
 			if (err == 0) {
 				break;
 			}
@@ -826,6 +832,7 @@ int _set_time(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 
 int set_time(lc_callback cb, void *cb_arg)
 {
+        _report_number_of_stages(cb, cb_arg, 1);
 	return _set_time(cb, cb_arg, LC_CB_STAGE_SET_TIME);
 }
 
@@ -1053,8 +1060,11 @@ int update_configuration(lc_callback cb, void *cb_arg, int noreset)
 {
 	int err;
 	if (is_z_remote()) {
+        	_report_number_of_stages(cb, cb_arg, 3);
 		err = _update_configuration_zwave(cb, cb_arg);
 	} else {
+        	_report_number_of_stages(cb, cb_arg,
+			(noreset) ? 5 : 6);
 		err = _update_configuration_hid(cb, cb_arg);
 	}
 

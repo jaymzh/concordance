@@ -467,6 +467,10 @@ int CRemote::PrepConfig(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 	uint8_t data_zero[1] = { 0x00 };
 
 	if (ri.architecture != 14) {
+		if (cb) {
+			cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		}
 		return 0;
 	}
 
