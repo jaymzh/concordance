@@ -171,12 +171,12 @@ void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
 	uint32_t total, uint32_t counter_type, void *arg)
 {
 
-#if _DEBUG
 	if (stage_id == LC_CB_STAGE_NUM_STAGES) {
+#if _DEBUG
 		printf("Num stages: %d\n", count);
+#endif
 		return;
 	}
-#endif
 
 #ifdef WIN32
 	CONSOLE_SCREEN_BUFFER_INFO sbi;
@@ -1131,7 +1131,7 @@ int main(int argc, char *argv[])
 		goto cleanup;
 	}
 	if (err == LC_ERROR_INVALID_CONFIG) {
-		printf("WARNING: Invalid config found\n");
+		printf("WARNING: Invalid config found.\n");
 	}
 
 	/*
