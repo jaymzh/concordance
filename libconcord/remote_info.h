@@ -97,7 +97,11 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_HAR,	"Harmony 700",		"Molson" }
+	{ MFG_HAR,	"Harmony 700",		"Molson" },
+	{ MFG_HAR,	"Harmony 515",		NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },			// 70
 };
 
 static const unsigned int max_model=sizeof(ModelList)/sizeof(TModel)-1;
