@@ -635,8 +635,10 @@ int init_concord()
 int deinit_concord()
 {
 	ShutdownUSB();
-	delete of;
-	delete rmt;
+	if (of)
+		delete of;
+	if (rmt)
+		delete rmt;
 	return 0;
 }
 
