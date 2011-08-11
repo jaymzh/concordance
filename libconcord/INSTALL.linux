@@ -7,11 +7,12 @@ source, see the instructions below.
 
 0. INSTALL REQUIRED SOFTWARE
 
-You *MUST* install libusb. This library is in most distributions, so
-apt-get/yum/up2date/urpmi/etc. it.
+You *MUST* install libusb and libzzip. These libraries are in most
+distributions, so apt-get/yum/up2date/urpmi/etc. it.
 
-If you're compiling from source, you'll also need the libusb development
-package - usually libusb-dev or libusb-devel, depending on your distribution.
+If you're compiling libconcord from source, you'll also need the development
+packages - usually libusb-dev or libusb-devel (and libzzip-dev/libzzip-devel),
+depending on your distribution.
 
 1. BUILD LIBCONCORD
 
