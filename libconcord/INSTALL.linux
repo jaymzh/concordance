@@ -31,34 +31,62 @@ As root, simply run "make install"
 3. INSTALL UDEV/CONSOLEKIT/POLICYKIT SUPPORT (OPTIONAL)
 
 If you don't want to have to be root to use concordance (or any other
-libconcord frontend), you'll need to set up udev, consolekit, or policykit
-support. If you don't know which of these your distribution uses, then the
-plain udev support will work:
+libconcord frontend), you'll need to set up udev-acl, hal/consolekit, 
+hal/policykit or old udev support.
+
+Most modern distributions should use the udev-acl support. udev versions since
+167, released on 2011-03-30, have the necessary support for this method to
+work.
+
+With this option, all locally logged-in users will be able to have access
+to the remote control, but remote users (such as those logged in via ssh or
+fast user switching) will not. This support does not depend on anything beyond
+a sufficiently recent version of udev itself. To use the udev-acl support, do:
 
   make udev
   sudo make install_udev
 
-This will allow anyone in the "dialout" group to read and write to harmony
-remote controls connected to the machine.
+If you have an older distribution without a recent enough version of udev, you
+can choose between old-style generic udev support, hal/consolekit support, and
+hal/policykit support.
 
-Alternatively, if you use policykit (fedora, and ubuntu, for example), you can
-do:
+To use hal/policykit support, you can do:
 
   make policykit
   sudo make install_policykit
 
-This will generate a different udev file and all the appropriate policykit
+This will generate a different udev file and all the appropriate HAL/policykit
 files and install them in the right place for the console user to have access
-to the remote when it's plugged in. In otherwords, there is no need to do udev
-and policykit - policykit will take care of everything needed for policykit.
+to the remote when it's plugged in. It will work only if your distribution has
+udev, HAL and PolicyKit of around the correct vintage - approximately, the
+versions that were current in early 2009 - correctly built to work with each
+other.
 
-If your system is using consolekit, then you can use:
+To use hal/consolekit, you can do:
 
   make consolekit
   sudo make install_consolekit
 
-If you're not sure which method your system uses, the udev one will work on
-all systems. 
+This will do much the same as the hal/policykit support does, only with
+consolekit instead. As with the hal/policykit support, it depends on having
+udev, HAL and ConsoleKit of an early 2009 vintage, correctly built to work
+together.
+
+The safest option for old systems is the old generic udev support:
+
+  make old-udev
+  sudo make install_old-udev
+
+This will allow anyone in the "dialout" group to read and write to harmony
+remote controls connected to the machine. It should work with any udev system,
+including modern ones, but is a less sophisticated solution than the udev-acl
+support and requires you to add your user to the "dialout" group. 
+
+If you are not sure which method to use, and your distribution came out since
+March 2011, try the new udev option first, as it provides the cleanest
+configuration and most transparent operation. If it does not work, you can try
+the hal/consolekit or hal/policykit options, but old-udev is the most likely
+to work.
 
 NOTE: By default the install prefix is /usr/local which means that the
 udev/policykit/consolekit make targets will install in /usr/local/etc which
