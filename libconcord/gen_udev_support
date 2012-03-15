@@ -15,7 +15,8 @@
 #
 
 UDEV_POLICY_TEMPLATE='ATTR{idVendor}=="%s", ATTR{idProduct}=="%s", SYMLINK+="harmony-%%k"'
-UDEV_NO_POLICY_TEMPLATE='SYSFS{idVendor}=="%s", SYSFS{idProduct}=="%s", MODE="0660", GROUP="dialout"'
+UDEV_NEW_NO_POLICY_TEMPLATE='ATTR{idVendor}=="%s", ATTR{idProduct}=="%s", ENV{ID_REMOTE_CONTROL}="1"'
+UDEV_OLD_NO_POLICY_TEMPLATE='SYSFS{idVendor}=="%s", SYSFS{idProduct}=="%s", MODE="0660", GROUP="dialout"'
 
 HAL_PRE_TEMPLATE='    <match key="usb_device.vendor_id" int="0x%s">'
 HAL_RULE_TEMPLATE='      <match key="usb_device.product_id" int="0x%s">
@@ -66,7 +67,7 @@ emit_udev_header() {
 # Neat trick so that non-harmony devices don't read through a million rules
 SUBSYSTEM=="usb_device", GOTO="harmony_usb_rules"
 SUBSYSTEM=="usb", GOTO="harmony_usb_rules"
-BUS!="usb", GOTO="harmony_rules_end"
+SUBSYSTEM!="usb", GOTO="harmony_rules_end"
 GOTO="harmony_rules_end"
 LABEL="harmony_usb_rules"
 END
@@ -85,8 +86,10 @@ emit_udev_rules() {
     type="$2"
     if [ "$type" == 'policykit' -o "$type" == 'consolekit' ]; then
         template="$UDEV_POLICY_TEMPLATE"
+    elif [ "$type" == 'old_udev' ]; then
+        template="$UDEV_OLD_NO_POLICY_TEMPLATE"
     else
-        template="$UDEV_NO_POLICY_TEMPLATE"
+        template="$UDEV_NEW_NO_POLICY_TEMPLATE"
     fi
 
     emit_for_all $file "$template" 'yes'
@@ -192,14 +195,14 @@ create_perms_file() {
 #
 
 usage() {
-    echo "Usage: $0 <-u|-p|-c>"
+    echo "Usage: $0 <-u|-p|-c|-o>"
 }
 
 #
 # MAIN
 #
 
-while getopts upc opt; do
+while getopts upco opt; do
     case $opt in
         u)
             MODE='udev_only'
@@ -209,6 +212,9 @@ while getopts upc opt; do
             ;;
         c)
             MODE='consolekit'
+            ;;
+        o)
+            MODE='old_udev'
             ;;
         *)
             usage

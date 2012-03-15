@@ -15,9 +15,14 @@ udev:
 install_udev_generic:
 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/udev/rules.d
 	$(install_sh_DATA) libconcord.rules \
-		$(DESTDIR)$(sysconfdir)/udev/rules.d/99-libconcord.rules
+		$(DESTDIR)$(sysconfdir)/udev/rules.d/60-libconcord.rules
 
 install_udev: udev install_udev_generic
+
+old-udev:
+	./gen_udev_support -o
+
+install_old-udev: old-udev install_udev_generic
 
 policykit:
 	./gen_udev_support -p
