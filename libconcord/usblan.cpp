@@ -31,6 +31,7 @@
 #else
 #include <sys/socket.h>
 #include <netdb.h>
+#include <unistd.h>
 #define closesocket close
 #define SOCKET int
 #define SOCKET_ERROR -1
