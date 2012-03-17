@@ -11,7 +11,7 @@ then
 	AC_MSG_ERROR([Error, libusb is missing!])
 fi
 AC_CHECK_HEADER(zzip/lib.h, [], [a=0])
-AC_CHECK_LIB(zzip, zzip_dir_open, [] [a=0])
+AC_CHECK_LIB(zzip, zzip_dir_open, [], [a=0])
 if test $a == 0
 then
 	AC_MSG_ERROR([Error, libzzip is missing!])
