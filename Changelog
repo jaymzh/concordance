@@ -1,3 +1,18 @@
+0.24
+Released: 03/18/12
+phil@ipom.com:
+- libconcord: Give a name to the 515 so output is sane.
+
+s-t-concordance@wwwdotorg.org:
+- libconcord: Fix the flash_base for 525 which was broken in the reformat.
+  Fixes bugs 3469523,3071382.
+
+awilliam@redhat.com:
+- Update gen_udev_support to work with modern udev (udev-acl). Fixes RFEs
+  3241307,3119335.
+- Fix compilation with GCC 4.7
+
+
 0.23
 Released: 08/28/10
 s-t-concordance@wwwdotorg.org:
