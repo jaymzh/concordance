@@ -47,7 +47,8 @@
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
 
-#define MAX_WAIT_FOR_BOOT 5
+// Certain remotes (e.g., 900) take longer to reboot, so extend wait time.
+#define MAX_WAIT_FOR_BOOT 10
 #define WAIT_FOR_BOOT_SLEEP 5
 
 static class CRemoteBase *rmt;
@@ -102,6 +103,11 @@ int get_hw_ver_maj()
 int get_hw_ver_min()
 {
 	return ri.hw_ver_minor;
+}
+
+int get_hw_ver_mic()
+{
+	return ri.hw_ver_micro;
 }
 
 int get_flash_size()
@@ -207,6 +213,11 @@ int is_z_remote()
 	return rmt->IsZRemote() ? 1 : 0;
 }
 
+int is_usbnet_remote()
+{
+	return rmt->IsUSBNet() ? 1 : 0;
+}
+
 int get_time_second()
 {
 	return rtime.second;
@@ -302,7 +313,9 @@ const char *lc_strerror(int err)
 			break;
 
 		case LC_ERROR_CONNECT:
-			return "Error connecting or finding the remote";
+			return "Error connecting or finding the remote\nNOTE: \
+if you recently plugged in your remote and you have a newer remote, you\nmay \
+need to wait a few additional seconds for your remote to be fully connected.";
 			break;
 
 		case LC_ERROR_OS:
@@ -415,6 +428,12 @@ int read_and_parse_file(char *filename, int *type)
 {
 	of = new OperationFile;
 	return of->ReadAndParseOpFile(filename, type);
+}
+
+void delete_opfile_obj()
+{
+	if (of)
+		delete of;
 }
 
 /*
@@ -599,15 +618,11 @@ int init_concord()
 	if ((err = FindRemote(hid_info))) {
 		hid_info.pid = 0;
 
-#ifdef WIN32
 		if ((err = FindUsbLanRemote())) {
 			return LC_ERROR_CONNECT;
 		}
 
-		rmt = new CRemoteZ_TCP;
-#else
-		return LC_ERROR_CONNECT;
-#endif
+		rmt = new CRemoteZ_USBNET;
 	}
 
 	/*
@@ -635,8 +650,6 @@ int init_concord()
 int deinit_concord()
 {
 	ShutdownUSB();
-	if (of)
-		delete of;
 	if (rmt)
 		delete rmt;
 	return 0;
@@ -1074,7 +1087,8 @@ int update_configuration(lc_callback cb, void *cb_arg, int noreset)
 	if (err != 0)
 		return err;
 
-	if (noreset || is_z_remote())
+	// usbnet seems to need a reset; not sure why zwave-hid's do not
+	if (noreset || (is_z_remote() && !is_usbnet_remote()))
 		return 0;
 
 	if ((err = reset_remote(cb, cb_arg)))

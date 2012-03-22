@@ -25,6 +25,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #ifdef WIN32
 #include <winsock.h>
@@ -48,6 +49,13 @@ static SOCKET sock = SOCKET_ERROR;
 
 const char * const remote_ip_address = "169.254.1.2";
 const u_short remote_port            = 3074;
+const int connect_timeout            = 1; // try to connect for 1 seconds
+
+const char * const http_get_cmd = "\
+GET /xmluserrfsetting HTTP/1.1\r\n\
+User-Agent: Jakarta Commons-HttpClient/3.1\r\n\
+Host: 169.254.1.2\r\n\
+\r\n";
 
 int InitializeUsbLan(void)
 {
@@ -88,8 +96,44 @@ int FindUsbLanRemote(void)
 	sock = socket(sa.sin_family, SOCK_STREAM, 0);	// TCP
 	//sock = socket(sa.sin_family, SOCK_DGRAM, 0);	// UDP
 
+	// Make the socket non-blocking so it doesn't hang on systems that 
+	// don't have a usbnet remote.
+	int flags = 0;
+	fd_set wset;
+	FD_ZERO(&wset);
+	FD_SET(sock, &wset);
+	struct timeval tv;
+	tv.tv_sec = connect_timeout;
+	tv.tv_usec = 0;
+	if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
+		report_net_error("fcntl()");
+		return LC_ERROR_OS_NET;
+	}
+	if(fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
+		report_net_error("fcntl()");
+		return LC_ERROR_OS_NET;
+	}
+
 	if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
-		report_net_error("connect()");
+		if (errno != EINPROGRESS) {
+			report_net_error("connect()");
+			return LC_ERROR_OS_NET;
+		}
+	}
+
+	if ((err = select(sock+1, NULL, &wset, NULL, &tv)) <= 0) {
+		report_net_error("select()");
+		return LC_ERROR_OS_NET;
+	}
+
+	// Change the socket back to blocking which should be fine now that we
+	// connected.
+	if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
+		report_net_error("fcntl()");
+		return LC_ERROR_OS_NET;
+	}
+	if(fcntl(sock, F_SETFL, flags & ~O_NONBLOCK) < 0) {
+		report_net_error("fcntl()");
 		return LC_ERROR_OS_NET;
 	}
 
@@ -125,6 +169,66 @@ int UsbLan_Read(unsigned int &len, uint8_t *data)
 
 	len = static_cast<unsigned int>(err);
 	debug("%i bytes received", len);
+
+	return 0;
+}
+
+int GetXMLUserRFSetting(char **data)
+{
+	int err;
+	int web_sock;
+	char buf[4096];
+
+	hostent* addr = gethostbyname(remote_ip_address);
+
+	if (!addr) {
+		report_net_error("gethostbyname()");
+		return LC_ERROR_OS_NET;
+	}
+
+	sockaddr_in sa;
+	memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
+	sa.sin_family = AF_INET;		// TCP/IP
+	sa.sin_port = htons(80);                // Web Server port
+
+	web_sock = socket(sa.sin_family, SOCK_STREAM, 0);	// TCP
+
+	if ((err = connect(web_sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+		report_net_error("connect()");
+		return LC_ERROR_OS_NET;
+	}
+	debug("Connected to USB LAN web server!");
+
+	err = send(web_sock, http_get_cmd, strlen(http_get_cmd), 0);
+	if (err == SOCKET_ERROR) {
+		report_net_error("send()");
+		return LC_ERROR_OS_NET;
+	}
+	debug("%i bytes sent", err);
+
+	unsigned int len = 0;
+	char* buf_ptr = buf;
+	do {
+		err = recv(web_sock, buf_ptr, sizeof(buf)-len, 0);
+		if (err == SOCKET_ERROR) {
+			report_net_error("recv()");
+			len = 0;
+			return LC_ERROR_OS_NET;
+		}
+		len += err;
+		buf_ptr += err;
+		debug("%i bytes received", err);
+	} while (err > 0); // recv will return 0 when the message is done.
+	buf[len] = '\0';
+
+	buf_ptr = strstr(buf, "\r\n\r\n"); // search for end of the http header
+	if (buf_ptr == NULL) {
+		report_net_error("strstr()");
+		return LC_ERROR_OS_NET;
+	}
+	buf_ptr += 4;
+	*data = new char[strlen(buf_ptr)+1];
+	strncpy(*data, buf_ptr, strlen(buf_ptr)+1);
 
 	return 0;
 }

@@ -29,6 +29,12 @@
 
 #define SERIAL_SIZE 48
 #define FIRMWARE_MAX_SIZE 64*1024
+/* Largest packet size for HID-UDP is 4 bytes (header) + 64 bytes (data) */
+#define HID_UDP_MAX_PACKET_SIZE 68
+/* Largest packet size for usbnet is the COMMAND_WRITE_UPDATE_DATA
+   which is 1 (num params) + 3 (3 parameter size bytes) + 1 (param 1)
+   + 1024 (param 2) + 4 (param 3) = 1033. */
+#define USBNET_MAX_PACKET_SIZE 1033
 
 /*
  * limits for IR signal learning, stop when any is reached:
@@ -100,6 +106,7 @@ struct TArchInfo {
 struct TRemoteInfo {
 	uint16_t		hw_ver_major;
 	uint16_t		hw_ver_minor;
+	uint16_t		hw_ver_micro;
 	uint16_t		fw_ver_major;
 	uint16_t		fw_ver_minor;
 	uint8_t			fw_type;
@@ -117,6 +124,14 @@ struct TRemoteInfo {
 	bool			valid_config;
 	uint32_t		config_bytes_used;
 	uint32_t		max_config_size;
+	/* usbnet only from here down */
+	uint8_t			num_regions;
+	uint8_t			*region_ids;
+	char			**region_versions;
+	uint32_t		home_id;
+	uint8_t			node_id;
+	char			*tid;
+	char			*xml_user_rf_setting;
 };
 
 struct THarmonyTime {
@@ -177,6 +192,7 @@ public:
 		uint32_t *ir_signal_length, lc_callback cb=NULL,
 		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
 	virtual int IsZRemote()=0;
+	virtual int IsUSBNet()=0;
 };
 
 class CRemote : public CRemoteBase	// All non-Z-Wave remotes
@@ -230,6 +246,7 @@ public:
 		uint32_t *ir_signal_length, lc_callback cb=NULL,
 		void *cb_arg=NULL, uint32_t cb_stage=NULL);
 	int IsZRemote() {return false;}
+	int IsUSBNet() {return false;}
 };
 
 // Base class for all Z-Wave remotes
@@ -313,12 +330,14 @@ public:
 	virtual ~CRemoteZ_HID() {};
 	int UpdateConfig(const uint32_t len, const uint8_t *wr,
 		lc_callback cb, void *cb_arg, uint32_t cb_stage);
+	int IsUSBNet() {return false;}
 };
 
 // 1000, 1000i
-class CRemoteZ_TCP : public CRemoteZ_Base
+class CRemoteZ_USBNET : public CRemoteZ_Base
 {
 protected:
+	int TCPSendAndCheck(uint8_t cmd, uint32_t len=0, uint8_t *data=NULL);
 	virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
 		uint8_t *data=NULL);
 	virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data);
@@ -327,8 +346,14 @@ protected:
 	virtual uint16_t GetWord(uint8_t *x) { return x[0]<<8 | x[1]; };
 
 public:
-	CRemoteZ_TCP() {};
-	virtual ~CRemoteZ_TCP() {};
+	CRemoteZ_USBNET() {};
+	virtual ~CRemoteZ_USBNET() {};
+	int UpdateConfig(const uint32_t len, const uint8_t *wr,
+		lc_callback cb, void *cb_arg, uint32_t cb_stage);
+	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
+	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+	int IsUSBNet() {return true;}
 };
 
 #endif //REMOTE_H

@@ -113,6 +113,7 @@ int OperationFile::ReadZipFile(char *file_name)
 			} else {
 				data_size = dirent.st_size;
 				data = new uint8_t[data_size];
+				data_alloc = true;
 				zzip_size_t len = zzip_file_read(fh, data,
 					data_size);
 			}
@@ -159,11 +160,18 @@ OperationFile::OperationFile()
 {
 	data_size = xml_size = 0;
 	data = xml = NULL;
+	data_alloc = false;
 }
 
 OperationFile::~OperationFile()
 {
-	if (data)
+	/* 
+	 * In certain places, the data pointer is used to point to an area
+	 * inside of the xml memory.  In those cases, we don't want to delete
+	 * it.  Use the data_alloc variable to keep track of when we've actually
+	 * allocated unique memory to it, and in those cases, delete it.
+	 */
+	if (data && data_alloc)
 		delete data;
 	if (xml)
 		delete xml;
@@ -186,6 +194,7 @@ int OperationFile::_ExtractFirmwareBinary()
 	debug("extracting firmware binary");
 	uint32_t o_size = FIRMWARE_MAX_SIZE;
 	data = new uint8_t[o_size];
+	data_alloc = true;
 	uint8_t *o = data;
 
 	uint8_t *x = xml;

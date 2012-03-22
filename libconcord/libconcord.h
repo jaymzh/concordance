@@ -132,6 +132,7 @@ int get_fw_ver_min();
 int get_fw_type();
 int get_hw_ver_maj();
 int get_hw_ver_min();
+int get_hw_ver_mic();
 int get_flash_size();
 int get_flash_mfg();
 int get_flash_id();
@@ -205,6 +206,10 @@ void delete_blob(uint8_t *ptr);
  * of operations.
  */
 int read_and_parse_file(char *filename, int *type);
+/*
+ * Free the memory used by the file as allocated in read_and_parse_file.
+*/
+void delete_opfile_obj();
 
 /*
  * GENERAL REMOTE INTERACTIONS

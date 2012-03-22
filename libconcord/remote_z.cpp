@@ -38,7 +38,7 @@ static unsigned int last_ack;
 static unsigned int last_payload_bytes;
 
 int TCP_Ack(bool increment_ack = false, bool fin = false) {
-	uint8_t pkt[68];
+	uint8_t pkt[HID_UDP_MAX_PACKET_SIZE];
 
 	/*
 	 * Note: It's the caller's responsibility to ensure we've already
@@ -87,7 +87,7 @@ int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 {
 	if (len > 60)
 		return LC_ERROR;
-	uint8_t pkt[68];
+	uint8_t pkt[HID_UDP_MAX_PACKET_SIZE];
 	pkt[0] = 3+len;
 	pkt[1] = 1; // UDP
 	pkt[2] = typ;
@@ -108,7 +108,7 @@ int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 
 int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
-	uint8_t pkt[68];
+	uint8_t pkt[HID_UDP_MAX_PACKET_SIZE];
 	int err;
 	if ((err = HID_ReadReport(pkt))) {
 		return LC_ERROR_READ;
@@ -138,7 +138,7 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
-	uint8_t pkt[68];
+	uint8_t pkt[HID_UDP_MAX_PACKET_SIZE];
 
 	/*
 	 * Note: It's the caller's responsibility to ensure we've already
@@ -185,7 +185,7 @@ int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 
 int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
-	uint8_t pkt[68];
+	uint8_t pkt[HID_UDP_MAX_PACKET_SIZE];
 	int err;
 	/*
 	 * Many TCP operations can take a while, like computing checksums,
@@ -268,10 +268,10 @@ int CRemoteZ_HID::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 }
 
 
-int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, uint32_t len,
+int CRemoteZ_USBNET::Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	uint8_t *data)
 {
-	if (len > 60) {
+	if (len > USBNET_MAX_PACKET_SIZE) {
 		return LC_ERROR;
 	}
 
@@ -279,7 +279,7 @@ int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	const bool request = (typ == TYPE_REQUEST);
 	const uint8_t status = STATUS_OK;
 
-	uint8_t pkt[68];
+	uint8_t pkt[USBNET_MAX_PACKET_SIZE+3]; /* add standard 3-byte header */
 	pkt[0] = service_type << 4 | (cmd >> 8) & 0x0F;
 	pkt[1] = cmd & 0xFF;
 	pkt[2] = request ? 0x80 : (status & 0x7F);
@@ -295,7 +295,7 @@ int CRemoteZ_TCP::Write(uint8_t typ, uint8_t cmd, uint32_t len,
 	return UsbLan_Write(len, pkt);
 }
 
-int CRemoteZ_TCP::Read(uint8_t &status, uint32_t &len, uint8_t *data)
+int CRemoteZ_USBNET::Read(uint8_t &status, uint32_t &len, uint8_t *data)
 {
 	uint8_t buf[1600];
 	len = sizeof(buf);
@@ -308,7 +308,7 @@ int CRemoteZ_TCP::Read(uint8_t &status, uint32_t &len, uint8_t *data)
 	return err;
 }
 
-int CRemoteZ_TCP::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
+int CRemoteZ_USBNET::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 {
 	unsigned int n = 0;
 	unsigned int i = 4;
@@ -343,6 +343,239 @@ int CRemoteZ_TCP::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
 	return 0;
 }
 
+int CRemoteZ_USBNET::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data)
+{
+	int err = 0;
+	uint8_t status;
+	unsigned int rlen;
+	uint8_t rsp[60];
+
+	if ((err = Write(TYPE_REQUEST, cmd, len, data))) {
+		debug("Failed to send request %02X", cmd);
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	if (rsp[2] != TYPE_RESPONSE) {
+		debug("Packet didn't have response bit!");
+		return LC_ERROR;
+	}
+
+	if (rsp[1] != cmd) {
+		debug("The cmd bit didn't match our request packet");
+		return LC_ERROR;
+	}
+
+	return 0;
+}
+
+int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
+	lc_callback cb, void *arg, uint32_t cb_stage)
+{
+	int err = 0;
+	int cb_count = 0;
+	uint8_t rsp[60];
+	unsigned int rlen;
+	uint8_t status;
+
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 0, 2,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+
+	/* ACK it with a command to start an update */
+	debug("START_UPDATE");
+	// 2 parameters, each 1 byte.
+	// 1st parameter "flags" seems to always be 0.
+	uint8_t cmd[60] = { 0x02, 0x01, 0x00, 0x01, REGION_USER_CONFIG };
+	if ((err = TCPSendAndCheck(COMMAND_START_UPDATE, 5, cmd))) {
+		return err;
+	}
+
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 1, 2,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+
+	/* write update-header */
+	debug("UPDATE_HEADER");
+	cmd[0] = 0x02; // 2 parameters
+	cmd[1] = 0x04; // 1st parameter 4 bytes (size)
+	cmd[2] = (len & 0xFF000000) >> 24; 
+	cmd[3] = (len & 0x00FF0000) >> 16;
+	cmd[4] = (len & 0x0000FF00) >> 8;
+	cmd[5] = (len & 0x000000FF);
+	cmd[6] = 0x01; // 2nd parameter 1 byte (region id)
+	cmd[7] = REGION_USER_CONFIG;
+	if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_HEADER, 8, cmd))) {
+		return err;
+	}
+
+	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 2, 2,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+	cb_count = 0;
+
+	/* write data */
+	debug("UPDATE_DATA");
+	uint32_t pkt_len;
+	int tlen = len;
+	int bytes_written = 0;
+	uint8_t *wr_ptr = const_cast<uint8_t*>(wr);
+	uint8_t tmp_pkt[1033];
+	tmp_pkt[0] = 0x03; // 3 parameters
+	tmp_pkt[1] = 0x01; // 1st parameter, 1 byte (region id)
+	tmp_pkt[2] = REGION_USER_CONFIG;
+	tmp_pkt[3] = 0xC2; // 2nd parameter, 1024 bytes (data)
+	tmp_pkt[1028] = 0x04; // 3rd parameter, 4 bytes (length)
+	while (tlen) {
+		pkt_len = 1024; // max packet length seems to be 1024
+		if (tlen < pkt_len) {
+			pkt_len = tlen;
+		}
+		tlen -= pkt_len;
+
+		memcpy(&tmp_pkt[4], wr_ptr, pkt_len);
+		tmp_pkt[1029] = (pkt_len & 0xFF000000) >> 24;
+		tmp_pkt[1030] = (pkt_len & 0x00FF0000) >> 16;
+		tmp_pkt[1031] = (pkt_len & 0x0000FF00) >> 8;
+		tmp_pkt[1032] = (pkt_len & 0x000000FF);
+
+		debug("DATA %d, sending %d bytes, %d bytes left", cb_count,
+			pkt_len, tlen);
+
+		if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_DATA, 1033,
+			tmp_pkt))) {
+			return err;
+		}
+		wr_ptr += pkt_len;
+
+		if (cb) {
+			cb(LC_CB_STAGE_WRITE_CONFIG, cb_count++,
+				(int)(wr_ptr - wr), len,
+				LC_CB_COUNTER_TYPE_BYTES, arg);
+		}
+	}
+
+	/* write update-done */
+	cb_count = 0;
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 0, 3,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+
+	debug("UPDATE_DATA_DONE");
+	cmd[0] = 0x01; // 1 parameter
+	cmd[1] = 0x01; // 1st parameter 1 byte (region id)
+	cmd[2] = REGION_USER_CONFIG;
+	if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_DATA_DONE, 3, cmd))) {
+		return err;
+	}
+
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 1, 3,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+
+	/* send get-cheksum */
+	debug("GET_CHECKSUM");
+	cmd[0] = 0x02; // 2 parameters
+	cmd[1] = 0x02; // 1st parameter 2 bytes (seed)
+	cmd[2] = 0xFF; // seed seems to always be FF
+	cmd[3] = 0xFF; // seed seems to always be FF
+	cmd[4] = 0x01; // 2nd parameter 1 byte (region id)
+	cmd[5] = REGION_USER_CONFIG;
+	if ((err = TCPSendAndCheck(COMMAND_GET_UPDATE_CHECKSUM, 6, cmd))) {
+		return err;
+	}
+
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 2, 3,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+
+	/* send finish-update */
+	debug("FINISH_UPDATE");
+	cmd[0] = 0x02; // 2 parameters
+	cmd[1] = 0x01; // 1st parameter 1 byte (validate)
+	cmd[2] = 0x01; // validate?
+	cmd[3] = 0x01; // 2nd parameter 1 byte (region id)
+	cmd[4] = REGION_USER_CONFIG;
+	if ((err = TCPSendAndCheck(COMMAND_FINISH_UPDATE, 5, cmd))) {
+		return err;
+	}
+
+	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 3, 3,
+		LC_CB_COUNTER_TYPE_STEPS, arg);
+
+	return 0;
+}
+
+int CRemoteZ_USBNET::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
+{
+	int err = 0;
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_CURRENT_TIME))) {
+		debug("Failed to write to remote");
+		return LC_ERROR_WRITE;
+	}
+	uint8_t time[60];
+	unsigned int len;
+	uint8_t status;
+	if ((err = Read(status, len, time))) {
+		debug("Failed to read to remote");
+		return LC_ERROR_READ;
+	}
+
+	if (time[2] != TYPE_RESPONSE || time[1] != COMMAND_GET_CURRENT_TIME) {
+		debug("Incorrect response type from Get Time");
+		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+	}
+
+	CRemoteZ_Base::TParamList pl;
+	ParseParams(len, time, pl);
+
+	ht.year = GetWord(pl.p[0]);
+	ht.month = *pl.p[1];
+	ht.day = *pl.p[2];
+	ht.hour = *pl.p[3];
+	ht.minute = *pl.p[4];
+	ht.second = *pl.p[5];
+	ht.dow = *pl.p[6]&7;
+	ht.utc_offset = static_cast<int16_t>(GetWord(pl.p[7]));
+	if (pl.count > 11) {
+		ht.timezone = reinterpret_cast<char*>(pl.p[11]);
+		ht.timezone[3] = '\0';
+	} else {
+		ht.timezone = "";
+	}
+
+	return 0;
+}
+
+int CRemoteZ_USBNET::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
+{
+	debug("SetTime");
+	int err = 0;
+
+	uint8_t tsv[32] = {
+		0x0C, // 12 parameters
+		0x02, ht.year >> 8, ht.year, // 2 bytes
+		0x01, ht.month,
+		0x01, ht.day,
+		0x01, ht.hour,
+		0x01, ht.minute,
+		0x01, ht.second,
+		0x01, ht.dow,
+		// utcOffset
+		0x02, 0, 0, // 2 bytes - 900 doesn't seem to accept this
+		// 0s
+		0x02, 0, 0, // 2 bytes
+		0x02, 0, 0, // 2 bytes
+		0x02, 0, 0, // 2 bytes
+		0x83, 0, 0, 0 // 900 doesn't seem to accept this, don't bother
+		};
+
+	if ((err = TCPSendAndCheck(COMMAND_UPDATE_TIME, 32, tsv))) {
+		debug("Failed to write to remote");
+		return err;
+	}
+
+	return 0;
+}
 
 int CRemoteZ_Base::Reset(uint8_t kind)
 {
@@ -405,21 +638,8 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	CRemoteZ_Base::TParamList pl;
 	ParseParams(len, rsp, pl);
 
-	if (hid.pid == 0) {		// 1000
-		hid.vid = GetWord(pl.p[0]);
-		hid.pid = GetWord(pl.p[1]);
-		hid.ver = 0;
-		hid.irl = 0;
-		hid.orl = 0;
-		hid.frl = 0;
-		hid.mfg = "Logitech";
-		hid.prod = "Harmony 1000";
-		ri.flash_mfg = 0;	// todo
-		ri.flash_id = 0;	// todo
-	} else {				// Not 1000
-		ri.flash_mfg = 0x01;// todo
-		ri.flash_id = 0x49;	// todo
-	}
+	ri.flash_mfg = 0x01;
+	ri.flash_id = 0x49;
 	ri.architecture = GetWord(pl.p[2]);
 	ri.fw_ver_major = GetWord(pl.p[3]);
 	ri.fw_ver_minor = GetWord(pl.p[4]);
@@ -428,12 +648,23 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	const unsigned int hw = GetWord(pl.p[7]);
 	ri.hw_ver_major = hw >> 8;		// ???
 	ri.hw_ver_minor = (hw >> 4) & 0x0F;	// ???
-	// hw_ver_micro = hw & 0x0F		// ???
+	ri.hw_ver_micro = hw & 0x0F;		// 900 has this and is non-zero
 	//ri.hw_ver_major = hw >> 4;
 	//ri.hw_ver_minor = hw & 0x0F;
-	ri.protocol = 0;
+	ri.protocol = GetWord(pl.p[2]); // Seems to be the same as arch?
 
 	setup_ri_pointers(ri);
+
+	if (IsUSBNet()) {
+		hid.vid = GetWord(pl.p[0]);
+		hid.pid = GetWord(pl.p[1]);
+		hid.ver = 0;
+		hid.irl = 0;
+		hid.orl = 0;
+		hid.frl = 0;
+		hid.mfg = ri.model->mfg;
+		hid.prod = ri.model->model;
+	}
 
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_GUID))) {
 		debug("Failed to write to remote");
@@ -457,7 +688,12 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	ri.max_config_size = 1;
 	ri.valid_config = 1;
 
-#if 0	// Get region info - 1000 only!
+	if (!IsUSBNet()) {
+		return 0;
+	}
+	
+	// Get region info - everything below is extra stuff that only the
+	// usbnet remotes seem to use.
 	uint8_t rr[] = { 1, 1, 1 }; // AddByteParam(1);
 	if ((err = Write(TYPE_REQUEST, COMMAND_GET_REGION_IDS, 3, rr))) {
 		debug("Failed to write to remote");
@@ -471,9 +707,33 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	ParseParams(len, rgn, pl);
 	if (pl.count == 1) {
 		const unsigned int rc = *(pl.p[0]-1) & 0x3F;
+		ri.num_regions = rc + 1;
+		ri.region_ids = new uint8_t[ri.num_regions];
+		ri.region_versions = new char*[ri.num_regions];
+
+		// There seems to be an implied Region 0 that the Windows
+		// software requests but it is not listed in the Region IDs.
+		uint8_t rz[] = { 1, 1, 0 }; // 1 parameter, 1 byte, value = 0
+		if ((err = Write(TYPE_REQUEST,
+				COMMAND_GET_REGION_VERSION, 3, rz))) {
+			debug("Failed to write to remote");
+			return LC_ERROR;
+		}
+		uint8_t rgz[64];
+		if ((err = Read(status, len, rgz))) {
+			debug("Failed to read from remote");
+			return LC_ERROR;
+		}
+		CRemoteZ_Base::TParamList rzp;
+		ParseParams(len, rgz, rzp);
+		ri.region_ids[0] = 0x00; // Store region 0.
+		ri.region_versions[0] = new char[4];
+		snprintf(ri.region_versions[0], 4, "%d.%d", *(rzp.p[0]+1),
+			 *rzp.p[0]);
+
 		for(unsigned int r = 0; r < rc; ++r) {
 			const uint8_t rn = *(pl.p[0]+r);
-			printf("Region %i\n", rn);
+			debug("Region %i", rn);
 			uint8_t rv[] = { 1, 1, rn }; // AddByteParam(rn);
 			if ((err = Write(TYPE_REQUEST,
 					COMMAND_GET_REGION_VERSION, 3, rv))) {
@@ -487,10 +747,61 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 			}
 			CRemoteZ_Base::TParamList rp;
 			ParseParams(len, rgv, rp);
+			ri.region_ids[r+1] = rn;
+			ri.region_versions[r+1] = new char[4];
+			snprintf(ri.region_versions[r+1], 4, "%d.%d",
+				 *(rp.p[0]+1), *rp.p[0]);
 		}
 	}
-#endif
 
+	// Get HOMEID, NODEID, TID
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_HOME_ID))) {
+		debug("Failed to write to remote");
+		return LC_ERROR;
+	}
+	if ((err = Read(status, len, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR;
+	}
+	ParseParams(len, rsp, pl);
+	ri.home_id = (*pl.p[0] << 24) + (*(pl.p[0]+1) << 16) +
+			(*(pl.p[0]+2) << 8) + *(pl.p[0]+3);
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_NODE_ID))) {
+		debug("Failed to write to remote");
+		return LC_ERROR;
+	}
+	if ((err = Read(status, len, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR;
+	}
+	ParseParams(len, rsp, pl);
+	ri.node_id = *pl.p[0];
+	// Get the "TID" - not entirely sure what this is, but it appears to be
+	// contained in the INTERFACE_LIST.
+	if ((err = Write(TYPE_REQUEST, COMMAND_GET_INTERFACE_LIST))) {
+		debug("Failed to write to remote");
+		return LC_ERROR;
+	}
+	if ((err = Read(status, len, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR;
+	}
+	ParseParams(len, rsp, pl);
+	ri.tid = new char[21];
+	ri.tid[0] = '0';
+	ri.tid[1] = 'x';
+	// "TID" appears to be contained in the middle of the INTERFACE_LIST.
+	for (int i=0; i<9; i++)
+		snprintf(&ri.tid[(i*2)+2], 3, "%02X", *(pl.p[1]+i+2));
+	ri.tid[20] = '\0';
+
+	// Get the "XMLUserRFSetting" - the usbnet remote appears to have a web
+	// server running where the Windows driver grabs this data.
+	if (err = GetXMLUserRFSetting(&ri.xml_user_rf_setting)) {
+		debug("Failed to read XML User RF Settings");
+		return LC_ERROR;
+	}
+	
 	return 0;
 }
 

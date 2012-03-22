@@ -52,10 +52,19 @@ void setup_ri_pointers(TRemoteInfo &ri)
 void make_guid(const uint8_t * const in, char*&out)
 {
 	char x[48];
-	sprintf(x,
-	"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
-		in[3], in[2], in[1], in[0], in[5], in[4], in[7], in[6],
-		in[8], in[9], in[10], in[11], in[12], in[13], in[14], in[15]);
+	// usbnet remotes seem to use a more normal byte ordering for serial #'s
+	if (is_usbnet_remote()) {
+		sprintf(x,
+		"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+			in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7],
+			in[8], in[9], in[10], in[11], in[12], in[13], in[14], in[15]);
+	}
+	else {
+		sprintf(x,
+		"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+			in[3], in[2], in[1], in[0], in[5], in[4], in[7], in[6],
+			in[8], in[9], in[10], in[11], in[12], in[13], in[14], in[15]);
+	}
 	out = strdup(x);
 }
 
@@ -112,6 +121,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	ri.fw_ver_minor = rsp[1] & 0x0F;
 	ri.hw_ver_major = rsp[2] >> 4;
 	ri.hw_ver_minor = rsp[2] & 0x0F;
+	ri.hw_ver_micro = 0; /* usbnet remotes have a non-zero micro version */
 	ri.flash_id = rsp[3];
 	ri.flash_mfg = rsp[4];
 	ri.architecture = rx_len < 6 ? 2 : rsp[5] >> 4;

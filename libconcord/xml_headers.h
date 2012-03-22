@@ -153,15 +153,35 @@ const char *post_xml="\
 <SOFTWARE>%i.%i</SOFTWARE>\
 <SOFTWARETYPE>%i</SOFTWARETYPE>\
 <ID>%s</ID>\
-<BOARD>%i.%i.0</BOARD>\
+<BOARD>%i.%i.%i</BOARD>\
 <FLASH>0x%02X:0x%02X</FLASH>\
 <PROTOCOL>%i</PROTOCOL>\
 <ARCHITECTURE>%i</ARCHITECTURE>\
-<SKIN>%i</SKIN>\
+<SKIN>%i</SKIN>";
+
+const char *post_xml_trailer="\
 <REGIONS/>\
 </VERSION>\
 </VERSIONINFORMATION>\
 </EASYZAPPERDATA>\r\n";
+
+const char *post_xml_usbnet1="\
+<HOMEID>0x%08X</HOMEID>\
+<NODEID>%i</NODEID>\
+<TID>%s</TID>\
+<FIRMWARE>";
+
+const char *post_xml_usbnet_region="\
+<REGION ID=\"%i\">%s</REGION>";
+
+const char *post_xml_usbnet2="\
+</FIRMWARE>\
+<REGIONS/>\
+</VERSION>\
+</VERSIONINFORMATION>";
+
+const char *post_xml_usbnet3="\
+</EASYZAPPERDATA>";
 
 const char *z_post_xml="\
 <DATA>\

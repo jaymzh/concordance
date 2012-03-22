@@ -257,6 +257,19 @@ int encode_ir_signal(uint32_t carrier_clock,
 	return 0;
 }
 
+int add_usbnet_headers(char *post_data, TRemoteInfo &ri)
+{
+	sprintf(post_data+strlen(post_data), post_xml_usbnet1, ri.home_id, 
+		ri.node_id, ri.tid);
+	for (int i=0; i<ri.num_regions; i++) {
+		sprintf(post_data+strlen(post_data),
+			post_xml_usbnet_region, ri.region_ids[i],
+			ri.region_versions[i]);
+	}
+	sprintf(post_data+strlen(post_data), "%s", post_xml_usbnet2);
+	sprintf(post_data+strlen(post_data), "%s", ri.xml_user_rf_setting);
+	sprintf(post_data+strlen(post_data), "%s", post_xml_usbnet3);
+}
 
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 	bool has_userid, bool add_cookiekeyval, bool z_post,
@@ -302,7 +315,7 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 	if (learn_seq == NULL) {
 		char serial[144];
 		sprintf(serial, "%s%s%s", ri.serial1, ri.serial2, ri.serial3);
-		char post_data[2000];
+		char post_data[4000]; // large enough for extra usbnet headers
 		if (z_post) {
 			sprintf(post_data, z_post_xml,
 				ri.hw_ver_major, ri.hw_ver_minor,
@@ -312,8 +325,14 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 			sprintf(post_data, post_xml,
 				ri.fw_ver_major, ri.fw_ver_minor, ri.fw_type,
 				serial, ri.hw_ver_major, ri.hw_ver_minor,
-				ri.flash_mfg, ri.flash_id, ri.protocol,
-				ri.architecture, ri.skin);
+				ri.hw_ver_micro, ri.flash_mfg, ri.flash_id,
+				ri.protocol, ri.architecture, ri.skin);
+			if (is_usbnet_remote()) {
+				add_usbnet_headers(post_data, ri);
+			} else {
+				sprintf(post_data+strlen(post_data), "%s", 
+					post_xml_trailer);
+			}
 		}
 
 		debug("post data: %s",post_data);

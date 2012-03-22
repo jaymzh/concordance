@@ -922,8 +922,8 @@ int print_version_info(struct options_t *options)
 	if ((*options).verbose)
 		printf("  Firmware Type: %i\n", get_fw_type());
 
-	printf("  Hardware Version: %i.%i\n", get_hw_ver_maj(),
-		get_hw_ver_min());
+	printf("  Hardware Version: %i.%i.%i\n", get_hw_ver_maj(),
+		get_hw_ver_min(), get_hw_ver_mic());
 
 	if ((*options).verbose) {
 		int size = get_flash_size();
@@ -1221,6 +1221,7 @@ cleanup:
 	if (data) {
 		delete_blob(data);
 	}
+	delete_opfile_obj();
 
 	deinit_concord();
 

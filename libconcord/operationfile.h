@@ -29,6 +29,7 @@ class OperationFile {
 private:
 	uint8_t *data;
 	uint32_t data_size;
+	bool data_alloc;
 	uint8_t *xml;
 	uint32_t xml_size;
 	int ReadPlainFile(char *file_name);

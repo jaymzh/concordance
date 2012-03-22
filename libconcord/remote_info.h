@@ -92,9 +92,9 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },			// 60
+	{ MFG_HAR,	"Harmony 900",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony 1100",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 700",		"Molson" }
@@ -345,7 +345,7 @@ static const TArchInfo ArchList[]={
 		0,				// eeprom_size
 		"USBN9604",			// usb
 	},
-	/* arch 11 */
+	/* arch 11: 1100 */
 	{
 		0,				// serial_location
 		0,				// serial_address
@@ -354,7 +354,7 @@ static const TArchInfo ArchList[]={
 		0,				// config_base
 		0,				// firmware_update_base
 		0,				// firmware_4847_offset
-		0,				// cookie
+		0x1, /* hack to make config test pass */	// cookie
 		0,				// cookie_size
 		0,				// end_vector
 		"",				// micro
@@ -416,6 +416,24 @@ static const TArchInfo ArchList[]={
 		0,				// ram_size
 		0,				// eeprom_size
 		"Internal",			// usb
+	},
+	/* arch 15: 900 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0x1, /* hack to make config test pass */	// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
 	}
 };
 
