@@ -81,6 +81,15 @@ LABEL="harmony_rules_end"
 END
 }
 
+# Rule for the usbnet family of remotes to start a DHCP daemon upon detection.
+emit_udev_usbnet_rules() {
+    file="$1"
+    cat >>$file <<END
+SUBSYSTEM=="net", ENV{ID_VENDOR_ID}=="046d", ENV{ID_MODEL_ID}=="c11f", \
+RUN+="start_concordance_dhcpd_wrapper.sh"
+END
+}
+
 emit_udev_rules() {
     file="$1"
     type="$2"
@@ -101,6 +110,8 @@ create_udev_file() {
     emit_udev_header $UDEV_FILE
     emit_udev_rules $UDEV_FILE $mode
     emit_udev_footer $UDEV_FILE
+    # USBNET rule needs to be outside the other rules since it is a net rule.
+    emit_udev_usbnet_rules $UDEV_FILE
     echo 'done'
 }
 
