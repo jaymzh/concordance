@@ -589,7 +589,7 @@ int is_fw_update_supported(int direct)
 }
 
 void _report_number_of_stages(lc_callback cb, void *cb_arg, int num) {
-        cb(LC_CB_STAGE_NUM_STAGES, num, NULL, NULL, NULL, cb_arg);
+        cb(LC_CB_STAGE_NUM_STAGES, num, 0, 0, 0, cb_arg);
 }
 
 
@@ -700,7 +700,7 @@ int reset_remote(lc_callback cb, void *cb_arg)
 		sleep(WAIT_FOR_BOOT_SLEEP);
 		err = init_concord();
 		if (err == 0) {
-			err = _get_identity(NULL, NULL, NULL);
+			err = _get_identity(NULL, NULL, 0);
 			if (err == 0) {
 				break;
 			}
@@ -1026,7 +1026,7 @@ int _update_configuration_zwave(lc_callback cb, void *cb_arg)
 {
 	int err;
 
-	if ((err = _write_config_to_remote(cb, cb_arg, NULL))) {
+	if ((err = _write_config_to_remote(cb, cb_arg, 0))) {
 		return err;
 	}
 

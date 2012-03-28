@@ -158,39 +158,39 @@ public:
 	virtual int Reset(uint8_t kind)=0;
 	virtual int GetIdentity(TRemoteInfo &ri, struct THIDINFO &hid,
 		lc_callback cb=NULL, void *cb_arg=NULL,
-		uint32_t cb_stage=NULL)=0;
+		uint32_t cb_stage=0)=0;
 
 	virtual int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
-		uint32_t cb_stage=NULL)=0;
+		uint32_t cb_stage=0)=0;
 	virtual int EraseFlash(uint32_t addr, uint32_t len,
 		const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+		void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int WriteFlash(uint32_t addr, const uint32_t len,
 		const uint8_t *wr, unsigned int protocol, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+		void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr)=0;
 	virtual int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)=0;
 	virtual int PrepFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL) = 0;
+		void *cb_arg=NULL, uint32_t cb_stage=0) = 0;
 	virtual int FinishFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL) = 0;
+		void *cb_arg=NULL, uint32_t cb_stage=0) = 0;
 	virtual int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+		void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+		void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int UpdateConfig(const uint32_t len,
 		const uint8_t *wr, lc_callback cb, void *cb_arg,
 		uint32_t cb_stage)=0;
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
 	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 		lc_callback cb=NULL, void *cb_arg=NULL,
-		uint32_t cb_stage=NULL)=0;
+		uint32_t cb_stage=0)=0;
 	virtual int LearnIR(uint32_t *freq, uint32_t **ir_signal,
 		uint32_t *ir_signal_length, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL)=0;
+		void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int IsZRemote()=0;
 	virtual int IsUSBNet()=0;
 };
@@ -212,39 +212,39 @@ public:
 	virtual ~CRemote() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 	int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
-		uint32_t cb_stage=NULL);
+		uint32_t cb_stage=0);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 		unsigned int protocol, lc_callback cb=NULL, void *cb_arg=NULL,
-		uint32_t cb_stage=NULL);
+		uint32_t cb_stage=0);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
 	int PrepFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int FinishFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	virtual int UpdateConfig(const uint32_t len,
 		const uint8_t *wr, lc_callback cb, void *cb_arg,
-		uint32_t cb_stage=NULL) {};
+		uint32_t cb_stage=0) {};
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
 		uint32_t *ir_signal_length, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int IsZRemote() {return false;}
 	int IsUSBNet() {return false;}
 };
@@ -269,36 +269,36 @@ public:
 	virtual ~CRemoteZ_Base() {};
 	int Reset(uint8_t kind);
 	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 
 	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 	int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
-		uint32_t cb_stage=NULL);
+		uint32_t cb_stage=0);
 	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 		unsigned int protocol, lc_callback cb=NULL, void *cb_arg=NULL,
-		uint32_t cb_stage=NULL);
+		uint32_t cb_stage=0);
 	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
 	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
 	int PrepFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int FinishFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 
 	int LearnIR(uint32_t *freq, uint32_t **ir_signal,
 		uint32_t *ir_signal_length, lc_callback cb=NULL,
-		void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int IsZRemote() {return true;}
 };
 
@@ -352,7 +352,7 @@ public:
 		lc_callback cb, void *cb_arg, uint32_t cb_stage);
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=NULL);
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 	int IsUSBNet() {return true;}
 };
 

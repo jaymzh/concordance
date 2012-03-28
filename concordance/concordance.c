@@ -966,9 +966,7 @@ int main(int argc, char *argv[])
 {
 	struct options_t options;
 	char *file_name;
-	int mode, file_mode, err, is_zipfile;
-	uint8_t *data, *xml;
-	uint32_t data_size, xml_size;
+	int mode, file_mode, err;
 
 #ifdef WIN32
 	con=GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1014,15 +1012,6 @@ int main(int argc, char *argv[])
 			lc_strerror(err));
 		exit(1);
 	}
-
-	/*
-	 * OK, if we have a filename go ahead and read the file...
-	 */
-	data = NULL;
-	data_size = 0;
-	xml = NULL;
-	xml_size = 0;
-	is_zipfile = 0;
 
 	/*
  	 * Alright, at this point, if there's going to be a filename,
@@ -1218,9 +1207,6 @@ int main(int argc, char *argv[])
 			
 cleanup:
 
-	if (data) {
-		delete_blob(data);
-	}
 	delete_opfile_obj();
 
 	deinit_concord();

@@ -403,7 +403,7 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
 
 		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
-				NULL, NULL)))
+				NULL, 0)))
 			return LC_ERROR;
 	} else {
 		/*
@@ -440,7 +440,7 @@ int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
 		data[0] = 0x02;
 		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
-			NULL, NULL)))
+			NULL, 0)))
 			return LC_ERROR;
 		if (cb)
 			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
