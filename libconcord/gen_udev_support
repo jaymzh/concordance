@@ -34,6 +34,7 @@ LOGITECH_MIN_PID=c110
 LOGITECH_MAX_PID=c14f
 
 UDEV_FILE='libconcord.rules'
+UDEV_USBNET_FILE='libconcord-usbnet.rules'
 HAL_POLICY_FILE='libconcord.fdi'
 POLICYKIT_FILE='org.freedesktop.hal.device-access.libconcord.policy'
 CONSOLEKIT_FILE='libconcord.perms'
@@ -84,7 +85,7 @@ END
 # Rule for the usbnet family of remotes to start a DHCP daemon upon detection.
 emit_udev_usbnet_rules() {
     file="$1"
-    cat >>$file <<END
+    cat >$file <<END
 SUBSYSTEM=="net", ENV{ID_VENDOR_ID}=="046d", ENV{ID_MODEL_ID}=="c11f", \
 RUN+="start_concordance_dhcpd_wrapper.sh"
 END
@@ -104,14 +105,17 @@ emit_udev_rules() {
     emit_for_all $file "$template" 'yes'
 }
 
-create_udev_file() {
+create_udev_files() {
     mode=$1
     echo -n "Creating udev file: $UDEV_FILE ... "
     emit_udev_header $UDEV_FILE
     emit_udev_rules $UDEV_FILE $mode
     emit_udev_footer $UDEV_FILE
-    # USBNET rule needs to be outside the other rules since it is a net rule.
-    emit_udev_usbnet_rules $UDEV_FILE
+    echo 'done'
+    # USBNET rule needs to be in a separate file because it depends on
+    # 75-net-description.rules.
+    echo -n "Creating udev file: $UDEV_USBNET_FILE ... "
+    emit_udev_usbnet_rules $UDEV_USBNET_FILE
     echo 'done'
 }
 
@@ -238,7 +242,7 @@ if [ "$MODE" == '' ]; then
     exit 1
 fi
 
-create_udev_file $MODE
+create_udev_files $MODE
 if [ "$MODE" == 'policykit' ]; then
     create_hal_policy_file
     create_policykit_file

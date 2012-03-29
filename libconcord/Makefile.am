@@ -16,9 +16,11 @@ install_udev_generic:
 	$(MKDIR_P) $(DESTDIR)$(libdir)/udev/rules.d
 	$(install_sh_DATA) libconcord.rules \
 		$(DESTDIR)$(libdir)/udev/rules.d/60-libconcord.rules
-	$(install_sh_DATA) start_concordance_dhcpd.sh \
+	$(install_sh_DATA) libconcord-usbnet.rules \
+		$(DESTDIR)$(libdir)/udev/rules.d/80-libconcord-usbnet.rules
+	$(install_sh_SCRIPT) start_concordance_dhcpd.sh \
 		$(DESTDIR)$(libdir)/udev/
-	$(install_sh_DATA) start_concordance_dhcpd_wrapper.sh \
+	$(install_sh_SCRIPT) start_concordance_dhcpd_wrapper.sh \
 		$(DESTDIR)$(libdir)/udev/
 
 install_udev: udev install_udev_generic
