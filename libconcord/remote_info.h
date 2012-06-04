@@ -85,7 +85,7 @@ static const TModel ModelList[]={
 	{ MFG_COOL,	"Harmony 552",		"Mocha Grande" },
 	{ MFG_HAR,	"Harmony 1000i",	"Cognac" },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony One",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
@@ -140,6 +140,20 @@ static const uint32_t sectors5[]={
 	0x390000, 0x3a0000, 0x3b0000, 0x3c0000, 0x1d0000, 0x3e0000, 0x3f0000, 0x400000,
 	0 };
 
+// 1F:C8 Atmel AT49BV322A (Non-Uniform Sectors)
+static const uint32_t sectors6[]={
+	0x000000, 0x002000, 0x004000, 0x006000, 0x008000, 0x00A000, 0x00C000,
+	0x00E000, 0x010000, 0x020000, 0x030000, 0x040000, 0x050000, 0x060000,
+	0x070000, 0x080000, 0x090000, 0x0A0000, 0x0B0000, 0x0C0000, 0x0D0000,
+	0x0E0000, 0x0F0000, 0x100000, 0x110000, 0x120000, 0x130000, 0x140000,
+	0x150000, 0x160000, 0x170000, 0x180000, 0x190000, 0x1A0000, 0x1B0000,
+	0x1C0000, 0x1D0000, 0x1E0000, 0x1F0000, 0x200000, 0x210000, 0x220000,
+	0x230000, 0x240000, 0x250000, 0x260000, 0x270000, 0x280000, 0x290000,
+	0x2A0000, 0x2B0000, 0x2C0000, 0x2D0000, 0x2E0000, 0x2F0000, 0x300000,
+	0x310000, 0x320000, 0x330000, 0x340000, 0x350000, 0x360000, 0x370000,
+	0x380000, 0x390000, 0x3A0000, 0x3B0000, 0x3C0000, 0x3D0000, 0x3E0000,
+	0x3F0000, 0 };
+
 static const TFlash FlashList[]={
 	{ 0x01,		0x37,	1024,	8,	sectors1,	"AMD Am29LV008B" },
 	{ 0x01,		0x49,	2048,	16,	sectors2,	"AMD Am29LV160BB" },
@@ -147,6 +161,7 @@ static const TFlash FlashList[]={
 	{ 0x15,		0x1C,	4096,	8,	sectors5,	"EON F16-100HIP" },
 	{ 0xFF,		0x11,	256,	1,	sectors3,	"25F020" },
 	{ 0xFF,		0x12,	512,	1,	sectors4,	"25F040" } ,
+	{ 0x1F,		0xC8,	4096,	8,	sectors6,	"Atmel AT49BV322A" } ,
 	{ 0,		0,		0,		0,	NULL,		"" }
 };
 
@@ -367,18 +382,18 @@ static const TArchInfo ArchList[]={
 		0,				// eeprom_size
 		"",				// usb
 	},
-	/* arch 12 */
+	/* arch 12: One */
 	{
-		0,				// serial_location
-		0,				// serial_address
-		0,				// flash_base
+		SERIAL_LOCATION_FLASH,		// serial_location
+		0xfff400,			// serial_address
+		0x000000,			// flash_base
 		0,				// firmware_base
-		0,				// config_base
+		0x040000,			// config_base
 		0,				// firmware_update_base
 		0,				// firmware_4847_offset
-		0,				// cookie
-		0,				// cookie_size
-		0,				// end_vector
+		0x4D505347,			// cookie
+		4,				// cookie_size
+		4,				// end_vector
 		"",				// micro
 		0,				// flash_size
 		0,				// ram_size
