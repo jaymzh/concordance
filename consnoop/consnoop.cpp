@@ -30,6 +30,7 @@ typedef unsigned char uint8_t;
 #include "../concordance/win/getopt/getopt.h"
 #else
 #include <getopt.h>
+#include <stdint.h>
 #endif
 
 // TODO: Once we figure this stuff out, move it to someplace more useful.
