@@ -563,7 +563,7 @@ int _fix_magic_bytes(uint8_t *in, uint32_t size)
  */
 int is_config_dump_supported()
 {
-	return is_z_remote() ? LC_ERROR_UNSUPP: 0;
+	return (is_z_remote() && !is_usbnet_remote()) ? LC_ERROR_UNSUPP: 0;
 }
 
 int is_config_update_supported()

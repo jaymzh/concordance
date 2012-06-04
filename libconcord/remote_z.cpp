@@ -577,6 +577,97 @@ int CRemoteZ_USBNET::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 	return 0;
 }
 
+int CRemoteZ_USBNET::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
+	unsigned int protocol, bool verify, lc_callback cb,
+	void *cb_arg, uint32_t cb_stage)
+{
+	uint32_t tmp;
+	return ReadRegion(addr, tmp, rd, cb, cb_arg, cb_stage);
+}
+
+int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
+{
+	int err = 0;
+	int cb_count = 0;
+	uint8_t rsp[60];
+	unsigned int rlen;
+	uint8_t status;
+	CRemoteZ_Base::TParamList pl;
+
+	debug("READ_REGION");
+	// 1 parameters, 1 byte, region to read.
+	uint8_t cmd[60] = { 0x01, 0x01, region };
+	if ((err = Write(TYPE_REQUEST, COMMAND_READ_REGION, 3, cmd))) {
+		debug("Failed to write to remote");
+		return LC_ERROR_WRITE;
+	}
+	if ((err = Read(status, rlen, rsp))) {
+		debug("Failed to read to remote");
+		return LC_ERROR_READ;
+	}
+	if (rsp[2] != TYPE_RESPONSE || rsp[1] != COMMAND_READ_REGION ||
+	    rlen != 9 || rsp[4] != 0x04) {
+		debug("Incorrect response type from remote");
+		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+	}
+	ParseParams(rlen, rsp, pl);
+	rgn_len = GetWord32(pl.p[0]);
+
+	debug("READ_REGION_DATA");
+	uint32_t pkt_len;
+	unsigned int data_to_read = rgn_len;
+	uint8_t *rd_ptr = rd;
+	uint8_t tmp_pkt[USBNET_MAX_PACKET_SIZE];
+	cmd[0] = 0x01; // 1 parameter
+	cmd[1] = 0x01; // 1st parameter, 1 byte (region id)
+	cmd[2] = region;
+
+	while (data_to_read) {
+		if ((err = Write(TYPE_REQUEST, COMMAND_READ_REGION_DATA, 3,
+				 cmd))) {
+			debug("Failed to write to remote");
+			return LC_ERROR_WRITE;
+		}
+		if ((err = Read(status, rlen, tmp_pkt))) {
+			debug("Failed to read to remote");
+			return LC_ERROR_READ;
+		}
+		if (tmp_pkt[2] != TYPE_RESPONSE ||
+		    tmp_pkt[1] != COMMAND_READ_REGION_DATA) {
+			debug("Incorrect response type from remote");
+			return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+		}
+		ParseParams(rlen, tmp_pkt, pl);
+		pkt_len = GetWord32(pl.p[2]);
+		data_to_read -= pkt_len;
+
+		if (rd) {
+			memcpy(rd_ptr, pl.p[1], pkt_len);
+			rd_ptr += pkt_len;
+		}
+
+		debug("DATA %d, read %d bytes, %d bytes left", cb_count,
+			pkt_len, data_to_read);
+
+		if (cb) {
+			cb(cb_stage, cb_count++, rgn_len - data_to_read,
+				rgn_len, LC_CB_COUNTER_TYPE_BYTES, cb_arg);
+		}
+	}
+
+	debug("READ_REGION_DONE");
+	// 1 parameter, 1 byte, region to read.
+	cmd[0] = 0x01;
+	cmd[1] = 0x01;
+	cmd[2] = region;
+	if ((err = TCPSendAndCheck(COMMAND_READ_REGION_DONE, 3, cmd))) {
+		return err;
+	}
+
+	return 0;
+}
+
 int CRemoteZ_Base::Reset(uint8_t kind)
 {
 	int err = 0;
@@ -684,7 +775,16 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 	make_serial(pl.p[0], ri);
 
-	ri.config_bytes_used = 0;
+	if (IsUSBNet()) {
+		// Get the User Config Region to find the config bytes used.
+		if (err = ReadRegion(REGION_USER_CONFIG, ri.config_bytes_used,
+				     NULL, NULL, NULL, 0)) {
+			return err;
+	    	}
+	}
+	else {
+		ri.config_bytes_used = 0;
+	}
 	ri.max_config_size = 1;
 	ri.valid_config = 1;
 

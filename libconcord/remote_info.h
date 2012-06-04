@@ -366,7 +366,7 @@ static const TArchInfo ArchList[]={
 		0,				// serial_address
 		0,				// flash_base
 		0,				// firmware_base
-		0,				// config_base
+		REGION_USER_CONFIG,		// config_base
 		0,				// firmware_update_base
 		0,				// firmware_4847_offset
 		0x1, /* hack to make config test pass */	// cookie
@@ -438,7 +438,7 @@ static const TArchInfo ArchList[]={
 		0,				// serial_address
 		0,				// flash_base
 		0,				// firmware_base
-		0,				// config_base
+		REGION_USER_CONFIG,		// config_base
 		0,				// firmware_update_base
 		0,				// firmware_4847_offset
 		0x1, /* hack to make config test pass */	// cookie
