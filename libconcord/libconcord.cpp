@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <zzip/lib.h>
 #include <list>
+#include <unistd.h>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "remote.h"
