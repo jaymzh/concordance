@@ -230,11 +230,9 @@ int OperationFile::ReadAndParseOpFile(char *file_name, int *type)
 	}
 
 	bool is_zip = false;
-	if (is_z_remote()) {
-		if (!ReadZipFile(file_name)) {
-			debug("Is zip");
-			is_zip = true;
-		}
+	if (!ReadZipFile(file_name)) {
+		debug("Is zip");
+		is_zip = true;
 	}
 
 	if (!is_zip) {
