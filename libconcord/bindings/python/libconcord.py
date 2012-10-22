@@ -45,8 +45,10 @@ else:
 
 # Public libconcord API: Custom types
 
-# typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, void*);
-callback_type = CFUNCTYPE(None, c_uint, c_uint, c_uint, py_object)
+# typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
+#     void*);
+callback_type = CFUNCTYPE(None, c_uint, c_uint, c_uint, c_uint, c_uint, \
+                py_object)
 
 # Public libconcord API: Error codes
 
@@ -67,6 +69,31 @@ LC_ERROR_OS_FILE = 14
 LC_ERROR_UNSUPP = 15
 LC_ERROR_INVALID_CONFIG = 16
 LC_ERROR_IR_OVERFLOW = 17
+
+LC_FILE_TYPE_CONNECTIVITY  = 1
+LC_FILE_TYPE_CONFIGURATION = 2
+LC_FILE_TYPE_FIRMWARE      = 3
+LC_FILE_TYPE_LEARN_IR      = 4
+
+LC_CB_COUNTER_TYPE_STEPS = 5
+LC_CB_COUNTER_TYPE_BYTES = 6
+
+LC_CB_STAGE_NUM_STAGES = 0xFF
+LC_CB_STAGE_GET_IDENTITY = 7
+LC_CB_STAGE_INITIALIZE_UPDATE = 8
+LC_CB_STAGE_INVALIDATE_FLASH = 9
+LC_CB_STAGE_ERASE_FLASH = 10
+LC_CB_STAGE_WRITE_CONFIG = 11
+LC_CB_STAGE_VERIFY_CONFIG = 12
+LC_CB_STAGE_FINALIZE_UPDATE = 13
+LC_CB_STAGE_READ_CONFIG = 14
+LC_CB_STAGE_WRITE_FIRMWARE = 15
+LC_CB_STAGE_READ_FIRMWARE = 16
+LC_CB_STAGE_READ_SAFEMODE = 17
+LC_CB_STAGE_RESET = 18
+LC_CB_STAGE_SET_TIME = 19
+LC_CB_STAGE_HTTP = 20
+LC_CB_STAGE_LEARN = 21
 
 # Public libconcord API: Exception types
 
@@ -320,6 +347,12 @@ get_hw_ver_min = _create_func(
     c_int
 )
 
+# int get_hw_ver_mic();
+get_hw_ver_mic = _create_func(
+    'get_hw_ver_mic',
+    c_int
+)
+
 # int get_flash_size();
 get_flash_size = _create_func(
     'get_flash_size',
@@ -365,7 +398,7 @@ get_hid_mfg_str = _create_func(
 # const char *get_hid_prod_str();
 get_hid_prod_str = _create_func(
     'get_hid_prod_str',
-    c_int
+    c_char_p
 )
 
 # int get_hid_irl();
@@ -425,6 +458,31 @@ get_config_bytes_used = _create_func(
 get_config_bytes_total = _create_func(
     'get_config_bytes_total',
     c_int
+)
+
+# int is_config_dump_supported();
+is_config_dump_supported = _create_func(
+    'is_config_dump_supported',
+    c_int
+)
+
+# int is_config_update_supported();
+is_config_update_supported = _create_func(
+    'is_config_update_supported',
+    c_int
+)
+
+# int is_fw_dump_supported();
+is_fw_dump_supported = _create_func(
+    'is_fw_dump_supported',
+    c_int
+)
+
+# int is_fw_update_supported(int direct);
+is_fw_update_supported = _create_func(
+    'is_fw_update_supported',
+    c_int,
+    _in('direct', c_int)
 )
 
 # int get_time_second();
@@ -488,6 +546,13 @@ lc_strerror = _dll.lc_strerror
 lc_strerror.restype = c_char_p
 lc_strerror.argtypes = (c_int,)
 
+# const char *lc_cb_stage_str(int stage);
+lc_cb_stage_str = _create_func(
+    'lc_cb_stage_str',
+    c_char_p,
+    _in('stage', c_int)
+)
+
 # void delete_blob(uint8_t *ptr);
 delete_blob = _create_func(
     'delete_blob',
@@ -495,18 +560,18 @@ delete_blob = _create_func(
     _in('ptr', POINTER(c_ubyte))
 );
 
-LC_FILE_TYPE_CONNECTIVITY  = 0
-LC_FILE_TYPE_CONFIGURATION = 1
-LC_FILE_TYPE_FIRMWARE      = 2
-LC_FILE_TYPE_LEARN_IR      = 3
-
-# int identify_file(uint8_t *in, uint32_t size, int *type);
-identify_file = _create_func(
-    'identify_file',
+# int read_and_parse_file(char *filename, int *type);
+read_and_parse_file = _create_func(
+    'read_and_parse_file',
     _ret_lc_concord(),
-    _in('in', POINTER(c_ubyte)),
-    _in('size', c_uint),
+    _in('filename', c_char_p),
     _out('type', c_int)
+)
+
+# void delete_opfile_obj();
+delete_opfile_obj = _create_func(
+    'delete_opfile_obj',
+    _ret_void()
 )
 
 # int init_concord();
@@ -529,10 +594,12 @@ get_identity = _create_func(
     _in('cb_arg', py_object)
 )
 
-# int reset_remote();
+# int reset_remote(lc_callback cb, void *cb_arg);
 reset_remote = _create_func(
     'reset_remote',
-    _ret_lc_concord()
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
 # int get_time();
@@ -541,52 +608,65 @@ get_time = _create_func(
     _ret_lc_concord()
 )
 
-# int set_time();
+# int set_time(lc_callback cb, void *cb_arg);
 set_time = _create_func(
     'set_time',
-    _ret_lc_concord()
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
-# int post_connect_test_success(uint8_t *data, uint32_t size);
+# int post_connect_test_success(lc_callback cb, void *cb_arg);
 post_connect_test_success = _create_func(
     'post_connect_test_success',
     _ret_lc_concord(),
-    _in('data', POINTER(c_ubyte)),
-    _in('size', c_uint)
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
-# int post_preconfig(uint8_t *data, uint32_t size);
+# int post_preconfig(lc_callback cb, void *cb_arg);
 post_preconfig = _create_func(
     'post_preconfig',
     _ret_lc_concord(),
-    _in('data', POINTER(c_ubyte)),
-    _in('size', c_uint)
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
-# int post_postconfig(uint8_t *data, uint32_t size);
+# int post_postconfig(lc_callback cb, void *cb_arg);
 post_postconfig = _create_func(
     'post_postconfig',
     _ret_lc_concord(),
-    _in('data', POINTER(c_ubyte)),
-    _in('size', c_uint)
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
-# int post_postfirmware(uint8_t *data, uint32_t size);
+# int post_postfirmware(lc_callback cb, void *cb_arg);
 post_postfirmware = _create_func(
     'post_postfirmware',
     _ret_lc_concord(),
-    _in('data', POINTER(c_ubyte)),
-    _in('size', c_uint)
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
-# int invalidate_flash();
+# int invalidate_flash(lc_callback cb, void *cb_arg);
 invalidate_flash = _create_func(
     'invalidate_flash',
     _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
+)
+
+# int update_configuration(lc_callback cb, void *cb_arg, int noreset);
+update_configuration = _create_func(
+    'update_configuration',
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object),
+    _in('noreset', c_int)
 )
 
 # int read_config_from_remote(uint8_t **out, uint32_t *size,
-#	lc_callback cb, void *cb_arg);
+#     lc_callback cb, void *cb_arg);
 read_config_from_remote = _create_func(
     'read_config_from_remote',
     _ret_lc_concord(),
@@ -596,24 +676,12 @@ read_config_from_remote = _create_func(
     _in('cb_arg', py_object)
 )
 
-# int write_config_to_remote(uint8_t *in, uint32_t size,
-#     lc_callback cb, void *cb_arg);
+# int write_config_to_remote(lc_callback cb, void *cb_arg);
 write_config_to_remote = _create_func(
     'write_config_to_remote',
     _ret_lc_concord(),
-    _in('in', POINTER(c_ubyte)),
-    _in('size', c_uint),
     _in('cb', callback_type),
     _in('cb_arg', py_object)
-)
-
-# int read_file(char *file_name, uint8_t **out, uint32_t *size);
-read_file = _create_func(
-    'read_file',
-    _ret_lc_concord(),
-    _in('file_name', c_char_p),
-    _out('out', POINTER(c_ubyte)),
-    _out('size', c_uint)
 )
 
 # int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
@@ -627,47 +695,36 @@ write_config_to_file = _create_func(
     _in('binary', c_int)
 )
 
-# int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
-#     void *cb_arg);
+# int verify_remote_config(lc_callback cb, void *cb_arg);
 verify_remote_config = _create_func(
     'verify_remote_config',
     _ret_lc_concord(),
-    _in('in', POINTER(c_ubyte)),
-    _in('size', c_uint),
     _in('cb', callback_type),
     _in('cb_arg', py_object)
 )
 
-# int prep_config();
+# int prep_config(lc_callback cb, void *cb_arg);
 prep_config = _create_func(
     'prep_config',
-    _ret_lc_concord()
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
-# int finish_config();
+# int finish_config(lc_callback cb, void *cb_arg);
 finish_config = _create_func(
     'finish_config',
-    _ret_lc_concord()
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
-# int erase_config(uint32_t size, lc_callback cb, void *cb_arg);
+# int erase_config(lc_callback cb, void *cb_arg);
 erase_config = _create_func(
     'erase_config',
     _ret_lc_concord(),
-    _in('size', c_uint),
     _in('cb', callback_type),
     _in('cb_arg', py_object)
-)
-
-# int find_config_binary(uint8_t *config, uint32_t config_size,
-#     uint8_t **binary_ptr, uint32_t *binary_size);
-find_config_binary = _create_func(
-    'find_config_binary',
-    _ret_lc_concord(),
-    _in('config', POINTER(c_ubyte)),
-    _in('config_size', c_uint),
-    _out('binary_ptr', POINTER(c_ubyte)),
-    _out('binary_size', c_uint)
 )
 
 # int erase_safemode(lc_callback cb, void *cb_arg);
@@ -698,10 +755,13 @@ write_safemode_to_file = _create_func(
     _in('file_name', c_char_p)
 )
 
-# int is_fw_update_supported(int direct);
-is_fw_update_supported = _create_func(
-    'is_fw_update_supported',
-    c_int,
+# int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct);
+update_firmware = _create_func(
+    'update_firmware',
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object),
+    _in('noreset', c_int),
     _in('direct', c_int)
 )
 
@@ -711,16 +771,20 @@ is_config_safe_after_fw = _create_func(
     c_int
 )
 
-# int prep_firmware();
+# int prep_firmware(lc_callback cb, void *cb_arg);
 prep_firmware = _create_func(
     'prep_firmware',
-    _ret_lc_concord()
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object),
 )
 
-# int finish_firmware();
+# int finish_firmware(lc_callback cb, void *cb_arg);
 finish_firmware = _create_func(
     'finish_firmware',
-    _ret_lc_concord()
+    _ret_lc_concord(),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object),
 )
 
 # int erase_firmware(int direct, lc_callback cb, void *cb_arg);
@@ -743,13 +807,10 @@ read_firmware_from_remote = _create_func(
     _in('cb_arg', py_object)
 )
 
-# int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
-#     lc_callback cb, void *cb_arg);
+# int write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg);
 write_firmware_to_remote = _create_func(
     'write_firmware_to_remote',
     _ret_lc_concord(),
-    _in('in', POINTER(c_ubyte)),
-    _in('size', c_uint),
     _in('direct', c_int),
     _in('cb', callback_type),
     _in('cb_arg', py_object)
@@ -766,24 +827,10 @@ write_firmware_to_file = _create_func(
     _in('binary', c_int)
 )
 
-# int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
-#     uint32_t *size);
-extract_firmware_binary = _create_func(
-    'extract_firmware_binary',
-    _ret_lc_concord(),
-    _in('xml', POINTER(c_ubyte)),
-    _in('xml_size', c_uint),
-    _out('out', POINTER(c_ubyte)),
-    _out('size', c_uint)
-)
-
-# int get_key_names(uint8_t *xml, uint32_t xml_size,
-#     char ***key_names, uint32_t *key_names_length);
+# int get_key_names(char ***key_names, uint32_t *key_names_length);
 get_key_names = _create_func(
     'get_key_names',
     _ret_lc_concord(),
-    _in('xml', POINTER(c_ubyte)),
-    _in('xml_size', c_uint),
     _out('key_names', POINTER(c_char_p)),
     _out('key_names_length', c_uint)
 )
@@ -835,14 +882,14 @@ delete_encoded_signal = _create_func(
     _in('encoded_signal', c_char_p),
 )
 
-# int post_new_code(uint8_t *xml, uint32_t xml_size, 
-#     char *key_name, char *encoded_signal);
+# int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
+#     void *cb_arg);
 post_new_code = _create_func(
     'post_new_code',
     _ret_lc_concord(),
-    _in('xml', POINTER(c_ubyte)),
-    _in('xml_size', c_uint),
     _in('key_name', c_char_p),
-    _in('encoded_signal', c_char_p)
+    _in('encoded_signal', c_char_p),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 

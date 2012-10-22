@@ -163,7 +163,7 @@ int get_config_bytes_total();
  * This will return 0 for yes and LC_ERROR_UNSUPP otherwise.
  */
 int is_config_dump_supported();
-int is_config_upload_supported();
+int is_config_update_supported();
 int is_fw_dump_supported();
 int is_fw_update_supported(int direct);
 
@@ -332,12 +332,12 @@ int verify_remote_config(lc_callback cb, void *cb_arg);
  * original Windows software, and future remotes may require these functions
  * to be executed to operate correctly.
  */
-int prep_config();
+int prep_config(lc_callback cb, void *cb_arg);
 /*
  * Tells the remote the config upgrade was successful and that it should
  * use the new config upon next reboot.
  */
-int finish_config();
+int finish_config(lc_callback cb, void *cb_arg);
 /*
  * Flash can be changed to 0, but not back to 1, so you must erase the
  * flash (to 1) in order to write the flash.
