@@ -759,7 +759,15 @@ int reset_remote(lc_callback cb, void *cb_arg)
 		err = init_concord();
 		if (err == 0) {
 			err = _get_identity(NULL, NULL, 0);
-			if (err == 0) {
+			/*
+			 * On remotes where firmware upgrades are not "direct",
+			 * the config gets erased as part of the firmware
+			 * update.  Thus, the config could be invalid if we are
+			 * resetting after a firmware upgrade, and we don't
+			 * want to treat this as an error.
+			 */
+			if ((err == 0) || (err == LC_ERROR_INVALID_CONFIG)) {
+				err = 0;
 				break;
 			}
 			deinit_concord();

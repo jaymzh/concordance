@@ -198,10 +198,24 @@ int OperationFile::_ExtractFirmwareBinary()
 	uint8_t *o = data;
 
 	uint8_t *x = xml;
+	uint8_t *x_new;
 	uint32_t x_size = xml_size;
 
+	/*
+	 * Some remotes (e.g., Arch 7) contain multiple phases in their
+	 * firmware update files.  In that case, extract only the first phase.
+	 */
+	if (GetTag("PHASE", x, x_size, x_new) == 0) {
+		debug("multi-phase firmware found, extracting 1st phase");
+		x_size = x_size - (x_new - x);
+		x = x_new;
+		uint8_t *phase_end;
+		GetTag("/PHASE", x, x_size, phase_end);
+		x_size = phase_end - x;
+	}
+
 	string hex;
-	while (GetTag("DATA", x, x_size, x, &hex) == 0) {
+	while (GetTag("DATA", x, x_size, x_new, &hex) == 0) {
 		uint32_t hex_size = hex.length() / 2;
 		if (hex_size > o_size) {
 			return LC_ERROR;
@@ -209,7 +223,8 @@ int OperationFile::_ExtractFirmwareBinary()
 
 		_convert_to_binary(hex, o);
 
-		x_size = xml_size - (x - xml);
+		x_size = x_size - (x_new - x);
+		x = x_new;
 		o_size -= hex_size;
 	}
 
