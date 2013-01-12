@@ -145,7 +145,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	}
 	if (cb) {
 		cb(cb_stage, cb_count++, 1, 2,
-			LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	/*
@@ -193,7 +193,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 	if (cb) {
 		cb(cb_stage, cb_count++, 2, 2,
-			LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	make_serial(rsp, ri);
@@ -285,7 +285,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 		if (cb) {
 			cb(cb_stage, cb_count++, bytes_read, len,
-				LC_CB_COUNTER_TYPE_BYTES, cb_arg);
+				LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
 		}
 	} while (err == 0 && addr < end);
 
@@ -299,13 +299,13 @@ int CRemote::InvalidateFlash(lc_callback cb, void *cb_arg, uint32_t lc_stage)
 	int err;
 
 	if (cb)
-		cb(lc_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(lc_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if ((err = HID_WriteReport(ivf)))
 		return err;
 
 	if (cb)
-		cb(lc_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(lc_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	uint8_t rsp[68];
 	if ((err = HID_ReadReport(rsp)))
@@ -317,14 +317,14 @@ int CRemote::InvalidateFlash(lc_callback cb, void *cb_arg, uint32_t lc_stage)
 	}
 
 	if (cb)
-		cb(lc_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(lc_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
 
 
 int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
-	lc_callback cb, void *arg, uint32_t cb_stage)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	const unsigned int *sectors = ri.flash->sectors;
 	const unsigned int flash_base = ri.arch->flash_base;
@@ -368,7 +368,7 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 
 		if (cb) {
 			cb(cb_stage, i, i+1, num_sectors,
-				LC_CB_COUNTER_TYPE_STEPS, arg);
+				LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 		}
 		debug("erase sector %2i: %06X - %06X", n, sector_begin,
 			sector_end);
@@ -386,7 +386,7 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 	uint8_t data[1] = { 0x00 };
 
 	if (cb)
-		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
 		/*
@@ -400,7 +400,8 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 			return LC_ERROR;
 
 		if (cb)
-			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 
 		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
 				NULL, 0)))
@@ -415,7 +416,8 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 			return LC_ERROR_WRITE;
 
 		if (cb)
-			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 
 		if ((err = ReadRam(0, 1, data)))
 			return LC_ERROR_WRITE;
@@ -423,7 +425,7 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 			return LC_ERROR_VERIFY;
 	}
 	if (cb)
-		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
@@ -434,7 +436,7 @@ int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 	int err = 0;
 
 	if (cb)
-		cb(cb_stage, 0, 0, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 0, 0, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	uint8_t data[1];
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
@@ -443,7 +445,8 @@ int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 			NULL, 0)))
 			return LC_ERROR;
 		if (cb)
-			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 	} else {
 		data[0] = 0x02;
 		if ((err = WriteRam(0, 1, data))) {
@@ -451,13 +454,15 @@ int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 			return LC_ERROR_WRITE;
 		}
 		if (cb)
-			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 		if ((err = ReadRam(0, 1, data))) {
 			debug("Failed to from RAM 0");
 			return LC_ERROR_WRITE;
 		}
 		if (cb)
-			cb(cb_stage, 2, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			cb(cb_stage, 2, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 		if (data[0] != 2) {
 			printf("byte is %d\n", data[0]);
 			debug("Finalize byte didn't match");
@@ -465,7 +470,7 @@ int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 		}
 	}
 	if (cb)
-		cb(cb_stage, 3, 3, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 3, 3, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
@@ -478,28 +483,30 @@ int CRemote::PrepConfig(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 
 	if (ri.architecture != 14) {
 		if (cb) {
-			cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
-			cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+			cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
+			cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 		}
 		return 0;
 	}
 
 	if (cb)
-		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if ((err = WriteMiscByte(0x02, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
 		return err;
 	}
 
 	if (cb)
-		cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if ((err = WriteMiscByte(0x05, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
 		return err;
 	}
 
 	if (cb)
-		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
@@ -516,21 +523,21 @@ int CRemote::FinishConfig(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
 	}
 
 	if (cb)
-		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if ((err = WriteMiscByte(0x03, 1, COMMAND_MISC_RESTART_CONFIG, data_one))) {
 		return err;
 	}
 
 	if (cb)
-		cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if ((err = WriteMiscByte(0x06, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
 		return err;
 	}
 
 	if (cb)
-		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
@@ -546,7 +553,7 @@ int CRemote::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 }
 
 int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-	unsigned int protocol, lc_callback cb, void *arg, uint32_t cb_stage)
+	unsigned int protocol, lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	uint32_t cb_count = 0;
 	const unsigned int max_chunk_len =
@@ -606,7 +613,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 
 		if (cb) {
 			cb(cb_stage, cb_count++, bytes_written, len,
-				LC_CB_COUNTER_TYPE_BYTES, arg);
+				LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
 		}
 	} while (addr < end);
 
@@ -764,8 +771,8 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 	int cb_count = 0;
 
 	if (cb)
-		cb(cb_stage, cb_count++, 0, 2, LC_CB_COUNTER_TYPE_STEPS,
-			cb_arg);
+		cb(cb_stage, cb_count++, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if (ri.architecture < 8) {
 		uint8_t tsv[8];
@@ -779,7 +786,7 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 			return err;
 		if (cb)
 			cb(cb_stage, cb_count++, 1, 3, LC_CB_COUNTER_TYPE_STEPS,
-				cb_arg);
+				cb_arg, NULL);
 
 		tsv[0] = ht.second;
 		err = WriteMiscByte(0, 1, COMMAND_MISC_STATE, tsv);
@@ -796,7 +803,7 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 			return err;
 		if (cb)
 			cb(cb_stage, cb_count++, 1, 3, LC_CB_COUNTER_TYPE_STEPS,
-				cb_arg);
+				cb_arg, NULL);
 		tsv[0] = ht.second;
 		if ((err = WriteMiscWord(0, 1, COMMAND_MISC_STATE, tsv)))
 			return err;
@@ -810,8 +817,8 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 		}
 	}
 	if (cb)
-		cb(cb_stage, cb_count++, 2, 3, LC_CB_COUNTER_TYPE_STEPS,
-			cb_arg);
+		cb(cb_stage, cb_count++, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
         if (err != 0) {
 		return err;
@@ -834,8 +841,8 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 		err = 0;
 	}
 	if (cb)
-		cb(cb_stage, cb_count++, 3, 3, LC_CB_COUNTER_TYPE_STEPS,
-			cb_arg);
+		cb(cb_stage, cb_count++, 3, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	return err;
 }
@@ -953,7 +960,7 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 	static const uint8_t stop_ir_learn[64] = { COMMAND_STOP_IRCAP };
 
 	if (cb) {
-		cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	if (HID_WriteReport(start_ir_learn) != 0) {
@@ -1039,7 +1046,7 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 	} while ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE);
 
 	if (cb && !err) {
-		cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	return err;

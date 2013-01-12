@@ -46,9 +46,9 @@ else:
 # Public libconcord API: Custom types
 
 # typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
-#     void*);
+#     void*, const uint32_t*);
 callback_type = CFUNCTYPE(None, c_uint, c_uint, c_uint, c_uint, c_uint, \
-                py_object)
+                py_object, POINTER(c_uint))
 
 # Public libconcord API: Error codes
 

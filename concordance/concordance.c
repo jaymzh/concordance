@@ -166,9 +166,11 @@ void print_stage_name(int stage_id)
  *   total => the number 'curr' is trying to reach
  *   counter_type => what 'curr' represents (bytes, percent, etc.)
  *   arg => an extra value we can ask libconcord to pass us.
+ *   stages => the array of stages that will be performed
  */
 void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
-	uint32_t total, uint32_t counter_type, void *arg)
+	uint32_t total, uint32_t counter_type, void *arg,
+	const uint32_t *stages)
 {
 
 	if (stage_id == LC_CB_STAGE_NUM_STAGES) {

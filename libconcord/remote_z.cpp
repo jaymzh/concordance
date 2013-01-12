@@ -374,7 +374,7 @@ int CRemoteZ_USBNET::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data)
 }
 
 int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
-	lc_callback cb, void *arg, uint32_t cb_stage)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 	int cb_count = 0;
@@ -383,7 +383,7 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	uint8_t status;
 
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 0, 2,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* ACK it with a command to start an update */
 	debug("START_UPDATE");
@@ -395,7 +395,7 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 1, 2,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* write update-header */
 	debug("UPDATE_HEADER");
@@ -412,7 +412,7 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 2, 2,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	cb_count = 0;
 
 	/* write data */
@@ -452,14 +452,14 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		if (cb) {
 			cb(LC_CB_STAGE_WRITE_CONFIG, cb_count++,
 				(int)(wr_ptr - wr), len,
-				LC_CB_COUNTER_TYPE_BYTES, arg);
+				LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
 		}
 	}
 
 	/* write update-done */
 	cb_count = 0;
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 0, 3,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	debug("UPDATE_DATA_DONE");
 	cmd[0] = 0x01; // 1 parameter
@@ -470,7 +470,7 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 1, 3,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* send get-cheksum */
 	debug("GET_CHECKSUM");
@@ -485,7 +485,7 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 2, 3,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* send finish-update */
 	debug("FINISH_UPDATE");
@@ -499,7 +499,7 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	}
 
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 3, 3,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
@@ -652,7 +652,8 @@ int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
 
 		if (cb) {
 			cb(cb_stage, cb_count++, rgn_len - data_to_read,
-				rgn_len, LC_CB_COUNTER_TYPE_BYTES, cb_arg);
+				rgn_len, LC_CB_COUNTER_TYPE_BYTES, cb_arg,
+				NULL);
 		}
 	}
 
@@ -723,7 +724,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	}
 
 	if (cb) {
-		cb(cb_stage, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	CRemoteZ_Base::TParamList pl;
@@ -768,7 +769,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 	if (cb) {
 		cb(LC_CB_STAGE_GET_IDENTITY, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS,
-			cb_arg);
+			cb_arg, NULL);
 	}
 
 	ParseParams(len, rsp, pl);
@@ -1084,13 +1085,13 @@ int CRemoteZ_HID::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data,
 }
 
 int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
-	lc_callback cb, void *arg, uint32_t cb_stage)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 	int cb_count = 0;
 
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 0, 4,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	/* Start a TCP transfer */
 	if ((err = Write(TYPE_REQUEST, COMMAND_INITIATE_UPDATE_TCP_CHANNEL))) {
 		debug("Failed to write to remote");
@@ -1112,7 +1113,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR;
 	}
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 1, 4,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* Look for a SYN packet */
 	debug("Looking for syn");
@@ -1126,7 +1127,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR;
 	}
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 2, 4,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* ACK it with a command to start an update */
 	debug("START_UPDATE");
@@ -1148,7 +1149,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR;
 	}
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 3, 4,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* write update-header */
 	debug("UPDATE_HEADER");
@@ -1162,7 +1163,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return err;
 	}
 	cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 4, 4,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	cb_count = 0;
 
 	/* write data */
@@ -1190,20 +1191,20 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		if (cb) {
 			cb(LC_CB_STAGE_WRITE_CONFIG, cb_count++,
 				(int)(wr_ptr - wr), len,
-				LC_CB_COUNTER_TYPE_BYTES, arg);
+				LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
 		}
 	}
 
 	/* write update-done */
 	cb_count = 0;
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 0, 6,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	debug("UPDATE_DATA_DONE");
 	if ((err = TCPSendAndCheck(COMMAND_WRITE_UPDATE_DATA_DONE))) {
 		return err;
 	}
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 1, 6,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* Funky ACK exchange - part 1 */
 	debug("FUNKY-ACK");
@@ -1229,7 +1230,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR_READ;
 	}
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 2, 6,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* send get-cheksum */
 	debug("GET_CHECKSUM");
@@ -1240,7 +1241,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return err;
 	}
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 3, 6,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* send finish-update */
 	debug("FINISH_UPDATE");
@@ -1255,7 +1256,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return err;
 	}
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 4, 6,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* Funky ACK exchange */
 	debug("FUNKY-ACK");
@@ -1287,7 +1288,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR;
 	}
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 5, 6,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/* FIN-ACK */
 	debug("FIN-ACK");
@@ -1312,7 +1313,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 		return LC_ERROR_WRITE;
 	}
 	cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 6, 6,
-		LC_CB_COUNTER_TYPE_STEPS, arg);
+		LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	/*
 	 * Official traces seem to show a final ack to the above ack, but for us

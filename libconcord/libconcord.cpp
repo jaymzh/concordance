@@ -589,10 +589,65 @@ int is_fw_update_supported(int direct)
 	}
 }
 
-void _report_number_of_stages(lc_callback cb, void *cb_arg, int num) {
-        cb(LC_CB_STAGE_NUM_STAGES, num, 0, 0, 0, cb_arg);
+void _report_stages(lc_callback cb, void *cb_arg, int num,
+	const uint32_t *stages)
+{
+	cb(LC_CB_STAGE_NUM_STAGES, num, 0, 0, 0, cb_arg, stages);
 }
 
+static const uint32_t update_configuration_hid_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_INVALIDATE_FLASH,
+	LC_CB_STAGE_ERASE_FLASH,
+	LC_CB_STAGE_WRITE_CONFIG,
+	LC_CB_STAGE_VERIFY_CONFIG,
+	LC_CB_STAGE_RESET,
+};
+static const int update_configuration_hid_num_stages = 6;
+
+static const uint32_t update_configuration_hid_noreset_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_INVALIDATE_FLASH,
+	LC_CB_STAGE_ERASE_FLASH,
+	LC_CB_STAGE_WRITE_CONFIG,
+	LC_CB_STAGE_VERIFY_CONFIG,
+};
+static const int update_configuration_hid_noreset_num_stages = 5;
+
+static const uint32_t update_configuration_zwave_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_WRITE_CONFIG,
+	LC_CB_STAGE_FINALIZE_UPDATE,
+};
+static const int update_configuration_zwave_num_stages = 3;
+
+static const uint32_t update_configuration_usbnet_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_WRITE_CONFIG,
+	LC_CB_STAGE_FINALIZE_UPDATE,
+	LC_CB_STAGE_RESET,
+};
+static const int update_configuration_usbnet_num_stages = 4;
+
+static const uint32_t update_firmware_hid_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_INVALIDATE_FLASH,
+	LC_CB_STAGE_ERASE_FLASH,
+	LC_CB_STAGE_WRITE_FIRMWARE,
+	LC_CB_STAGE_FINALIZE_UPDATE,
+	LC_CB_STAGE_RESET,
+	LC_CB_STAGE_SET_TIME,
+};
+static const int update_firmware_hid_num_stages = 7;
+
+static const uint32_t update_firmware_hid_direct_stages[]={
+	LC_CB_STAGE_INVALIDATE_FLASH,
+	LC_CB_STAGE_ERASE_FLASH,
+	LC_CB_STAGE_WRITE_FIRMWARE,
+	LC_CB_STAGE_RESET,
+	LC_CB_STAGE_SET_TIME,
+};
+static const int update_firmware_hid_direct_num_stages = 5;
 
 /*
  * GENERAL REMOTE STUFF
@@ -680,7 +735,7 @@ int _get_identity(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 
 int get_identity(lc_callback cb, void *cb_arg)
 {
-        _report_number_of_stages(cb, cb_arg, 1);
+	_report_stages(cb, cb_arg, 1, NULL);
 	_get_identity(cb, cb_arg, LC_CB_STAGE_GET_IDENTITY);
 }
 
@@ -688,13 +743,15 @@ int reset_remote(lc_callback cb, void *cb_arg)
 {
 	int err;
 	if (cb)
-		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if ((err = rmt->Reset(COMMAND_RESET_DEVICE)))
 		return err;
 
 	if (cb)
-		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	deinit_concord();
 	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
@@ -713,7 +770,8 @@ int reset_remote(lc_callback cb, void *cb_arg)
 		return err;
 
 	if (cb)
-		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	return 0;
 }
@@ -738,13 +796,15 @@ int post_preconfig(lc_callback cb, void *cb_arg)
 {
 	int err;
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri,
 			true))) {
 		return err;
 	}
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 	return 0;
 }
 
@@ -752,14 +812,16 @@ int post_postfirmware(lc_callback cb, void *cb_arg)
 {
 	int err;
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
 			false)))
 		return err;
 
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 	return 0;
 }
 
@@ -767,14 +829,16 @@ int post_postconfig(lc_callback cb, void *cb_arg)
 {
 	int err;
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
 		        true, false, is_z_remote() ? true : false, NULL, NULL)))
 		return err;
 
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	return 0;
 }
@@ -798,14 +862,16 @@ int post_connect_test_success(lc_callback cb, void *cb_arg)
 	}
 
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
 			add_cookiekeyval)))
 		return err;
 
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	return 0;
 }
@@ -825,7 +891,7 @@ int _set_time(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 	struct tm *lt = localtime(&t);
 
 	if (cb)
-		cb(cb_stage, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	rtime.second = lt->tm_sec;
 	rtime.minute = lt->tm_min;
@@ -842,14 +908,14 @@ int _set_time(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 		return err;
 	}
 	if (cb)
-		cb(cb_stage, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(cb_stage, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
 
 int set_time(lc_callback cb, void *cb_arg)
 {
-        _report_number_of_stages(cb, cb_arg, 1);
+	_report_stages(cb, cb_arg, 1, NULL);
 	return _set_time(cb, cb_arg, LC_CB_STAGE_SET_TIME);
 }
 
@@ -1077,11 +1143,24 @@ int update_configuration(lc_callback cb, void *cb_arg, int noreset)
 {
 	int err;
 	if (is_z_remote()) {
-        	_report_number_of_stages(cb, cb_arg, 3);
+		if (is_usbnet_remote())
+			_report_stages(cb, cb_arg,
+				update_configuration_usbnet_num_stages,
+				update_configuration_usbnet_stages);
+		else
+			_report_stages(cb, cb_arg,
+				update_configuration_zwave_num_stages,
+				update_configuration_zwave_stages);
 		err = _update_configuration_zwave(cb, cb_arg);
 	} else {
-        	_report_number_of_stages(cb, cb_arg,
-			(noreset) ? 5 : 6);
+		if (noreset)
+			_report_stages(cb, cb_arg,
+				update_configuration_hid_noreset_num_stages,
+				update_configuration_hid_noreset_stages);
+		else
+			_report_stages(cb, cb_arg,
+				update_configuration_hid_num_stages,
+				update_configuration_hid_stages);
 		err = _update_configuration_hid(cb, cb_arg);
 	}
 
@@ -1303,6 +1382,15 @@ int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct)
 		return LC_ERROR_UNSUPP;
 	}
 
+	if (direct)
+		_report_stages(cb, cb_arg,
+			update_firmware_hid_direct_num_stages,
+			update_firmware_hid_direct_stages);
+	else
+		_report_stages(cb, cb_arg,
+			update_firmware_hid_num_stages,
+			update_firmware_hid_stages);
+
 	if (!direct) {
 		if ((err = prep_firmware(cb, cb_arg)))
 			return err;
@@ -1523,7 +1611,8 @@ int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
 	string learn_key, learn_seq;
 
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if (key_name == NULL || encoded_signal == NULL) {
 		return LC_ERROR_POST;	/* cannot do anything without */
@@ -1533,14 +1622,16 @@ int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
 	learn_seq = encoded_signal;
 
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
 			false, false, &learn_seq, &learn_key)))
 		return err;
 
 	if (cb)
-		cb(LC_CB_STAGE_HTTP, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg);
+		cb(LC_CB_STAGE_HTTP, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	return 0;
 }

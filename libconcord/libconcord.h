@@ -114,9 +114,12 @@ extern "C" {
  *   uint32_t counter_type - the type of counter (bytes, steps, etc.)
  *   void *arg      - opaque object you can pass to functions to have them
  *                    pass back to your callback.
+ *   const uint32_t* stages - a pointer to the stages that will be
+ *                            performed for this operation.  Only used when
+ *                            LC_CB_STAGE_NUM_STAGES is the callback stage.
  */
 typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
-	void*);
+	void*, const uint32_t*);
 
 /*
  * REMOTE INFORMATION ACCESSORS
