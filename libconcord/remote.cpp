@@ -22,6 +22,7 @@
  */
 
 #include <string.h>
+#include <errno.h>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"
@@ -69,8 +70,18 @@ void make_serial(uint8_t *ser, TRemoteInfo &ri)
 int CRemote::Reset(uint8_t kind)
 {
 	uint8_t reset_cmd[64] = { COMMAND_RESET, kind };
+	int err;
 
-	return HID_WriteReport(reset_cmd);
+	err = HID_WriteReport(reset_cmd);
+	/*
+	 * Certain remotes (e.g., the 785) do not get a successful return from
+	 * HID_WriteReport even though the reset succeeds.  Ignore this.
+	 */
+	if (err == -ENODEV) {
+		debug("Ignoring error from reset command");
+		err = 0;
+	}
+	return err;
 }
 
 /*

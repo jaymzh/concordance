@@ -33,6 +33,7 @@
 #include <usb.h>
 #endif
 #include <errno.h>
+#include <string.h>
 
 /*
  * Harmonies either fall under logitech's VendorID (0x046d), and logitech's
@@ -214,7 +215,7 @@ int HID_WriteReport(const uint8_t *data)
 
 	if (err < 0) {
 		debug("Failed to write to device: %d (%s)", err,
-			usb_strerror());
+			strerror(-err));
 		return err;
 	}
 
