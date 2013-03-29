@@ -31,6 +31,8 @@
 #define FIRMWARE_MAX_SIZE 64*1024
 /* Largest packet size for HID-UDP is 4 bytes (header) + 64 bytes (data) */
 #define HID_UDP_MAX_PACKET_SIZE 68
+#define HID_UDP_HDR_SIZE 2
+#define HID_TCP_HDR_SIZE 4
 /* Largest packet size for usbnet is the COMMAND_WRITE_UPDATE_DATA
    which is 1 (num params) + 3 (3 parameter size bytes) + 1 (param 1)
    + 1024 (param 2) + 4 (param 3) = 1033. */
@@ -326,8 +328,6 @@ protected:
 	virtual int ParseParams(uint32_t len, uint8_t *data,
 		TParamList &pl);
 	virtual uint16_t GetWord(uint8_t *x) { return x[1]<<8 | x[0]; };
-	virtual int ReadRegion(uint8_t region, uint32_t &len, uint8_t *rd,
-		lc_callback cb, void *cb_arg, uint32_t cb_stage) {return 0;};
 
 public:
 	CRemoteZ_HID() {};
@@ -335,6 +335,8 @@ public:
 	int UpdateConfig(const uint32_t len, const uint8_t *wr,
 		lc_callback cb, void *cb_arg, uint32_t cb_stage);
 	int IsUSBNet() {return false;}
+	virtual int ReadRegion(uint8_t region, uint32_t &len, uint8_t *rd,
+		lc_callback cb, void *cb_arg, uint32_t cb_stage);
 };
 
 // 1000, 1000i
@@ -358,9 +360,6 @@ public:
 	virtual ~CRemoteZ_USBNET() {};
 	int UpdateConfig(const uint32_t len, const uint8_t *wr,
 		lc_callback cb, void *cb_arg, uint32_t cb_stage);
-	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
-		unsigned int protocol, bool verify=false,
-		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);

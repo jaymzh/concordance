@@ -348,7 +348,7 @@ static const TArchInfo ArchList[]={
 		0x000110,			// serial_address
 		0x000000,			// flash_base
 		0x010000,			// firmware_base
-		0x020000,			// config_base
+		REGION_USER_CONFIG,		// config_base
 		0,				// firmware_update_base
 		0,				// firmware_4847_offset
 		0x1, /* hack */			// cookie

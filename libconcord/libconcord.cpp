@@ -564,7 +564,7 @@ int _fix_magic_bytes(uint8_t *in, uint32_t size)
  */
 int is_config_dump_supported()
 {
-	return (is_z_remote() && !is_usbnet_remote()) ? LC_ERROR_UNSUPP: 0;
+	return 0;
 }
 
 int is_config_update_supported()
@@ -943,6 +943,16 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
 
 	if (!cb_arg) {
 		cb_arg = (void *)true;
+	}
+
+	// For zwave-hid remotes, need to read the config once to get the size
+	// For usbnet we do this in GetIdentity, but for hid it takes too long
+	if (is_z_remote() && !is_usbnet_remote()) {
+		if (err = ((CRemoteZ_HID*)rmt)->ReadRegion(REGION_USER_CONFIG,
+					  ri.config_bytes_used, NULL, cb,
+					  cb_arg, LC_CB_STAGE_READ_CONFIG)) {
+			return err;
+		}
 	}
 
 	*size = ri.config_bytes_used;

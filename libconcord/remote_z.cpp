@@ -207,13 +207,20 @@ int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
 	if (pkt[0] < 3) {
 		return LC_ERROR;
 	}
-	len = pkt[0] - 4;
+	/*
+	 * pkt[0] is the index of the last byte, which means it is equal to the
+	 * length of packet minus one byte.  'len' is expected to be set to the
+	 * payload size.  To get the payload size we subtract both the TCP and
+	 * UDP headers from pkt[0] and then add one.
+	 */
+	len = pkt[0] - HID_TCP_HDR_SIZE - HID_UDP_HDR_SIZE + 1;
 	last_seq = pkt[2];
 	last_ack = pkt[3];
-	last_payload_bytes = len + 1; // tcp payload size
+	last_payload_bytes = len + HID_UDP_HDR_SIZE; // tcp payload size
 	//if(!len) return 0;
 	//memcpy(data, pkt + 6, len);
-	memcpy(data, pkt + 1, len+3);
+	// include headers, minus the size
+	memcpy(data, pkt + 1, len + HID_TCP_HDR_SIZE + HID_UDP_HDR_SIZE - 1);
 	return 0;
 }
 
@@ -577,14 +584,6 @@ int CRemoteZ_USBNET::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 	return 0;
 }
 
-int CRemoteZ_USBNET::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
-	unsigned int protocol, bool verify, lc_callback cb,
-	void *cb_arg, uint32_t cb_stage)
-{
-	uint32_t tmp;
-	return ReadRegion(addr, tmp, rd, cb, cb_arg, cb_stage);
-}
-
 int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
 	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
@@ -910,6 +909,170 @@ int CRemoteZ_Base::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	unsigned int protocol, bool verify, lc_callback cb,
 	void *cb_arg, uint32_t cb_stage)
 {
+	uint32_t tmp;
+	return ReadRegion(addr, tmp, rd, cb, cb_arg, cb_stage);
+}
+
+/*
+ * When reading a config from the remote, we need to look for a sequence of
+ * four bytes to determine when to stop reading the config.  The tricky part is
+ * that the sequence could be split across two packets.  Thus, we need to
+ * search the last three bytes of the previous packet plus the current packet.
+ * This function searches for the "end of file" sequence in a set of two
+ * packets.  If the sequence is found, returns the number of bytes in the
+ * second packet up to and including the sequence.  Returns 0 if the sequence
+ * is not found.  Parameters point to the data section of the packets.  Note for
+ * the first packet, only the last 3 bytes are expected to be passed in.
+ */
+int FindEndSeq(uint8_t *pkt_1, uint8_t *pkt_2)
+{
+	uint8_t end_seq[4] = { 0x44, 0x4B, 0x44, 0x4B }; // end of file sequence
+	uint8_t tmp[57]; // 3 bytes from the 1st packet, 54 bytes from the 2nd
+	memcpy(&tmp, pkt_1, 3);
+	memcpy(&tmp[3], pkt_2, 54);
+	for (int i=0; i<54; i++) {
+		if (memcmp(&end_seq, &tmp[i], 4) == 0) {
+			return i + 1;
+		} 
+	}
+	return 0;
+}
+
+int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
+{
+	int err = 0;
+	int cb_count = 0;
+	uint8_t rsp[60];
+	unsigned int rlen;
+	uint8_t status;
+	CRemoteZ_Base::TParamList pl;
+
+	/* Start a TCP transfer */
+	if ((err = Write(TYPE_REQUEST, COMMAND_INITIATE_UPDATE_TCP_CHANNEL))) {
+		debug("Failed to write to remote");
+		return LC_ERROR_WRITE;
+	}
+
+	/* Make sure the remote is ready to start the TCP transfer */
+	if ((err = Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	if (rsp[1] != TYPE_RESPONSE || rsp[2] !=
+		COMMAND_INITIATE_UPDATE_TCP_CHANNEL) {
+		return LC_ERROR;
+	}
+
+	/* Look for a SYN packet */
+	debug("Looking for syn");
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read syn from remote");
+		return LC_ERROR_READ;
+	}
+
+	if (rsp[0] != TYPE_TCP_SYN) {
+		debug("Not a SYN packet!");
+		return LC_ERROR;
+	}
+
+	/* ACK it with a command to read a region */
+	debug("READ_REGION");
+	// 1 parameters, 1 byte, region to read.
+	uint8_t cmd[60] = { region };
+	if ((err = TCP_Write(TYPE_REQUEST, COMMAND_READ_REGION, 1, cmd))) {
+		debug("Failed to write to remote");
+		return LC_ERROR_WRITE;
+	}
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read to remote");
+		return LC_ERROR_READ;
+	}
+	if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+		rsp[4] != COMMAND_READ_REGION) {
+ 		debug("Incorrect response type from remote");
+		return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+	}
+
+	rgn_len = 0;
+
+	debug("READ_REGION_DATA");
+	int data_read = 0;
+	uint8_t *rd_ptr = rd;
+	cmd[0] = region;
+	int eof_found = 0;
+	uint8_t prev_pkt_tail[3] = { 0x00, 0x00, 0x00 };
+
+	while (1) {
+		if ((err = TCP_Write(TYPE_REQUEST, COMMAND_READ_REGION_DATA, 1,
+				 cmd))) {
+			debug("Failed to write to remote");
+			return LC_ERROR_WRITE;
+		}
+		if ((err = TCP_Read(status, rlen, rsp))) {
+			debug("Failed to read to remote");
+			return LC_ERROR_READ;
+		}
+		if (rsp[0] != TYPE_TCP_ACK || rsp[3] != TYPE_RESPONSE ||
+			((rsp[4] != COMMAND_READ_REGION_DATA) &&
+			(rsp[4] != COMMAND_READ_REGION_DONE))) {
+ 			debug("Incorrect response type from remote");
+			return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+		}
+		if (rsp[4] == COMMAND_READ_REGION_DONE) {
+			break;
+		}
+		data_read += rlen;
+
+		if (!eof_found) {
+			eof_found = FindEndSeq(prev_pkt_tail, &rsp[5]);
+			if (eof_found) {
+				rlen = eof_found;
+			}
+			rgn_len += rlen;
+			memcpy(&prev_pkt_tail, &rsp[56], 3);
+
+			if (rd) {
+				memcpy(rd_ptr, &rsp[5], rlen);
+				rd_ptr += rlen;
+			}
+		}
+
+		debug("DATA %d, read %d bytes, %d bytes total", cb_count,
+			rlen, data_read);
+
+		if (cb) {
+			cb(cb_stage, cb_count++, data_read, data_read+1,
+				LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
+		}
+	}
+
+	debug("FIN-ACK");
+	if ((err = TCP_Ack(false, true))) {
+		debug("Failed to send fin-ack");
+		return LC_ERROR_WRITE;
+	}
+
+	if ((err = TCP_Read(status, rlen, rsp))) {
+		debug("Failed to read from remote");
+		return LC_ERROR_READ;
+	}
+
+	/* Make sure we got an ack */
+	if (rsp[0] != (TYPE_TCP_ACK | TYPE_TCP_FIN)) {
+		debug("Failed to read finish-update ack");
+		return LC_ERROR;
+	}
+
+	if ((err = TCP_Ack(true, false))) {
+		debug("Failed to ack the ack of our fin-ack");
+		return LC_ERROR_WRITE;
+	}
+
+	/* Return TCP state to initial conditions */
+	SYN_ACKED = false;
+
 	return 0;
 }
 
@@ -1319,6 +1482,9 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 	 * Official traces seem to show a final ack to the above ack, but for us
 	 * it never comes... so we don't bother trying to read it.
 	 */
+
+	/* Return TCP state to initial conditions */
+	SYN_ACKED = false;
 
 	return 0;
 }
