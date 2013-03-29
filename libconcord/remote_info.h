@@ -327,7 +327,7 @@ static const TArchInfo ArchList[]={
 	/* arch 9: 360, 52x, 55x */
 	{
 		SERIAL_LOCATION_FLASH,		// serial_location
-		0x000110,			// serial_address
+		0x200010,			// serial_address
 		0x800000,			// flash_base
 		0x810000,			// firmware_base
 		0x820000,			// config_base
