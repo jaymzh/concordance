@@ -807,11 +807,6 @@ int upload_config(struct options_t *options, lc_callback cb, void *cb_arg)
 		return err;
 	}
 
-	/* Set the time, after a reboot */
-	if ((err = set_time(cb, NULL))) {
-		return err;
-	}
-
 	/* Tell the website we're done */
 	if (!(*options).binary && !(*options).noweb) {
 		if ((err = post_postconfig(cb, cb_arg))) {

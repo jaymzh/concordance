@@ -34,6 +34,7 @@
 #include <zzip/lib.h>
 #include <list>
 #include <unistd.h>
+#include <vector>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "remote.h"
@@ -601,33 +602,15 @@ static const uint32_t update_configuration_hid_stages[]={
 	LC_CB_STAGE_ERASE_FLASH,
 	LC_CB_STAGE_WRITE_CONFIG,
 	LC_CB_STAGE_VERIFY_CONFIG,
-	LC_CB_STAGE_RESET,
 };
-static const int update_configuration_hid_num_stages = 6;
+static const int update_configuration_hid_num_stages = 5;
 
-static const uint32_t update_configuration_hid_noreset_stages[]={
-	LC_CB_STAGE_INITIALIZE_UPDATE,
-	LC_CB_STAGE_INVALIDATE_FLASH,
-	LC_CB_STAGE_ERASE_FLASH,
-	LC_CB_STAGE_WRITE_CONFIG,
-	LC_CB_STAGE_VERIFY_CONFIG,
-};
-static const int update_configuration_hid_noreset_num_stages = 5;
-
-static const uint32_t update_configuration_zwave_stages[]={
+static const uint32_t update_configuration_zwave_mh_stages[]={
 	LC_CB_STAGE_INITIALIZE_UPDATE,
 	LC_CB_STAGE_WRITE_CONFIG,
 	LC_CB_STAGE_FINALIZE_UPDATE,
 };
-static const int update_configuration_zwave_num_stages = 3;
-
-static const uint32_t update_configuration_usbnet_stages[]={
-	LC_CB_STAGE_INITIALIZE_UPDATE,
-	LC_CB_STAGE_WRITE_CONFIG,
-	LC_CB_STAGE_FINALIZE_UPDATE,
-	LC_CB_STAGE_RESET,
-};
-static const int update_configuration_usbnet_num_stages = 4;
+static const int update_configuration_zwave_mh_num_stages = 3;
 
 static const uint32_t update_firmware_hid_stages[]={
 	LC_CB_STAGE_INITIALIZE_UPDATE,
@@ -635,19 +618,65 @@ static const uint32_t update_firmware_hid_stages[]={
 	LC_CB_STAGE_ERASE_FLASH,
 	LC_CB_STAGE_WRITE_FIRMWARE,
 	LC_CB_STAGE_FINALIZE_UPDATE,
-	LC_CB_STAGE_RESET,
-	LC_CB_STAGE_SET_TIME,
 };
-static const int update_firmware_hid_num_stages = 7;
+static const int update_firmware_hid_num_stages = 5;
 
 static const uint32_t update_firmware_hid_direct_stages[]={
 	LC_CB_STAGE_INVALIDATE_FLASH,
 	LC_CB_STAGE_ERASE_FLASH,
 	LC_CB_STAGE_WRITE_FIRMWARE,
-	LC_CB_STAGE_RESET,
-	LC_CB_STAGE_SET_TIME,
 };
-static const int update_firmware_hid_direct_num_stages = 5;
+static const int update_firmware_hid_direct_num_stages = 3;
+
+std::vector<uint32_t> _get_update_config_stages(int noreset)
+{
+	std::vector<uint32_t> stages;
+	uint32_t *base_stages;
+	int num_base_stages;
+
+	if (is_z_remote()) {
+		base_stages = (uint32_t*)update_configuration_zwave_mh_stages;
+		num_base_stages = update_configuration_zwave_mh_num_stages;
+	} else {
+		base_stages = (uint32_t*)update_configuration_hid_stages;
+		num_base_stages = update_configuration_hid_num_stages;
+	}
+
+	for (int i = 0; i < num_base_stages; i++)
+		stages.push_back(base_stages[i]);
+
+	if (!noreset && !(is_z_remote() && !is_usbnet_remote()))
+		stages.push_back(LC_CB_STAGE_RESET);
+
+	stages.push_back(LC_CB_STAGE_SET_TIME);
+
+	return stages;
+}
+
+std::vector<uint32_t> _get_update_firmware_stages(int noreset, int direct)
+{
+	std::vector<uint32_t> stages;
+	uint32_t *base_stages;
+	int num_base_stages;
+
+	if (direct) {
+		base_stages = (uint32_t*)update_firmware_hid_direct_stages;
+		num_base_stages = update_firmware_hid_direct_num_stages;
+	} else {
+		base_stages = (uint32_t*)update_firmware_hid_stages;
+		num_base_stages = update_firmware_hid_num_stages;
+	}
+
+	for (int i = 0; i < num_base_stages; i++)
+		stages.push_back(base_stages[i]);
+
+	if (!noreset && !(is_z_remote() && !is_usbnet_remote()))
+		stages.push_back(LC_CB_STAGE_RESET);
+
+	stages.push_back(LC_CB_STAGE_SET_TIME);
+
+	return stages;
+}
 
 /*
  * GENERAL REMOTE STUFF
@@ -893,13 +922,14 @@ int get_time()
 	return 0;
 }
 
-int _set_time(lc_callback cb, void *cb_arg, uint32_t cb_stage)
+int _set_time(lc_callback cb, void *cb_arg)
 {
 	const time_t t = time(NULL);
 	struct tm *lt = localtime(&t);
 
 	if (cb)
-		cb(cb_stage, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+		cb(LC_CB_STAGE_SET_TIME, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS,
+			cb_arg, NULL);
 
 	rtime.second = lt->tm_sec;
 	rtime.minute = lt->tm_min;
@@ -916,7 +946,8 @@ int _set_time(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 		return err;
 	}
 	if (cb)
-		cb(cb_stage, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+		cb(LC_CB_STAGE_SET_TIME, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS,
+			cb_arg, NULL);
 
 	return 0;
 }
@@ -924,7 +955,7 @@ int _set_time(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 int set_time(lc_callback cb, void *cb_arg)
 {
 	_report_stages(cb, cb_arg, 1, NULL);
-	return _set_time(cb, cb_arg, LC_CB_STAGE_SET_TIME);
+	return _set_time(cb, cb_arg);
 }
 
 
@@ -1160,36 +1191,27 @@ int _update_configuration_hid(lc_callback cb, void *cb_arg) {
 int update_configuration(lc_callback cb, void *cb_arg, int noreset)
 {
 	int err;
+
+	std::vector<uint32_t> stages = _get_update_config_stages(noreset);
+	_report_stages(cb, cb_arg, stages.size(), &stages[0]);
+
 	if (is_z_remote()) {
-		if (is_usbnet_remote())
-			_report_stages(cb, cb_arg,
-				update_configuration_usbnet_num_stages,
-				update_configuration_usbnet_stages);
-		else
-			_report_stages(cb, cb_arg,
-				update_configuration_zwave_num_stages,
-				update_configuration_zwave_stages);
 		err = _update_configuration_zwave(cb, cb_arg);
 	} else {
-		if (noreset)
-			_report_stages(cb, cb_arg,
-				update_configuration_hid_noreset_num_stages,
-				update_configuration_hid_noreset_stages);
-		else
-			_report_stages(cb, cb_arg,
-				update_configuration_hid_num_stages,
-				update_configuration_hid_stages);
 		err = _update_configuration_hid(cb, cb_arg);
 	}
 
 	if (err != 0)
 		return err;
 
-	// usbnet seems to need a reset; not sure why zwave-hid's do not
-	if (noreset || (is_z_remote() && !is_usbnet_remote()))
-		return 0;
+	// If reset is enabled (!noreset), we do reset, except that
+	// zwave-hid (is_z_remote() && !is_usbnet_remote()) doesn't need it.
+	// thus...
+	if (!noreset && !(is_z_remote() && !is_usbnet_remote()))
+		if ((err = reset_remote(cb, cb_arg)))
+			return err;
 
-	if ((err = reset_remote(cb, cb_arg)))
+	if ((err = _set_time(cb, cb_arg)))
 		return err;
 
 	return 0;
@@ -1400,14 +1422,8 @@ int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct)
 		return LC_ERROR_UNSUPP;
 	}
 
-	if (direct)
-		_report_stages(cb, cb_arg,
-			update_firmware_hid_direct_num_stages,
-			update_firmware_hid_direct_stages);
-	else
-		_report_stages(cb, cb_arg,
-			update_firmware_hid_num_stages,
-			update_firmware_hid_stages);
+	vector<uint32_t> stages = _get_update_firmware_stages(noreset, direct);
+	_report_stages(cb, cb_arg, stages.size(), &stages[0]);
 
 	if (!direct) {
 		if ((err = prep_firmware(cb, cb_arg)))
@@ -1428,12 +1444,11 @@ int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct)
 			return err;
 	}
 
-	if (noreset)
-		return 0;
+	if (!noreset)
+		if ((err = reset_remote(cb, cb_arg)))
+			return err;
 
-	reset_remote(cb, cb_arg);
-
-	if ((err = set_time(cb, cb_arg)))
+	if ((err = _set_time(cb, cb_arg)))
 		return err;
 
 	return 0;
