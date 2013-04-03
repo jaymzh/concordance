@@ -97,7 +97,8 @@ int OperationFile::ReadZipFile(char *file_name)
 		ZZIP_DIRENT dirent;
 		while (zzip_dir_read(dir, &dirent)) {
 			ZZIP_FILE *fh = zzip_file_open(dir, dirent.d_name, 0);
-			if (strcmp(dirent.d_name, "Data.xml") == 0) {
+			if ((strcmp(dirent.d_name, "Data.xml") == 0) || 
+			    (strcmp(dirent.d_name, "Description.xml") == 0)) {
 				debug("Internal file is %s", dirent.d_name);
 				debug("Size is %d", dirent.st_size);
 				xml_size = dirent.st_size;

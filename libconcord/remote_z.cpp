@@ -381,7 +381,8 @@ int CRemoteZ_USBNET::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data)
 }
 
 int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
-	lc_callback cb, void *cb_arg, uint32_t cb_stage)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage, uint32_t xml_size,
+	uint8_t *xml)
 {
 	int err = 0;
 	int cb_count = 0;
@@ -1248,7 +1249,8 @@ int CRemoteZ_HID::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data,
 }
 
 int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
-	lc_callback cb, void *cb_arg, uint32_t cb_stage)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage, uint32_t xml_size,
+	uint8_t *xml)
 {
 	int err = 0;
 	int cb_count = 0;

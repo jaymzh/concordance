@@ -55,7 +55,7 @@ void make_guid(const uint8_t * const in, char*&out)
 {
 	char x[48];
 	// usbnet remotes seem to use a more normal byte ordering for serial #'s
-	if (is_usbnet_remote()) {
+	if (is_usbnet_remote() || is_mh_remote()) {
 		sprintf(x,
 		"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
 			in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7],
@@ -960,26 +960,14 @@ int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
 	return 0;
 }
 
-
-int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
-		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg,
-		uint32_t cb_stage)
+// This section of IR learning code is common between pure HID and MH remotes.
+// 'seq' is the starting sequence number, which differs between HID and MH.
+int LearnIRInnerLoop(uint32_t *freq, uint32_t **ir_signal,
+	uint32_t *ir_signal_length, uint8_t seq)
 {
 	int err = 0;
 	uint8_t rsp[68];
 
-	static const uint8_t start_ir_learn[64] = { COMMAND_START_IRCAP };
-	static const uint8_t stop_ir_learn[64] = { COMMAND_STOP_IRCAP };
-
-	if (cb) {
-		cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
-	}
-
-	if (HID_WriteReport(start_ir_learn) != 0) {
-		return LC_ERROR_WRITE;
-	}
-
-	uint8_t seq = 0;
 	// Count of how man IR words we've received.
 	uint32_t ir_word = 0;
 	// Time button is on and off
@@ -1044,6 +1032,29 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 			(*ir_signal)[(*ir_signal_length)++] = t_off;
 		}
 	}
+
+	return err;
+}
+
+int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
+		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg,
+		uint32_t cb_stage)
+{
+	int err = 0;
+	uint8_t rsp[68];
+
+	static const uint8_t start_ir_learn[64] = { COMMAND_START_IRCAP };
+	static const uint8_t stop_ir_learn[64] = { COMMAND_STOP_IRCAP };
+
+	if (cb) {
+		cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+	}
+
+	if (HID_WriteReport(start_ir_learn) != 0) {
+		return LC_ERROR_WRITE;
+	}
+
+	err = LearnIRInnerLoop(freq, ir_signal, ir_signal_length, 0);
 
 	if (HID_WriteReport(stop_ir_learn) != 0) {
 		err = LC_ERROR_WRITE;

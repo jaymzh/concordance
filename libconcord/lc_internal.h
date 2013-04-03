@@ -60,5 +60,6 @@ void report_net_error(const char *msg);
 /* NOTE: 1 for yes, 0 for no, unlike some other functions. */
 int is_z_remote();
 int is_usbnet_remote();
+int is_mh_remote();
 
 #endif // ifndef LC_INTERNAL_H

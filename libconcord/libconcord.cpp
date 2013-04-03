@@ -220,6 +220,22 @@ int is_usbnet_remote()
 	return rmt->IsUSBNet() ? 1 : 0;
 }
 
+int is_mh_remote()
+{
+	return rmt->IsMHRemote() ? 1 : 0;
+}
+
+int is_mh_pid(unsigned int pid)
+{
+	switch (pid) {
+		case 0xC124: /* Harmony 300 */
+		case 0xC125: /* Harmony 200 */
+			return 1;
+		default:
+			return 0;
+	}
+}
+
 int get_time_second()
 {
 	return rtime.second;
@@ -634,7 +650,7 @@ std::vector<uint32_t> _get_update_config_stages(int noreset)
 	uint32_t *base_stages;
 	int num_base_stages;
 
-	if (is_z_remote()) {
+	if (is_z_remote() || is_mh_remote()) {
 		base_stages = (uint32_t*)update_configuration_zwave_mh_stages;
 		num_base_stages = update_configuration_zwave_mh_num_stages;
 	} else {
@@ -724,6 +740,8 @@ int init_concord()
 		    hid_info.pid <= ZWAVE_HID_PID_MAX) {
 			// 890, Monstor, etc.
 			rmt = new CRemoteZ_HID;
+		} else if (is_mh_pid(hid_info.pid)) {
+			rmt = new CRemoteMH;
 		} else {
 			rmt = new CRemote;
 		}
@@ -1006,9 +1024,10 @@ int _write_config_to_remote(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 		cb_arg = (void *)true;
 	}
 
-	if (is_z_remote()) {
+	if (is_z_remote() || is_mh_remote()) {
 		if ((err = rmt->UpdateConfig(of->GetDataSize(), of->GetData(),
-				cb, cb_arg, cb_stage)))
+				cb, cb_arg, cb_stage, of->GetXmlSize(),
+				of->GetXml())))
 			return LC_ERROR_WRITE;
 	} else {
 		if ((err = rmt->WriteFlash(ri.arch->config_base,
@@ -1149,6 +1168,17 @@ int _update_configuration_zwave(lc_callback cb, void *cb_arg)
 	return 0;
 }
 
+int _update_configuration_mh(lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	if ((err = _write_config_to_remote(cb, cb_arg, 0))) {
+		return err;
+	}
+
+	return 0;
+}
+
 int _update_configuration_hid(lc_callback cb, void *cb_arg) {
 	int err;
 	int cb_count = 0;
@@ -1197,6 +1227,8 @@ int update_configuration(lc_callback cb, void *cb_arg, int noreset)
 
 	if (is_z_remote()) {
 		err = _update_configuration_zwave(cb, cb_arg);
+	} else if (is_mh_remote()) {
+		err = _update_configuration_mh(cb, cb_arg);
 	} else {
 		err = _update_configuration_hid(cb, cb_arg);
 	}

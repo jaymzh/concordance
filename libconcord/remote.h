@@ -151,6 +151,8 @@ struct THarmonyTime {
 
 void setup_ri_pointers(TRemoteInfo &ri);
 void make_serial(uint8_t *ser, TRemoteInfo &ri);
+int LearnIRInnerLoop(uint32_t *freq, uint32_t **ir_signal,
+	uint32_t *ir_signal_length, uint8_t seq);
 
 class CRemoteBase			// Base class for all remotes
 {
@@ -185,7 +187,8 @@ public:
 		void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int UpdateConfig(const uint32_t len,
 		const uint8_t *wr, lc_callback cb, void *cb_arg,
-		uint32_t cb_stage)=0;
+		uint32_t cb_stage, uint32_t xml_size=0,
+		uint8_t *xml=NULL)=0;
 	virtual int GetTime(const TRemoteInfo &ri, THarmonyTime &ht)=0;
 	virtual int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 		lc_callback cb=NULL, void *cb_arg=NULL,
@@ -195,6 +198,7 @@ public:
 		void *cb_arg=NULL, uint32_t cb_stage=0)=0;
 	virtual int IsZRemote()=0;
 	virtual int IsUSBNet()=0;
+	virtual int IsMHRemote()=0;
 };
 
 class CRemote : public CRemoteBase	// All non-Z-Wave remotes
@@ -238,7 +242,8 @@ public:
 		void *cb_arg=NULL, uint32_t cb_stage=0);
 	virtual int UpdateConfig(const uint32_t len,
 		const uint8_t *wr, lc_callback cb, void *cb_arg,
-		uint32_t cb_stage=0) {};
+		uint32_t cb_stage=0, uint32_t xml_size=0,
+		uint8_t *xml=NULL) {};
 
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
@@ -249,6 +254,7 @@ public:
 		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int IsZRemote() {return false;}
 	int IsUSBNet() {return false;}
+	int IsMHRemote() {return false;}
 };
 
 // Base class for all Z-Wave remotes
@@ -304,6 +310,7 @@ public:
 		uint32_t *ir_signal_length, lc_callback cb=NULL,
 		void *cb_arg=NULL, uint32_t cb_stage=0);
 	int IsZRemote() {return true;}
+	int IsMHRemote() {return false;}
 };
 
 // 890, 890Pro, AVL-300, RF Extender
@@ -333,7 +340,8 @@ public:
 	CRemoteZ_HID() {};
 	virtual ~CRemoteZ_HID() {};
 	int UpdateConfig(const uint32_t len, const uint8_t *wr,
-		lc_callback cb, void *cb_arg, uint32_t cb_stage);
+		lc_callback cb, void *cb_arg, uint32_t cb_stage,
+		uint32_t xml_size=0, uint8_t *xml=NULL);
 	int IsUSBNet() {return false;}
 	virtual int ReadRegion(uint8_t region, uint32_t &len, uint8_t *rd,
 		lc_callback cb, void *cb_arg, uint32_t cb_stage);
@@ -359,11 +367,70 @@ public:
 	CRemoteZ_USBNET() {};
 	virtual ~CRemoteZ_USBNET() {};
 	int UpdateConfig(const uint32_t len, const uint8_t *wr,
-		lc_callback cb, void *cb_arg, uint32_t cb_stage);
+		lc_callback cb, void *cb_arg, uint32_t cb_stage,
+		uint32_t xml_size=0, uint8_t *xml=NULL);
 	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
 	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 	int IsUSBNet() {return true;}
+};
+
+class CRemoteMH : public CRemoteBase	// "My Harmony" remotes
+{
+private:
+	int ReadMiscByte(uint8_t addr, uint32_t len, uint8_t kind,
+		uint8_t *rd);
+	int ReadMiscWord(uint16_t addr, uint32_t len, uint8_t kind,
+		uint16_t *rd);
+	int WriteMiscByte(uint8_t addr, uint32_t len, uint8_t kind,
+		uint8_t *wr);
+	int WriteMiscWord(uint16_t addr, uint32_t len, uint8_t kind,
+		uint16_t *wr);
+
+public:
+	CRemoteMH() {};
+	virtual ~CRemoteMH() {};
+	int Reset(uint8_t kind);
+	int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
+
+	int ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
+		unsigned int protocol, bool verify=false,
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
+	int InvalidateFlash(lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=0);
+	int EraseFlash(uint32_t addr, uint32_t len, const TRemoteInfo &ri,
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
+	int WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
+		unsigned int protocol, lc_callback cb=NULL, void *cb_arg=NULL,
+		uint32_t cb_stage=0);
+	int WriteRam(uint32_t addr, const uint32_t len, uint8_t *wr);
+	int ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd);
+	int PrepFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=0);
+	int FinishFirmware(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=0);
+	int PrepConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=0);
+	int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=0);
+	virtual int UpdateConfig(const uint32_t len,
+		const uint8_t *wr, lc_callback cb, void *cb_arg,
+		uint32_t cb_stage=0) {};
+	virtual int UpdateConfig(const uint32_t len, const uint8_t *wr,
+		lc_callback cb,	void *cb_arg, uint32_t cb_stage=0,
+		uint32_t xml_size=0, uint8_t *xml=NULL);
+
+	int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
+	int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+		lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
+
+	int LearnIR(uint32_t *freq, uint32_t **ir_signal, 
+		uint32_t *ir_signal_length, lc_callback cb=NULL,
+		void *cb_arg=NULL, uint32_t cb_stage=0);
+	int IsZRemote() {return false;}
+	int IsUSBNet() {return false;}
+	int IsMHRemote() {return true;}
 };
 
 #endif //REMOTE_H
