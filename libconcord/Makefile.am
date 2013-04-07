@@ -7,21 +7,23 @@ libconcord_la_SOURCES = remote.cpp remote_z.cpp libconcord.cpp binaryfile.cpp \
 	 operationfile.cpp remote_mh.cpp
 include_HEADERS = libconcord.h
 libconcord_la_LDFLAGS = -version-info 2:0:0 -lusb -lzzip
+UDEVROOT ?= /
+UDEVLIBDIR ?= $(UDEVROOT)/lib
 
 # udev and friends support
 udev:
 	./gen_udev_support -u
 
 install_udev_generic:
-	$(MKDIR_P) $(DESTDIR)$(libdir)/udev/rules.d
+	$(MKDIR_P) $(DESTDIR)$(UDEVLIBDIR)/udev/rules.d
 	$(install_sh_DATA) libconcord.rules \
-		$(DESTDIR)$(libdir)/udev/rules.d/60-libconcord.rules
+		$(DESTDIR)$(UDEVLIBDIR)/udev/rules.d/60-libconcord.rules
 	$(install_sh_DATA) libconcord-usbnet.rules \
-		$(DESTDIR)$(libdir)/udev/rules.d/80-libconcord-usbnet.rules
+		$(DESTDIR)$(UDEVLIBDIR)/udev/rules.d/80-libconcord-usbnet.rules
 	$(install_sh_SCRIPT) start_concordance_dhcpd.sh \
-		$(DESTDIR)$(libdir)/udev/
+		$(DESTDIR)$(UDEVLIBDIR)/udev/
 	$(install_sh_SCRIPT) start_concordance_dhcpd_wrapper.sh \
-		$(DESTDIR)$(libdir)/udev/
+		$(DESTDIR)$(UDEVLIBDIR)/udev/
 
 install_udev: udev install_udev_generic
 

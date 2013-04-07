@@ -47,6 +47,11 @@ a sufficiently recent version of udev itself. To use the udev-acl support, do:
   make udev
   sudo make install_udev
 
+By default this installs rules in /lib/udev. You can override this by setting
+the UDEVLIBDIR environment variable (as root):
+
+  UDEVLIBDIR=/etc/udev make install_udev
+
 If you have an older distribution without a recent enough version of udev, you
 can choose between old-style generic udev support, hal/consolekit support, and
 hal/policykit support.
