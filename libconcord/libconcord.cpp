@@ -744,6 +744,14 @@ int init_concord()
 			rmt = new CRemoteMH;
 		} else {
 			rmt = new CRemote;
+			/*
+			 * Send a "reset USB" command before sending any other
+			 * commands.  Seems to be required for the Harmony One;
+			 * otherwise, the first communication attempt fails.
+			 * The official software seems to do this for most
+			 * remotes.
+			 */
+			rmt->Reset(COMMAND_RESET_USB);
 		}
 	}
 
