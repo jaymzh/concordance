@@ -1074,6 +1074,11 @@ int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
 	/* Return TCP state to initial conditions */
 	SYN_ACKED = false;
 
+	if (cb) {
+		cb(cb_stage, cb_count++, data_read, data_read,
+			LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
+	}
+
 	return 0;
 }
 
