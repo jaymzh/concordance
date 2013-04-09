@@ -33,7 +33,9 @@ As root, simply run "make install"
 
 If you don't want to have to be root to use concordance (or any other
 libconcord frontend), you'll need to set up udev-acl, hal/consolekit, 
-hal/policykit or old udev support.
+hal/policykit or old udev support. Here are your options:
+
+* UDEV-ACL SUPPORT (recommended)
 
 Most modern distributions should use the udev-acl support. udev versions since
 167, released on 2011-03-30, have the necessary support for this method to
@@ -47,57 +49,63 @@ a sufficiently recent version of udev itself. To use the udev-acl support, do:
   make udev
   sudo make install_udev
 
-By default this installs rules in /lib/udev. You can override this by setting
-the UDEVLIBDIR environment variable (as root):
+* GENERIC-UDEV SUPPORT
 
-  UDEVLIBDIR=/etc/udev make install_udev
+If you have a modern system, but your login manager doesn't support
+consolekit, (notably, 'xdm'), you'll need to use generic udev support. With
+this option, anyone in the group 'dialout' will have access to the remote
+control. To use this, do:
 
-If you have an older distribution without a recent enough version of udev, you
-can choose between old-style generic udev support, hal/consolekit support, and
-hal/policykit support.
+  make generic_udev
+  sudo make install_generic_udev
+
+* HAL/POLICYKIT SUPPORT
+
+This is for people on older distributions that use HAL+PolicyKit. It will
+generate the appropriate HAL/PolicyKit files and install them in the right
+place for the console user to have access to the remote when it's plugged in.
+It will work only if your distribution has udev, HAL and PolicyKit of around
+the correct vintage - approximately, the versions that were current in early
+2009 - correctly built to work with each other.
 
 To use hal/policykit support, you can do:
 
   make policykit
   sudo make install_policykit
 
-This will generate a different udev file and all the appropriate HAL/policykit
-files and install them in the right place for the console user to have access
-to the remote when it's plugged in. It will work only if your distribution has
-udev, HAL and PolicyKit of around the correct vintage - approximately, the
-versions that were current in early 2009 - correctly built to work with each
-other.
-
-To use hal/consolekit, you can do:
-
-  make consolekit
-  sudo make install_consolekit
+* HAL/CONSOLEKIT SUPPORT
 
 This will do much the same as the hal/policykit support does, only with
 consolekit instead. As with the hal/policykit support, it depends on having
 udev, HAL and ConsoleKit of an early 2009 vintage, correctly built to work
 together.
 
-The safest option for old systems is the old generic udev support:
+* OLD_UDEV SUPPORT
 
-  make old-udev
-  sudo make install_old-udev
+The safest option for old systems is the old generic udev support.  Like
+"UDEV-GENERIC", this will allow anyone in the "dialout" group to read and
+write to harmony remote controls connected to the machine. However, it uses
+the syntax necessary for very old versions of udev.
 
-This will allow anyone in the "dialout" group to read and write to harmony
-remote controls connected to the machine. It should work with any udev system,
-including modern ones, but is a less sophisticated solution than the udev-acl
-support and requires you to add your user to the "dialout" group. 
+  make old_udev
+  sudo make install_old_udev
 
 If you are not sure which method to use, and your distribution came out since
-March 2011, try the new udev option first, as it provides the cleanest
+March 2011, try the udev-acl option first, as it provides the cleanest
 configuration and most transparent operation. If it does not work, you can try
 the hal/consolekit or hal/policykit options, but old-udev is the most likely
 to work.
 
-NOTE: By default the install prefix is /usr/local which means that the
-udev/policykit/consolekit make targets will install in /usr/local/etc which
-won't actually do anything. This means for these to work you must run
-./configure with
+NOTE:
+By default udev files will install in /lib/udev. You can override this by setting
+the UDEVLIBDIR environment variable (as root):
+
+  UDEVLIBDIR=/etc/udev make install_udev
+
+The policykit/consolekit files will install in datarootdir which is a subset
+of prefix, meaning, by default /usr/local/share. This will not work, so if you
+are using the hal/policykit/console kit targets, you must run ./configure
+with:
 *either*:
   --prefix=/usr
 *or*:

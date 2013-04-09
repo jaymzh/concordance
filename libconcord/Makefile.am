@@ -14,7 +14,13 @@ UDEVLIBDIR ?= $(UDEVROOT)/lib
 udev:
 	./gen_udev_support -u
 
-install_udev_generic:
+old_udev:
+	./gen_udev_support -o
+
+generic_udev:
+	./gen_udev_support -g
+
+install_udev_common:
 	$(MKDIR_P) $(DESTDIR)$(UDEVLIBDIR)/udev/rules.d
 	$(install_sh_DATA) libconcord.rules \
 		$(DESTDIR)$(UDEVLIBDIR)/udev/rules.d/60-libconcord.rules
@@ -25,17 +31,14 @@ install_udev_generic:
 	$(install_sh_SCRIPT) start_concordance_dhcpd_wrapper.sh \
 		$(DESTDIR)$(UDEVLIBDIR)/udev/
 
-install_udev: udev install_udev_generic
-
-old-udev:
-	./gen_udev_support -o
-
-install_old-udev: old-udev install_udev_generic
+install_udev: udev install_udev_common
+install_old_udev: old_udev install_udev_common
+install_generic_udev: generic_udev install_udev_common
 
 policykit:
 	./gen_udev_support -p
 
-install_policykit: policykit install_udev_generic
+install_policykit: policykit install_udev_common
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/PolicyKit/policy/
 	$(install_sh_DATA) libconcord.fdi \
@@ -46,7 +49,7 @@ install_policykit: policykit install_udev_generic
 consolekit:
 	./gen_udev_support -c
 
-install_consolekit: consolekit install_udev_generic
+install_consolekit: consolekit install_udev_common
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
 	$(install_sh_DATA) libconcord.perms \
 		$(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.perms
