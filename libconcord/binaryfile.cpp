@@ -24,8 +24,7 @@
 // C++ iostreams will eat EOF chars, even when ios::binary is used with
 // read() and write()
 
-#include "libconcord.h"
-#include "lc_internal.h"
+#include "binaryfile.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -36,8 +35,8 @@
 #include <sys/stat.h>
 #endif
 
-#include "binaryfile.h"
-
+#include "libconcord.h"
+#include "lc_internal.h"
 
 binaryfile::binaryfile()
 {

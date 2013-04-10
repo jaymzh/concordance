@@ -354,7 +354,42 @@ parameters: 12 (0x0c)
 message type: 0x01
 parameters: 0
 
+COMMAND_READ_REGION 0x47 (71)
+message type: 0x80 (128)
+parameters: 1
+  parameter 1: 1 byte (region ID)
+    sample values: 04
 
+message type: 0x01 (1)
+parameters: 1
+  parameter 1: 4 bytes (region size in bytes)
+  sample values:
+      00 00 3e 88
+
+COMMAND_READ_REGION_DATA 0x48 (72)
+message type: 0x80
+parameters: 1
+  parameter 1: 1 byte (region ID)
+    sample values: 04
+
+message type: 0x01
+parameters: 3
+  parameter 1: 1 byte (region ID)
+    sample values: 04
+  parameter 2: 0x400 (1024) bytes (0xc2, 194/2 , 1100 0010) (data)
+  parameter 3: 4 bytes (length)
+    sample values: 00 00 04 00
+notes:
+  This is repeated for every 1K-byte chunk.
+
+COMMAND_READ_REGION_DONE 0x49 (73)
+message type: 0x80
+parameters: 1
+  parameter 1: 1 byte (region ID)
+    sample values: 04
+
+message type: 0x01
+parameters: 0
 
 # for vim
 vim:textwidth=80:

@@ -1,0 +1,82 @@
+"MyHarmony" Protocol:
+
+There seem to be two types of messages, command messages and data messages.
+
+Command messages/responses:
+1st byte is always 0xFF
+2nd byte is the command (see below).
+3rd byte is the sequence number, which ranges from 0x00 to 0x3F then rolls over
+    => in messages from the remote, the uppermost bit will be set, eg:
+    => if the sequence number in the message sent to the remote is 0x03, the 
+    => response will have the sequence number 0x83.
+4th byte is the number of parameters.
+5th byte and on are the parameters.  Each parameter begins with a byte which
+    indicates the number of bytes in the parameter.
+    => if the parameter length byte is 0x80, then the parameter is a "string"
+       of hex ASCII characters and is terminated by a 0x00.
+
+Command message 0x01 - Read/Write a file.
+	Parameters: 3
+	Parameter 1: String; filename to read or write.  Known files:
+		  Identity file is /sys/sysinfo
+		  Config file is /cfg/usercfg
+		  IR learn is /ir/ir_cap
+	Parameter 2: String; 'W' for write, 'R' for read.
+	Parameter 3: 4 bytes; length of data to write (only use for writes)
+Response (to a read command):
+	Parameters: 2
+	Parameter 1: 1 byte; unknown.
+	Parameter 1: 4 bytes; length of data that will be read.
+
+Command message 0x03 - Data mode acknowledgement response.
+	Parameters: 2
+	Parameter 1: 1 byte; unknown; value seems to always be 0x05.
+	Parameter 2: 1 byte; number of packets left to send, plus one.  If there
+		  are more than 50 packets to send, 0x33 (51) is sent.  The end
+		  of file message (0x7E) is included in the count.
+
+Command message 0x04 - Data mode read start message (sent before get identity
+	and IR data modes start)
+	Parameters: 2
+	Parameter 1: 1 byte; unknown; value seems to always be 0x06.
+	Parameter 2: 1 byte; number of packets to send before expecting an
+		  acknowledgement, minus one (ie, 0x33 [51] -> send 50 pkts).
+
+Command message 0x05 - unknown (sent after writing a config file)
+	Parameters: 2
+	Parameter 1: 1 byte; unknown; value seems to always be 0x05.
+	Parameter 2: 1 byte; unknown; value seems to always be 0x00.
+
+Command message 0x06 - Write file checksum (after a write).
+	Parameters: 7
+	Parameter 1: 1 byte; unknown; value seems to always be 0x05.
+	Parameter 2: 1 byte; unknown; value seems to always be 0x01.
+	Parameter 3: String; Checksum Type (from XML), e.g., "XOR".
+	Parameter 4: 2 bytes; Checksum Seed (from XML), e.g., "4321".
+	Parameter 5: 4 bytes; unknown; value seems to always be 0x00000000.
+		  (Might be Checksum "Offset" from XML)
+	Parameter 6: 4 bytes; Checksum Length (from XML), e.g., "4db1".
+	Parameter 7: 2 bytes; Checksum ExpectedValue (from XML), "5740".
+
+Command message 0x07 - Reset sequence number to 0? (sent after reading identity,
+		after writing a config file, and after learning IR)
+	Parameters: 1
+	Parameter 1: 1 byte; unknown; value seems to be 0x06 before write and
+		  0x05 after
+
+Special commands - some commands do not have sequence numbers in the 2nd byte:
+
+Reset command: 0xFF 0xFF 0x02 0x01 0x01
+
+Data messages:
+Once the remote or the software switches to data mode, the packets are as
+follows:
+	1st byte: sequence number (uppermost bit set to 1 if from the remote)
+	2nd byte: data length, eg: 0x3e for a full packet of 62 bytes
+	    (uppermost bit will be set to 1 if from the remote)
+	3rd-64th bytes: data
+
+IR learning:
+Once the remote is in IR learning mode, the packets received from the remote are
+in the same format as the IR learning mode of pure HID remotes (see
+protocol.txt)

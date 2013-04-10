@@ -27,8 +27,14 @@
  */
 
 #include <stdio.h>
+#include <string>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <zzip/lib.h>
+#include <list>
+#include <unistd.h>
+#include <vector>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "remote.h"
@@ -38,15 +44,17 @@
 #include "web.h"
 #include "protocol.h"
 #include "time.h"
-#include <errno.h>
-#include <list>
+#include "operationfile.h"
 
 #define ZWAVE_HID_PID_MIN 0xC112
 #define ZWAVE_HID_PID_MAX 0xC115
 
-#define FIRMWARE_MAX_SIZE 64*1024
+// Certain remotes (e.g., 900) take longer to reboot, so extend wait time.
+#define MAX_WAIT_FOR_BOOT 10
+#define WAIT_FOR_BOOT_SLEEP 5
 
 static class CRemoteBase *rmt;
+static class OperationFile *of;
 static struct TRemoteInfo ri;
 static struct THIDINFO hid_info;
 static struct THarmonyTime rtime;
@@ -97,6 +105,11 @@ int get_hw_ver_maj()
 int get_hw_ver_min()
 {
 	return ri.hw_ver_minor;
+}
+
+int get_hw_ver_mic()
+{
+	return ri.hw_ver_micro;
 }
 
 int get_flash_size()
@@ -196,6 +209,33 @@ int get_config_bytes_total()
 	return ri.max_config_size;
 }
 
+int is_z_remote()
+{
+	/* should this be in the remoteinfo struct? */
+	return rmt->IsZRemote() ? 1 : 0;
+}
+
+int is_usbnet_remote()
+{
+	return rmt->IsUSBNet() ? 1 : 0;
+}
+
+int is_mh_remote()
+{
+	return rmt->IsMHRemote() ? 1 : 0;
+}
+
+int is_mh_pid(unsigned int pid)
+{
+	switch (pid) {
+		case 0xC124: /* Harmony 300 */
+		case 0xC125: /* Harmony 200 */
+			return 1;
+		default:
+			return 0;
+	}
+}
+
 int get_time_second()
 {
 	return rtime.second;
@@ -266,7 +306,7 @@ const char *lc_strerror(int err)
 			break;
 
 		case LC_ERROR_INVALIDATE:
-			return 
+			return
 			"Error while asking the remote to invalidate it's flash";
 			break;
 
@@ -291,7 +331,9 @@ const char *lc_strerror(int err)
 			break;
 
 		case LC_ERROR_CONNECT:
-			return "Error connecting or finding the remote";
+			return "Error connecting or finding the remote\nNOTE: \
+if you recently plugged in your remote and you have a newer remote, you\nmay \
+need to wait a few additional seconds for your remote to be fully connected.";
 			break;
 
 		case LC_ERROR_OS:
@@ -307,17 +349,17 @@ const char *lc_strerror(int err)
 			break;
 
 		case LC_ERROR_UNSUPP:
-			return 
+			return
 			"Model or configuration or operation unsupported";
 			break;
 
 		case LC_ERROR_INVALID_CONFIG:
-			return 
+			return
 			"The configuration present on the remote is invalid";
 			break;
 
 		case LC_ERROR_IR_OVERFLOW:
-			return 
+			return
 			"Received IR signal is too long - release key earlier";
 			break;
 	}
@@ -330,146 +372,87 @@ void delete_blob(uint8_t *ptr)
 	delete[] ptr;
 }
 
-int identify_file(uint8_t *in, uint32_t size, int *type)
+const char *lc_cb_stage_str(int stage)
 {
-	int err;
-
-	/*
-	 * Validate this is a remotely sane XML file
-	 */
-	uint8_t *start_info_ptr;
-	err = GetTag("INFORMATION", in, size, start_info_ptr);
-	if (err == -1) {
-		return LC_ERROR;
-	}
-
-	uint8_t *end_info_ptr;
-	err = GetTag("/INFORMATION", in, size, end_info_ptr);
-	if (err == -1) {
-		return LC_ERROR;
-	}
-
-	/*
-	 * Determine size of binary data following /INFORMATION
-	 */
-	uint32_t data_len = size - (end_info_ptr - in);
-	/*
-	 * Account for CRLF after /INFORMATION>
-	 * But, don't screw up if it's missing
-	 */
-	if (data_len >= 2) {
-		data_len -= 2;
-	}
-
-	/*
-	 * Search for tag only in "connectivity test" files
-	 */
-	bool found_get_zaps_only = false;
-	uint8_t *tmp_data = in;
-	uint32_t tmp_size = size - data_len;
-	while (1) {
-		uint8_t *tag_ptr;
-		string tag_s;
-		err = GetTag("KEY", tmp_data, tmp_size, tag_ptr, &tag_s);
-		if (err == -1) {
+	switch (stage) {
+		case LC_CB_STAGE_GET_IDENTITY:
+			return "Requesting identity";
 			break;
-		}
-		if (!stricmp(tag_s.c_str(), "GETZAPSONLY")) {
-			found_get_zaps_only = true;
+
+		case LC_CB_STAGE_INITIALIZE_UPDATE:
+			return "Initializing update";
 			break;
-		}
-		tmp_data = tag_ptr + tag_s.length();
-		tmp_size = end_info_ptr - tmp_data;
-	}
 
-	/*
-	 * Search for tag only in "firmware" files
-	 */
-	bool found_firmware = false;
-	tmp_data = in;
-	tmp_size = size - data_len;
-	while (1) {
-		uint8_t *tag_ptr;
-		string tag_s;
-		err = GetTag("TYPE", tmp_data, tmp_size, tag_ptr, &tag_s);
-		if (err == -1) {
+		case LC_CB_STAGE_INVALIDATE_FLASH:
+			return "Invalidating flash";
 			break;
-		}
-		if (!stricmp(tag_s.c_str(), "Firmware_Main")) {
-			found_firmware = true;
+
+		case LC_CB_STAGE_ERASE_FLASH:
+			return "Erasing flash";
 			break;
-		}
-		tmp_data = tag_ptr + tag_s.length();
-		tmp_size = end_info_ptr - tmp_data;
+
+		case LC_CB_STAGE_WRITE_CONFIG:
+			return "Writing config";
+			break;
+
+		case LC_CB_STAGE_VERIFY_CONFIG:
+			return "Verifying config";
+			break;
+
+		case LC_CB_STAGE_FINALIZE_UPDATE:
+			return "Finalizing update";
+			break;
+
+		case LC_CB_STAGE_READ_CONFIG:
+			return "Reading config";
+			break;
+
+		case LC_CB_STAGE_WRITE_FIRMWARE:
+			return "Writing firmware";
+			break;
+
+		case LC_CB_STAGE_READ_FIRMWARE:
+			return "Reading firmware";
+			break;
+
+		case LC_CB_STAGE_READ_SAFEMODE:
+			return "Reading safemode fw";
+			break;
+
+		case LC_CB_STAGE_RESET:
+			return "Rebooting remote";
+			break;
+
+		case LC_CB_STAGE_SET_TIME:
+			return "Setting time";
+			break;
+
+		case LC_CB_STAGE_HTTP:
+			return "Contacting website";
+			break;
+
+		case LC_CB_STAGE_LEARN:
+			return "Learning IR code";
+			break;
 	}
 
-	/*
-	 * Search for tag only in "IR learning files.
-	 */
-	uint8_t *tag_ptr;
-	err = GetTag("CHECKKEYS", in, size - data_len, tag_ptr);
-	bool found_learn_ir = (err != -1);
-
-	/*
-	 * Check tag search results for consistency, and deduce the file type
-	 */
-	if (found_get_zaps_only && !data_len && !found_firmware &&
-		!found_learn_ir) {
-		*type = LC_FILE_TYPE_CONNECTIVITY;
-		return 0;
-	}
-	if (!found_get_zaps_only && (data_len >= 16) && !found_firmware &&
-		!found_learn_ir) {
-		*type = LC_FILE_TYPE_CONFIGURATION;
-		return 0;
-	}
-	if (!found_get_zaps_only && !data_len && found_firmware &&
-		!found_learn_ir) {
-		*type = LC_FILE_TYPE_FIRMWARE;
-		return 0;
-	}
-	if (!found_get_zaps_only && !data_len && !found_firmware &&
-		found_learn_ir) {
-		*type = LC_FILE_TYPE_LEARN_IR;
-		return 0;
-	}
-
-	/*
-	 * Findings didn't match a single file type; indicate a problem
-	 */
-	return LC_ERROR;
+	return "(Unknown)";
 }
 
 /*
- * Common routine to read contents of file named *file_name into
- * byte buffer **out. Get size from file and return out[size] 
- * as read from file.
+ * Wrapper around the OperationFile class.
  */
-int read_file(char *file_name, uint8_t **out, uint32_t *size)
+int read_and_parse_file(char *filename, int *type)
 {
-	binaryinfile file;
-
-	if (file_name == NULL) {
-		debug("Empty file_name");
-		return LC_ERROR_OS_FILE;
-	}
-
-	if (file.open(file_name) != 0) {
-		debug("Failed to open %s", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-
-	*size = file.getlength();
-	*out = new uint8_t[*size];
-	file.read(*out, *size);
-
-	if (file.close() != 0) {
-		debug("Failed to close %s\n", file_name);
-		return LC_ERROR_OS_FILE;
-	}
-	return 0;
+	of = new OperationFile;
+	return of->ReadAndParseOpFile(filename, type);
 }
 
+void delete_opfile_obj()
+{
+	if (of)
+		delete of;
+}
 
 /*
  * PRIVATE HELPER FUNCTIONS
@@ -488,6 +471,10 @@ int _is_fw_update_supported(int direct)
 	 * Also, only allow architectures where we've figured out the
 	 * structure of the initial magic bytes.
 	 */
+	if (is_z_remote()) {
+		return 0;
+	}
+
 	if (ri.arch->firmware_base == 0
 	    || (!direct && ri.arch->firmware_update_base == 0)
 	    || (ri.arch->firmware_4847_offset == 0)) {
@@ -498,19 +485,19 @@ int _is_fw_update_supported(int direct)
 }
 
 int _write_fw_to_remote(uint8_t *in, uint32_t size, uint32_t addr,
-	lc_callback cb,	void *cb_arg)
+	lc_callback cb,	void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
 	if ((err = rmt->WriteFlash(addr, size, in,
-			ri.protocol, cb, cb_arg))) {
+			ri.protocol, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_WRITE;
 	}
 	return 0;
 }
 
 int _read_fw_from_remote(uint8_t *&out, uint32_t size, uint32_t addr,
-	lc_callback cb,	void *cb_arg)
+	lc_callback cb,	void *cb_arg, uint32_t cb_stage)
 {
 	out = new uint8_t[size];
 	int err = 0;
@@ -520,7 +507,7 @@ int _read_fw_from_remote(uint8_t *&out, uint32_t size, uint32_t addr,
 	}
 
 	if ((err = rmt->ReadFlash(addr, size, out,
-				ri.protocol, false, cb, cb_arg))) {
+				ri.protocol, false, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_READ;
 	}
 
@@ -587,22 +574,125 @@ int _fix_magic_bytes(uint8_t *in, uint32_t size)
 	return 0;
 }
 
+
 /*
- * Chunk the hex into words, tack on an '0x', and then throw
- * it through strtoul to get binary data (int) back.
+ * Support helpers - needs to be below private helpers above.
+ * ZERO IS YES!!
  */
-int _convert_to_binary(string hex, uint8_t *&ptr)
+int is_config_dump_supported()
 {
-	size_t size = hex.length();
-	for (size_t i = 0; i < size; i += 2) {
-		char tmp[6];
-		sprintf(tmp, "0x%s ", hex.substr(i, 2).c_str());
-		ptr[0] = (uint8_t)strtoul(tmp, NULL, 16);
-		ptr++;
-	}
 	return 0;
 }
 
+int is_config_update_supported()
+{
+	return 0;
+}
+
+int is_fw_dump_supported()
+{
+	return is_z_remote() ? LC_ERROR_UNSUPP: 0;
+}
+
+int is_fw_update_supported(int direct)
+{
+	/*
+	 * Currently firmware upgrades are only available certain remotes.
+	 */
+	if (_is_fw_update_supported(direct)) {
+		return 0;
+	} else {
+		return LC_ERROR_UNSUPP;
+	}
+}
+
+void _report_stages(lc_callback cb, void *cb_arg, int num,
+	const uint32_t *stages)
+{
+	cb(LC_CB_STAGE_NUM_STAGES, num, 0, 0, 0, cb_arg, stages);
+}
+
+static const uint32_t update_configuration_hid_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_INVALIDATE_FLASH,
+	LC_CB_STAGE_ERASE_FLASH,
+	LC_CB_STAGE_WRITE_CONFIG,
+	LC_CB_STAGE_VERIFY_CONFIG,
+};
+static const int update_configuration_hid_num_stages = 5;
+
+static const uint32_t update_configuration_zwave_mh_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_WRITE_CONFIG,
+	LC_CB_STAGE_FINALIZE_UPDATE,
+};
+static const int update_configuration_zwave_mh_num_stages = 3;
+
+static const uint32_t update_firmware_hid_stages[]={
+	LC_CB_STAGE_INITIALIZE_UPDATE,
+	LC_CB_STAGE_INVALIDATE_FLASH,
+	LC_CB_STAGE_ERASE_FLASH,
+	LC_CB_STAGE_WRITE_FIRMWARE,
+	LC_CB_STAGE_FINALIZE_UPDATE,
+};
+static const int update_firmware_hid_num_stages = 5;
+
+static const uint32_t update_firmware_hid_direct_stages[]={
+	LC_CB_STAGE_INVALIDATE_FLASH,
+	LC_CB_STAGE_ERASE_FLASH,
+	LC_CB_STAGE_WRITE_FIRMWARE,
+};
+static const int update_firmware_hid_direct_num_stages = 3;
+
+std::vector<uint32_t> _get_update_config_stages(int noreset)
+{
+	std::vector<uint32_t> stages;
+	uint32_t *base_stages;
+	int num_base_stages;
+
+	if (is_z_remote() || is_mh_remote()) {
+		base_stages = (uint32_t*)update_configuration_zwave_mh_stages;
+		num_base_stages = update_configuration_zwave_mh_num_stages;
+	} else {
+		base_stages = (uint32_t*)update_configuration_hid_stages;
+		num_base_stages = update_configuration_hid_num_stages;
+	}
+
+	for (int i = 0; i < num_base_stages; i++)
+		stages.push_back(base_stages[i]);
+
+	if (!noreset && !(is_z_remote() && !is_usbnet_remote()))
+		stages.push_back(LC_CB_STAGE_RESET);
+
+	stages.push_back(LC_CB_STAGE_SET_TIME);
+
+	return stages;
+}
+
+std::vector<uint32_t> _get_update_firmware_stages(int noreset, int direct)
+{
+	std::vector<uint32_t> stages;
+	uint32_t *base_stages;
+	int num_base_stages;
+
+	if (direct) {
+		base_stages = (uint32_t*)update_firmware_hid_direct_stages;
+		num_base_stages = update_firmware_hid_direct_num_stages;
+	} else {
+		base_stages = (uint32_t*)update_firmware_hid_stages;
+		num_base_stages = update_firmware_hid_num_stages;
+	}
+
+	for (int i = 0; i < num_base_stages; i++)
+		stages.push_back(base_stages[i]);
+
+	if (!noreset && !(is_z_remote() && !is_usbnet_remote()))
+		stages.push_back(LC_CB_STAGE_RESET);
+
+	stages.push_back(LC_CB_STAGE_SET_TIME);
+
+	return stages;
+}
 
 /*
  * GENERAL REMOTE STUFF
@@ -629,15 +719,11 @@ int init_concord()
 	if ((err = FindRemote(hid_info))) {
 		hid_info.pid = 0;
 
-#ifdef WIN32
 		if ((err = FindUsbLanRemote())) {
 			return LC_ERROR_CONNECT;
 		}
 
-		rmt = new CRemoteZ_TCP;
-#else
-		return LC_ERROR_CONNECT;
-#endif
+		rmt = new CRemoteZ_USBNET;
 	}
 
 	/*
@@ -654,10 +740,20 @@ int init_concord()
 		    hid_info.pid <= ZWAVE_HID_PID_MAX) {
 			// 890, Monstor, etc.
 			rmt = new CRemoteZ_HID;
+		} else if (is_mh_pid(hid_info.pid)) {
+			rmt = new CRemoteMH;
 		} else {
 			rmt = new CRemote;
+			/*
+			 * Send a "reset USB" command before sending any other
+			 * commands.  Seems to be required for the Harmony One;
+			 * otherwise, the first communication attempt fails.
+			 * The official software seems to do this for most
+			 * remotes.
+			 */
+			rmt->Reset(COMMAND_RESET_USB);
 		}
-	}	
+	}
 
 	return 0;
 }
@@ -665,13 +761,14 @@ int init_concord()
 int deinit_concord()
 {
 	ShutdownUSB();
-	delete rmt;
+	if (rmt)
+		delete rmt;
 	return 0;
 }
 
-int get_identity(lc_callback cb, void *cb_arg)
+int _get_identity(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
-	if ((rmt->GetIdentity(ri, hid_info, cb, cb_arg))) {
+	if ((rmt->GetIdentity(ri, hid_info, cb, cb_arg, cb_stage))) {
 		return LC_ERROR;
 	}
 
@@ -691,38 +788,125 @@ int get_identity(lc_callback cb, void *cb_arg)
 	return 0;
 }
 
-int reset_remote()
+int get_identity(lc_callback cb, void *cb_arg)
 {
-	int err = rmt->Reset(COMMAND_RESET_DEVICE);
-	return err;
+	_report_stages(cb, cb_arg, 1, NULL);
+	_get_identity(cb, cb_arg, LC_CB_STAGE_GET_IDENTITY);
 }
 
-int invalidate_flash()
+int reset_remote(lc_callback cb, void *cb_arg)
+{
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	if ((err = rmt->Reset(COMMAND_RESET_DEVICE)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	deinit_concord();
+	for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
+		sleep(WAIT_FOR_BOOT_SLEEP);
+		err = init_concord();
+		if (err == 0) {
+			err = _get_identity(NULL, NULL, 0);
+			/*
+			 * On remotes where firmware upgrades are not "direct",
+			 * the config gets erased as part of the firmware
+			 * update.  Thus, the config could be invalid if we are
+			 * resetting after a firmware upgrade, and we don't
+			 * want to treat this as an error.
+			 */
+			if ((err == 0) || (err == LC_ERROR_INVALID_CONFIG)) {
+				err = 0;
+				break;
+			}
+			deinit_concord();
+		}
+	}
+
+	if (err != 0)
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	return 0;
+}
+
+/* FIXME: This should almost certainly be rolled into prep_config() */
+int _invalidate_flash(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
-	if ((err = rmt->InvalidateFlash()))
+	if ((err = rmt->InvalidateFlash(cb, cb_arg, cb_stage)))
 		return LC_ERROR_INVALIDATE;
 
 	return 0;
 }
 
-int post_preconfig(uint8_t *data, uint32_t size)
+int invalidate_flash(lc_callback cb, void *cb_arg)
 {
-	return Post(data, size, "POSTOPTIONS", ri, true);
+	_invalidate_flash(cb, cb_arg, LC_CB_STAGE_INVALIDATE_FLASH);
 }
 
-int post_postfirmware(uint8_t *data, uint32_t size)
+int post_preconfig(lc_callback cb, void *cb_arg)
 {
-	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, false);
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri,
+			true))) {
+		return err;
+	}
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+	return 0;
 }
 
-int post_postconfig(uint8_t *data, uint32_t size)
+int post_postfirmware(lc_callback cb, void *cb_arg)
 {
-	return Post(data, size, "COMPLETEPOSTOPTIONS", ri, true);
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
+			false)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+	return 0;
 }
 
-int post_connect_test_success(uint8_t *data, uint32_t size)
+int post_postconfig(lc_callback cb, void *cb_arg)
+{
+	int err;
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "COMPLETEPOSTOPTIONS", ri,
+		        true, false, is_z_remote() ? true : false, NULL, NULL)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	return 0;
+}
+
+int post_connect_test_success(lc_callback cb, void *cb_arg)
 {
 	/*
 	 * If we arrived, we can talk to the remote - so if it's
@@ -734,12 +918,25 @@ int post_connect_test_success(uint8_t *data, uint32_t size)
 	 * one cookie value, so we need to tell Post() to add it in.
 	 * Note that it ONLY does this for the connectivity test...
 	 */
+	int err;
 	bool add_cookiekeyval = false;
 	if (ri.architecture == 9) {
 		add_cookiekeyval = true;
 	}
 
-	return Post(data, size, "POSTOPTIONS", ri, true, add_cookiekeyval);
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
+			add_cookiekeyval)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	return 0;
 }
 
 int get_time()
@@ -751,10 +948,14 @@ int get_time()
 	return 0;
 }
 
-int set_time()
+int _set_time(lc_callback cb, void *cb_arg)
 {
 	const time_t t = time(NULL);
 	struct tm *lt = localtime(&t);
+
+	if (cb)
+		cb(LC_CB_STAGE_SET_TIME, 0, 1, 2, LC_CB_COUNTER_TYPE_STEPS,
+			cb_arg, NULL);
 
 	rtime.second = lt->tm_sec;
 	rtime.minute = lt->tm_min;
@@ -770,8 +971,17 @@ int set_time()
 	if (err != 0) {
 		return err;
 	}
+	if (cb)
+		cb(LC_CB_STAGE_SET_TIME, 1, 2, 2, LC_CB_COUNTER_TYPE_STEPS,
+			cb_arg, NULL);
 
 	return 0;
+}
+
+int set_time(lc_callback cb, void *cb_arg)
+{
+	_report_stages(cb, cb_arg, 1, NULL);
+	return _set_time(cb, cb_arg);
 }
 
 
@@ -792,19 +1002,29 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
 		cb_arg = (void *)true;
 	}
 
+	// For zwave-hid remotes, need to read the config once to get the size
+	// For usbnet we do this in GetIdentity, but for hid it takes too long
+	if (is_z_remote() && !is_usbnet_remote()) {
+		if (err = ((CRemoteZ_HID*)rmt)->ReadRegion(REGION_USER_CONFIG,
+					  ri.config_bytes_used, NULL, cb,
+					  cb_arg, LC_CB_STAGE_READ_CONFIG)) {
+			return err;
+		}
+	}
+
 	*size = ri.config_bytes_used;
 	*out = new uint8_t[*size];
 
 	if ((err = rmt->ReadFlash(ri.arch->config_base, *size,
-			*out, ri.protocol, false, cb, cb_arg))) {
+			*out, ri.protocol, false, cb, cb_arg,
+			LC_CB_STAGE_READ_CONFIG))) {
 		return LC_ERROR_READ;
 	}
 
 	return 0;
 }
 
-int write_config_to_remote(uint8_t *in, uint32_t size,
-	lc_callback cb, void *cb_arg)
+int _write_config_to_remote(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
@@ -812,12 +1032,24 @@ int write_config_to_remote(uint8_t *in, uint32_t size,
 		cb_arg = (void *)true;
 	}
 
-	if ((err = rmt->WriteFlash(ri.arch->config_base, size, in,
-			ri.protocol, cb, cb_arg))) {
-		return LC_ERROR_WRITE;
+	if (is_z_remote() || is_mh_remote()) {
+		if ((err = rmt->UpdateConfig(of->GetDataSize(), of->GetData(),
+				cb, cb_arg, cb_stage, of->GetXmlSize(),
+				of->GetXml())))
+			return LC_ERROR_WRITE;
+	} else {
+		if ((err = rmt->WriteFlash(ri.arch->config_base,
+				of->GetDataSize(), of->GetData(), ri.protocol,
+				cb, cb_arg, cb_stage)))
+			return LC_ERROR_WRITE;
 	}
 
 	return 0;
+}
+
+int write_config_to_remote(lc_callback cb, void *cb_arg)
+{
+	return _write_config_to_remote(cb, cb_arg, LC_CB_STAGE_WRITE_CONFIG);
 }
 
 int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
@@ -845,7 +1077,7 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 		char *ch = new char[strlen(config_header) + 200];
 		const int chlen = sprintf(ch,
 			config_header, ri.protocol,
-			ri.skin ,ri.flash_mfg,
+			ri.skin, ri.flash_mfg,
 			ri.flash_id, ri.hw_ver_major,
 			ri.hw_ver_minor, ri.fw_type,
 			ri.protocol, ri.skin,
@@ -867,31 +1099,40 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
 	return 0;
 }
 
-int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
-	void *cb_arg)
+int _verify_remote_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
-	if ((err = rmt->ReadFlash(ri.arch->config_base, size, in,
-			ri.protocol, true, cb, cb_arg))) {
+	if ((err = rmt->ReadFlash(ri.arch->config_base, of->GetDataSize(),
+			of->GetData(), ri.protocol, true, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_VERIFY;
 	}
 
 	return 0;
 }
 
-int prep_config()
+int verify_remote_config(lc_callback cb, void *cb_arg)
+{
+	_verify_remote_config(cb, cb_arg, LC_CB_STAGE_VERIFY_CONFIG);
+}
+
+int _prep_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
-	if ((err = rmt->PrepConfig(ri))) {
+	if ((err = rmt->PrepConfig(ri, cb, cb_arg, cb_stage))) {
 		return LC_ERROR;
 	}
 
 	return 0;
 }
 
-int finish_config()
+int prep_config(lc_callback cb, void *cb_arg)
+{
+	return _prep_config(cb, cb_arg, LC_CB_STAGE_INITIALIZE_UPDATE);
+}
+
+int _finish_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
@@ -902,69 +1143,116 @@ int finish_config()
 	return 0;
 }
 
-int erase_config(uint32_t size, lc_callback cb, void *cb_arg)
+int finish_config(lc_callback cb, void *cb_arg)
+{
+	return _finish_config(cb, cb_arg, LC_CB_STAGE_FINALIZE_UPDATE);
+}
+
+int _erase_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 
-	if ((err = rmt->EraseFlash(ri.arch->config_base, size, ri, cb,
-			cb_arg))) {
+	if ((err = rmt->EraseFlash(ri.arch->config_base, of->GetDataSize(),
+			ri, cb, cb_arg, cb_stage))) {
 		return LC_ERROR_ERASE;
 	}
 
 	return 0;
 }
 
-int find_config_binary(uint8_t *config, uint32_t config_size,
-	uint8_t **binary_ptr, uint32_t *binary_size)
+int erase_config(lc_callback cb, void *cb_arg)
+{
+	return _erase_config(cb, cb_arg, LC_CB_STAGE_ERASE_FLASH);
+}
+
+int _update_configuration_zwave(lc_callback cb, void *cb_arg)
 {
 	int err;
 
-        err = GetTag("/INFORMATION", config, config_size, *binary_ptr);
-	if (err == -1)
-		return LC_ERROR;
-
-	*binary_ptr += 2;
-	*binary_size = config_size - (*binary_ptr - config);
-
-        // Limit tag searches to XML portion
-        config_size -= *binary_size;
-
-	string binary_tag_size_s;
-	uint8_t *n = 0;
-	err = GetTag("BINARYDATASIZE", config, config_size, n,
-		&binary_tag_size_s);
-	if (err == -1)
-		return LC_ERROR;
-        uint32_t binary_tag_size = (uint32_t)atoi(binary_tag_size_s.c_str());
-
-	debug("actual data size %i", *binary_size);
-	debug("reported data size %i", binary_tag_size);
-
-	if (*binary_size != binary_tag_size) {
-		debug("Config data size mismatch");
-		return LC_ERROR;
+	if ((err = _write_config_to_remote(cb, cb_arg, 0))) {
+		return err;
 	}
 
-	string s;
-	err = GetTag("CHECKSUM", config, config_size, n, &s);
+	return 0;
+}
+
+int _update_configuration_mh(lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	if ((err = _write_config_to_remote(cb, cb_arg, 0))) {
+		return err;
+	}
+
+	return 0;
+}
+
+int _update_configuration_hid(lc_callback cb, void *cb_arg) {
+	int err;
+	int cb_count = 0;
+
+	if ((err = prep_config(cb, cb_arg))) {
+		return err;
+	}
+
+	/*
+	 * We must invalidate flash before we erase and write so that
+	 * nothing will attempt to reference it while we're working.
+	 */
+	if ((err = invalidate_flash(cb, cb_arg))) {
+		return err;
+	}
+
+	/*
+	 * Flash can be changed to 0, but not back to 1, so you must
+	 * erase the flash (to 1) in order to write the flash.
+	 */
+	if ((err = erase_config(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = write_config_to_remote(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = verify_remote_config(cb, cb_arg))) {
+		return err;
+	}
+
+	if ((err = finish_config(cb, cb_arg))) {
+		return err;
+	}
+
+	return 0;
+}
+
+int update_configuration(lc_callback cb, void *cb_arg, int noreset)
+{
+	int err;
+
+	std::vector<uint32_t> stages = _get_update_config_stages(noreset);
+	_report_stages(cb, cb_arg, stages.size(), &stages[0]);
+
+	if (is_z_remote()) {
+		err = _update_configuration_zwave(cb, cb_arg);
+	} else if (is_mh_remote()) {
+		err = _update_configuration_mh(cb, cb_arg);
+	} else {
+		err = _update_configuration_hid(cb, cb_arg);
+	}
+
 	if (err != 0)
 		return err;
-	const uint8_t checksum = atoi(s.c_str());
 
-	// Calculate checksum
-	uint32_t u = *binary_size;
-	uint8_t calc_checksum = 0x69;
-	uint8_t *pc = *binary_ptr;
-	while (u--)
-		calc_checksum ^= *pc++;
+	// If reset is enabled (!noreset), we do reset, except that
+	// zwave-hid (is_z_remote() && !is_usbnet_remote()) doesn't need it.
+	// thus...
+	if (!noreset && !(is_z_remote() && !is_usbnet_remote()))
+		if ((err = reset_remote(cb, cb_arg)))
+			return err;
 
-	debug("reported checksum %i %02x", checksum, checksum);
-	debug("actual checksum %i %02x", calc_checksum, calc_checksum);
-
-	if (calc_checksum != checksum) {
-		debug("Config checksum mismatch");
-		return LC_ERROR;
-	}
+	if ((err = _set_time(cb, cb_arg)))
+		return err;
 
 	return 0;
 }
@@ -991,7 +1279,7 @@ int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 {
 	*size = FIRMWARE_MAX_SIZE;
 	return _read_fw_from_remote(*out, *size, ri.arch->flash_base, cb,
-		cb_arg);
+		cb_arg, LC_CB_STAGE_READ_SAFEMODE);
 }
 
 int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
@@ -1016,18 +1304,6 @@ int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
  * FIRMWARE RELATED
  */
 
-int is_fw_update_supported(int direct)
-{
-	/*
-	 * Currently firmware upgrades are only available certain remotes.
-	 */
-	if (_is_fw_update_supported(direct)) {
-		return 0;
-	} else {
-		return LC_ERROR_UNSUPP;
-	}
-}
-
 int is_config_safe_after_fw()
 {
 	/*
@@ -1042,23 +1318,43 @@ int is_config_safe_after_fw()
 	}
 }
 
-int prep_firmware()
+int prep_firmware(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->PrepFirmware(ri))) {
+	if ((err = rmt->PrepFirmware(ri, cb, cb_arg,
+			LC_CB_STAGE_INITIALIZE_UPDATE))) {
 		return LC_ERROR;
 	}
 
 	return 0;
 }
 
-int finish_firmware()
+int finish_firmware(lc_callback cb, void *cb_arg)
 {
 	int err = 0;
 
-	if ((err = rmt->FinishFirmware(ri))) {
+	if ((err = rmt->FinishFirmware(ri, cb, cb_arg,
+			LC_CB_STAGE_FINALIZE_UPDATE))) {
 		return LC_ERROR;
+	}
+
+	return 0;
+}
+
+int _erase_firmware(int direct, lc_callback cb, void *cb_arg, uint32_t cb_stage)
+{
+	int err = 0;
+
+	uint32_t addr = ri.arch->firmware_update_base;
+	if (direct) {
+		debug("Writing direct");
+		addr = ri.arch->firmware_base;
+	}
+
+	if ((err = rmt->EraseFlash(addr, FIRMWARE_MAX_SIZE, ri, cb, cb_arg,
+			cb_stage))) {
+		return LC_ERROR_ERASE;
 	}
 
 	return 0;
@@ -1066,23 +1362,7 @@ int finish_firmware()
 
 int erase_firmware(int direct, lc_callback cb, void *cb_arg)
 {
-	int err = 0;
-
-	if (!_is_fw_update_supported(direct)) {
-		return LC_ERROR_UNSUPP;
-	}
-
-	uint32_t addr = ri.arch->firmware_update_base;
-	if (direct) {
-		debug("Writing direct");
-		addr = ri.arch->firmware_base;
-	}
-
-	if ((err = rmt->EraseFlash(addr, FIRMWARE_MAX_SIZE, ri, cb, cb_arg))) {
-		return LC_ERROR_ERASE;
-	}
-
-	return 0;
+	_erase_firmware(direct, cb, cb_arg, LC_CB_STAGE_ERASE_FLASH);
 }
 
 int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
@@ -1090,20 +1370,16 @@ int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 {
 	*size = FIRMWARE_MAX_SIZE;
 	return _read_fw_from_remote(*out, *size, ri.arch->firmware_base, cb,
-		cb_arg);
+		cb_arg, LC_CB_STAGE_READ_FIRMWARE);
 }
 
-int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
-	lc_callback cb,	void *cb_arg)
+int _write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg,
+	uint32_t cb_stage)
 {
 	uint32_t addr = ri.arch->firmware_update_base;
 	int err = 0;
 
-	if (!_is_fw_update_supported(direct)) {
-		return LC_ERROR_UNSUPP;
-	}
-
-	if (size > FIRMWARE_MAX_SIZE) {
+	if (of->GetDataSize() > FIRMWARE_MAX_SIZE) {
 		return LC_ERROR;
 	}
 
@@ -1112,11 +1388,18 @@ int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
 		addr = ri.arch->firmware_base;
 	}
 
-	if ((err = _fix_magic_bytes(in, size))) {
+	if ((err = _fix_magic_bytes(of->GetData(), of->GetDataSize()))) {
 		return LC_ERROR_READ;
 	}
 
-	return _write_fw_to_remote(in, size, addr, cb, cb_arg);
+	return _write_fw_to_remote(of->GetData(), of->GetDataSize(), addr, cb,
+		cb_arg, cb_stage);
+}
+
+int write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg)
+{
+	return _write_firmware_to_remote(direct, cb, cb_arg,
+		LC_CB_STAGE_WRITE_FIRMWARE);
 }
 
 int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
@@ -1171,30 +1454,42 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 	return 0;
 }
 
-int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
-	uint32_t *size)
+int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct)
 {
-	uint32_t o_size = FIRMWARE_MAX_SIZE;
-	*out = new uint8_t[o_size];
-	uint8_t *o = *out;
+	int err;
 
-	uint8_t *x = xml;
-	uint32_t x_size = xml_size;
-
-	string hex;
-	while (GetTag("DATA", x, x_size, x, &hex) == 0) {
-		uint32_t hex_size = hex.length() / 2;
-		if (hex_size > o_size) {
-			return LC_ERROR;
-		}
-
-		_convert_to_binary(hex, o);
-
-		x_size = xml_size - (x - xml);
-		o_size -= hex_size;
+	if (!_is_fw_update_supported(direct)) {
+		return LC_ERROR_UNSUPP;
 	}
 
-	*size = o - *out;
+	vector<uint32_t> stages = _get_update_firmware_stages(noreset, direct);
+	_report_stages(cb, cb_arg, stages.size(), &stages[0]);
+
+	if (!direct) {
+		if ((err = prep_firmware(cb, cb_arg)))
+			return err;
+	}
+
+	if ((err = invalidate_flash(cb, cb_arg)))
+		return err;
+
+	if ((err = erase_firmware(direct, cb, cb_arg)))
+		return err;
+
+	if ((err = write_firmware_to_remote(direct, cb, cb_arg)))
+		return err;
+
+	if (!direct) {
+		if ((err = finish_firmware(cb, cb_arg)))
+			return err;
+	}
+
+	if (!noreset)
+		if ((err = reset_remote(cb, cb_arg)))
+			return err;
+
+	if ((err = _set_time(cb, cb_arg)))
+		return err;
 
 	return 0;
 }
@@ -1215,21 +1510,21 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
 /*
  * locate the INPUTPARMS section in *data:
  */
-int _init_key_scan(uint8_t *data, uint32_t size, 
+int _init_key_scan(uint8_t *data, uint32_t size,
 	uint8_t **inputparams_start, uint8_t **inputparams_end)
 {
 	int err;
-		
+
 	/* locating start tag "<INPUTPARMS>" */
 	err = GetTag("INPUTPARMS", data, size, *inputparams_start);
 	if (err == 0) {
 		/* locating end tag "</INPUTPARMS>" */
-		err = GetTag("/INPUTPARMS", *inputparams_start, 
+		err = GetTag("/INPUTPARMS", *inputparams_start,
 			size - (*inputparams_start - data), *inputparams_end);
 	}
 	return err;
 }
-	
+
 int _next_key_name(uint8_t **start, uint8_t *inputparams_end, string *keyname)
 {
 	int err;
@@ -1257,37 +1552,36 @@ int _next_key_name(uint8_t **start, uint8_t *inputparams_end, string *keyname)
 }
 
 
-int get_key_names(uint8_t *data, uint32_t size,
-	char ***key_names, uint32_t *key_names_length)
+int get_key_names(char ***key_names, uint32_t *key_names_length)
 {
 	using namespace std;
-	uint8_t *cursor = data;
+	uint8_t *cursor = of->GetXml();
 	uint8_t *inputparams_end;
 	uint32_t key_index = 0;
 	list<string> key_list;
 	string key_name;
-	
-	if ((data == NULL) || (size == 0) || (key_names == NULL)
-		     	|| (key_names_length == NULL)) {
+
+	if ((key_names == NULL) || (key_names_length == NULL)) {
 		return LC_ERROR;
 	}
 	/* setup data scanning, locating start and end of keynames section: */
-	if (_init_key_scan(data, size, &cursor, &inputparams_end) != 0) {
+	if (_init_key_scan(of->GetXml(), of->GetXmlSize(), &cursor,
+		&inputparams_end) != 0) {
 		return LC_ERROR;
 	}
-	
+
 	/* scan for key names and append found names to list: */
 	while (_next_key_name(&cursor, inputparams_end, &key_name) == 0) {
 		key_list.push_back(key_name);
 	}
-	
+
 	if (key_list.size() == 0) {
 		return LC_ERROR;
 	}
-	
+
 	*key_names_length = key_list.size();
 	*key_names = new char*[*key_names_length];
-			
+
 	/* copy list of found names to allocated buffer: */
 	for (
 		list<string>::const_iterator cursor = key_list.begin();
@@ -1332,10 +1626,10 @@ int learn_from_remote(uint32_t *carrier_clock,
 		/* nothing to write to: */
 		return LC_ERROR;
 	}
-	
+
 	/* try to learn code via Harmony from original remote: */
 	return rmt->LearnIR(carrier_clock, ir_signal, ir_signal_length, cb,
-		cb_arg);
+		cb_arg, LC_CB_STAGE_LEARN);
 }
 
 /*
@@ -1357,14 +1651,14 @@ int encode_for_posting(uint32_t carrier_clock,
 {
 	int err = 0;
 	string encoded;
-	if ((ir_signal == NULL) || (ir_signal_length == 0)
-			|| (encoded_signal == NULL)) {
+	if (ir_signal == NULL || ir_signal_length == 0
+			|| encoded_signal == NULL) {
 		return LC_ERROR;	/* cannot do anything without */
 	}
-	err = encode_ir_signal(carrier_clock, 
+	err = encode_ir_signal(carrier_clock,
 			ir_signal, ir_signal_length, &encoded);
 	if (err == 0) {
-		debug("Learned code: %s",encoded.c_str());
+		debug("Learned code: %s", encoded.c_str());
 		*encoded_signal = strdup(encoded.c_str());
 	}
 	return err;
@@ -1383,22 +1677,36 @@ void delete_encoded_signal(char *encoded_signal)
  * information from XML data[size] to Logitech.
  * Returns 0 for success, error code for failure.
  */
-int post_new_code(uint8_t *data, uint32_t size, 
-	char *key_name, char *encoded_signal)
+int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
+	void *cb_arg)
 {
-	string learn_key;
-	string learn_seq;
+	int err;
+	string learn_key, learn_seq;
 
-	if ((key_name == NULL) || (encoded_signal == NULL)
-			|| (data == NULL) || (size == 0)) {
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	if (key_name == NULL || encoded_signal == NULL) {
 		return LC_ERROR_POST;	/* cannot do anything without */
 	}
 
 	learn_key = key_name;
 	learn_seq = encoded_signal;
 
-	return Post(data, size, "POSTOPTIONS", ri, true, false,
-			&learn_seq, &learn_key);
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	if ((err = Post(of->GetXml(), of->GetXmlSize(), "POSTOPTIONS", ri, true,
+			false, false, &learn_seq, &learn_key)))
+		return err;
+
+	if (cb)
+		cb(LC_CB_STAGE_HTTP, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
+
+	return 0;
 }
 
 /*

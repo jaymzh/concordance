@@ -60,10 +60,38 @@ typedef unsigned __int64 uint64_t;
 /*
  * Filetypes, used by identity_file()
  */
-#define LC_FILE_TYPE_CONNECTIVITY  0
-#define LC_FILE_TYPE_CONFIGURATION 1
-#define LC_FILE_TYPE_FIRMWARE      2
-#define LC_FILE_TYPE_LEARN_IR      3
+#define LC_FILE_TYPE_CONNECTIVITY 1
+#define LC_FILE_TYPE_CONFIGURATION 2
+#define LC_FILE_TYPE_FIRMWARE 3
+#define LC_FILE_TYPE_LEARN_IR 4
+/*
+ * Callback counter types
+ */
+#define LC_CB_COUNTER_TYPE_STEPS 5
+#define LC_CB_COUNTER_TYPE_BYTES 6
+/*
+ * Callback stages
+ */
+#define LC_CB_STAGE_NUM_STAGES 0xFF
+#define LC_CB_STAGE_GET_IDENTITY 7
+/* for config updates... */
+#define LC_CB_STAGE_INITIALIZE_UPDATE 8
+#define LC_CB_STAGE_INVALIDATE_FLASH 9
+#define LC_CB_STAGE_ERASE_FLASH 10
+#define LC_CB_STAGE_WRITE_CONFIG 11
+#define LC_CB_STAGE_VERIFY_CONFIG 12
+#define LC_CB_STAGE_FINALIZE_UPDATE 13
+#define LC_CB_STAGE_READ_CONFIG 14
+/* firmware updates share most of the above, but need */
+#define LC_CB_STAGE_WRITE_FIRMWARE 15
+#define LC_CB_STAGE_READ_FIRMWARE 16
+#define LC_CB_STAGE_READ_SAFEMODE 17
+/* other... */
+#define LC_CB_STAGE_RESET 18
+#define LC_CB_STAGE_SET_TIME 19
+#define LC_CB_STAGE_HTTP 20
+#define LC_CB_STAGE_LEARN 21
+
 
 /*
  * Actual C clients are not fully supported yet, but that's the goal...
@@ -78,14 +106,20 @@ extern "C" {
  * There is currently only one kind of callback, and it's for status
  * information. It should be a void function and takes the following
  * arguments:
+ *   uint32_t stage_id - the id of the stage
  *   uint32_t count - the amount of times this cb has been called in a
  *                    given call of a given functioin
  *   uint32_t curr  - current status (usually bytes read/written)
  *   uint32_t total - total goal status (usually bytes expected to read/write)
+ *   uint32_t counter_type - the type of counter (bytes, steps, etc.)
  *   void *arg      - opaque object you can pass to functions to have them
  *                    pass back to your callback.
+ *   const uint32_t* stages - a pointer to the stages that will be
+ *                            performed for this operation.  Only used when
+ *                            LC_CB_STAGE_NUM_STAGES is the callback stage.
  */
-typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, void*);
+typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
+	void*, const uint32_t*);
 
 /*
  * REMOTE INFORMATION ACCESSORS
@@ -101,6 +135,7 @@ int get_fw_ver_min();
 int get_fw_type();
 int get_hw_ver_maj();
 int get_hw_ver_min();
+int get_hw_ver_mic();
 int get_flash_size();
 int get_flash_mfg();
 int get_flash_id();
@@ -118,6 +153,22 @@ int get_usb_bcd();
 char *get_serial(int p);
 int get_config_bytes_used();
 int get_config_bytes_total();
+
+/*
+ * Support helpers
+ */
+/*
+ * We don't yet support all things on all remotes, so these try to help you
+ * figure out if something is supported.
+ * NOTE WELL: If they are a remote we don't know about, the results are
+ * meaningless.
+ *
+ * This will return 0 for yes and LC_ERROR_UNSUPP otherwise.
+ */
+int is_config_dump_supported();
+int is_config_update_supported();
+int is_fw_dump_supported();
+int is_fw_update_supported(int direct);
 
 /*
  * TIME ACCESSORS
@@ -145,6 +196,7 @@ const char *get_time_timezone();
  * you received, get back a string.
  */
 const char *lc_strerror(int err);
+const char *lc_cb_stage_str(int stage);
 /*
  * Many functions require you to pass in a ptr which then gets pointed
  * to data that we allocate. You should then call this to clean that
@@ -153,14 +205,14 @@ const char *lc_strerror(int err);
 void delete_blob(uint8_t *ptr);
 
 /*
- * Attempt to identify the action to perform to process the given file,
- * given its content.
- *
- * The function will indicate whether the file could be identified using
- * the return value. If the file can be identified, the type of the file
- * will be written to *mode.
+ * Read an operations file from the website, parse it, and return a mode
+ * of operations.
  */
-int identify_file(uint8_t *in, uint32_t size, int *type);
+int read_and_parse_file(char *filename, int *type);
+/*
+ * Free the memory used by the file as allocated in read_and_parse_file.
+*/
+void delete_opfile_obj();
 
 /*
  * GENERAL REMOTE INTERACTIONS
@@ -185,7 +237,7 @@ int get_identity(lc_callback cb, void *cb_arg);
 /*
  * Reboot the remote.
  */
-int reset_remote();
+int reset_remote(lc_callback cb, void *cb_arg);
 /*
  * Get the time from the remote. Use the time accessors above to access
  * the data.
@@ -195,30 +247,30 @@ int get_time();
  * Set the time on the remote to the system time. To find out what time was
  * used, use the time accessors above.
  */
-int set_time();
+int set_time(lc_callback cb, void *cb_arg);
 /*
  * POST to the members.harmonyremote.com website that the connection test was
  * successful. A Connectivity.EZHex file must be passed in so that we
  * can get the URL, cookie information, etc.
  */
-int post_connect_test_success(uint8_t *data, uint32_t size);
+int post_connect_test_success(lc_callback cb, void *cb_arg);
 /*
  * Prior to updating the config, if you want to interact with the website
  * you have to send it some initial data. This does that. The data passed
  * in here is a pointer to the config data config block (with XML - this
  * should NOT be the pointer result from find_binary_start().
  */
-int post_preconfig(uint8_t *data, uint32_t size);
+int post_preconfig(lc_callback cb, void *cb_arg);
 /*
  * After writing the config to the remote, this should be called to tell
  * the members.harmonyremote.com website that it was successful.
  */
-int post_postconfig(uint8_t *data, uint32_t size);
+int post_postconfig(lc_callback cb, void *cb_arg);
 /*
  * After writing a new firmware to the remote, this should be called to tell
  * the members.harmonyremote.com website that it was successful.
  */
-int post_postfirmware(uint8_t *data, uint32_t size);
+int post_postfirmware(lc_callback cb, void *cb_arg);
 /*
  * This sends the remote a command to tell it we're about to start
  * writing to it's flash area and that it shouldn't read from it.
@@ -228,12 +280,23 @@ int post_postfirmware(uint8_t *data, uint32_t size);
  * If something goes wrong, or you change your mind after invalidating
  * flash, you should reboot the device.
  */
-int invalidate_flash();
+int invalidate_flash(lc_callback cb, void *cb_arg);
 
 /*
  * CONFIGURATION INTERACTIONS
  */
- 
+
+/*
+ * NOTE: This is the only function you should need to update a remote's config.
+ * This wraps calls to all other calls and handles all remote-specific logic for
+ * you.
+ *
+ * The other functions are provided mostly for backwards compatibility, and for
+ * backing up remote configs. If you don't need to do that, you can skip down to
+ * the next section.
+ */
+int update_configuration(lc_callback cb, void *cb_arg, int noreset);
+
 /*
  * Read the config from the remote and store it into the unit8_t array
  * *out. The callback is for status information. See above for CB info.
@@ -248,19 +311,9 @@ int read_config_from_remote(uint8_t **out, uint32_t *size,
  * Given a config block in the byte array *in that is size big, write
  * it to the remote. This should be *just* the binary blob (see
  * find_binary_start()). CB info above.
- */
-int write_config_to_remote(uint8_t *in, uint32_t size,
-	lc_callback cb, void *cb_arg);
-/*
- * Read the in a file. If it's a standard XML file from the
- * membersharmonyremote.com website, the XML will be included. If it's just
- * the binary blob, that's fine too. size will be returned.
  *
- * NOTE: The pointer *out should not point to anything useful. We will
- * allocate a char array and point your pointer at it. Use delete_blob to
- * reclaim this memory.
  */
-int read_file(char *file_name, uint8_t **out, uint32_t *size);
+int write_config_to_remote(lc_callback cb, void *cb_arg);
 /*
  * Given a binary-only config blob *in, write the config to a file. Unless
  * binary is true, the XML will be constructed and written to the file
@@ -272,8 +325,7 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
  * After doing a write_config_to_remote(), this should be called to verify
  * that config. The data will be compared to what's in *in.
  */
-int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
-	void *cb_arg);
+int verify_remote_config(lc_callback cb, void *cb_arg);
 /*
  * Preps the remote for a config upgrade.
  *
@@ -283,29 +335,17 @@ int verify_remote_config(uint8_t *in, uint32_t size, lc_callback cb,
  * original Windows software, and future remotes may require these functions
  * to be executed to operate correctly.
  */
-int prep_config();
+int prep_config(lc_callback cb, void *cb_arg);
 /*
  * Tells the remote the config upgrade was successful and that it should
  * use the new config upon next reboot.
  */
-int finish_config();
+int finish_config(lc_callback cb, void *cb_arg);
 /*
  * Flash can be changed to 0, but not back to 1, so you must erase the
  * flash (to 1) in order to write the flash.
  */
-int erase_config(uint32_t size, lc_callback cb, void *cb_arg);
-/*
- * Determine the location of binary data within an XML configuration file.
- * (aka skip past the XML portion).
- *
- * config and config size indicate the location and size of the configuration
- * data (for example, what one you might get from read_config_from_remote()).
- *
- * *binary_ptr and *binary_size will set to the location and size of the
- * binary portion of the configuration data.
- */
-int find_config_binary(uint8_t *config, uint32_t config_size,
-	uint8_t **binary_ptr, uint32_t *binary_size);
+int erase_config(lc_callback cb, void *cb_arg);
 
 /*
  * SAFEMODE FIRMWARE INTERACTIONS
@@ -333,18 +373,20 @@ int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
  * Write aforementioned safemode data to a file. Note that this is always
  * written as pure binary.
  */
-int write_safemode_to_file(uint8_t *in, uint32_t size,char *file_name);
+int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name);
 
 /*
  * FIRMWARE INTERACTIONS
  */
+
 /*
- * We don't yet support firmware upgrades on all remotes. This function
- * will tell you if it's supported on the remote we found. You must pass
- * in whether you intend to do direct or not (direct isn't always supported
- * either). This will return 0 for yes and LC_ERROR_UNSUPP otherwise.
+ * NOTE: This is the only function you should need.
+ * This wraps calls to all other calls and handles all remote-specific logic for
+ * you. The other functions are provided mostly for backwards compatibility.
+ * You can skip down to the next section.
  */
-int is_fw_update_supported(int direct);
+int update_firmware(lc_callback cb, void *cb_arg, int noreset, int direct);
+
 /*
  * This function tells you if the config will be wiped out by a live
  * firmware upgrade (some remotes use the config area in memory as a
@@ -355,13 +397,13 @@ int is_config_safe_after_fw();
 /*
  * Preps the remote for a firmware upgrade
  */
-int prep_firmware();
+int prep_firmware(lc_callback cb, void *cb_arg);
 /*
  * Tells the remote the firmware upgrade was successful and that it should
  * copy the firmware from the "staging" area to the live area on next reboot.
  * Don't forget to reboot.
  */
-int finish_firmware();
+int finish_firmware(lc_callback cb, void *cb_arg);
 /*
  * Make the firmware area of the flash all 1's so you can write
  * to it.
@@ -379,8 +421,7 @@ int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 /*
  * Same as write_config_to_remote(), but with the firmware instead.
  */
-int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
-	lc_callback cb,	void *cb_arg);
+int write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg);
 /*
  * Same as write_config_to_file(), but with firmware instead. Note
  * that unless binary is specified, the firmware is broken into chunks
@@ -389,13 +430,6 @@ int write_firmware_to_remote(uint8_t *in, uint32_t size, int direct,
  */
 int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 	int binary);
-/*
- * Extract the binary firmware from a file read in with
- * read_file(). Obviously this function isn't necessary in
- * binary mode.
- */
-int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
-	uint32_t *size);
 
 /*
  * IR-stuff
@@ -431,8 +465,7 @@ int extract_firmware_binary(uint8_t *xml, uint32_t xml_size, uint8_t **out,
  * Memory allocated for the strings must be freed by the caller
  * via delete_key_names() when not needed any longer.
  */
-int get_key_names(uint8_t *data, uint32_t size,
-	char ***key_names, uint32_t *key_names_length);
+int get_key_names(char ***key_names, uint32_t *key_names_length);
 
 void delete_key_names(char **key_names, uint32_t key_names_length);
 
@@ -476,8 +509,8 @@ void delete_encoded_signal(char *encoded_signal);
  *
  * Returns 0 for success, error code for failure.
  */
-int post_new_code(uint8_t *data, uint32_t size, 
-	char *key_name, char *encoded_signal);
+int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
+	void *cb_arg);
 
 #ifdef __cplusplus
 }

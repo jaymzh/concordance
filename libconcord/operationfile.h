@@ -20,16 +20,30 @@
  * (C) Copyright Kevin Timmerman 2007
  */
 
-#ifndef USBLAN_H
-#define USBLAN_H
+#ifndef OPERATIONFILE_H
+#define OPERATIONFILE_H
 
 #include "lc_internal.h"
 
-int InitializeUsbLan(void);
-int ShutdownUsbLan(void);
-int FindUsbLanRemote(void);
-int UsbLan_Write(unsigned int len, uint8_t *data);
-int UsbLan_Read(unsigned int &len, uint8_t *data);
-int GetXMLUserRFSetting(char **data);
+class OperationFile {
+private:
+	uint8_t *data;
+	uint32_t data_size;
+	bool data_alloc;
+	uint8_t *xml;
+	uint32_t xml_size;
+	int ReadPlainFile(char *file_name);
+	int ReadZipFile(char *file_name);
+	int _ExtractFirmwareBinary();
 
-#endif
+public:
+	OperationFile();
+	~OperationFile();
+	uint32_t GetDataSize() {return data_size;}
+	uint32_t GetXmlSize() {return xml_size;}
+	uint8_t* GetData() {return data;}
+	uint8_t* GetXml() {return xml;}
+	int ReadAndParseOpFile(char *file_name, int *type);
+};
+
+#endif /* OPERATIONFILE_H */
