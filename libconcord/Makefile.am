@@ -3,21 +3,43 @@ ACLOCAL_AMFLAGS= -I m4
 lib_LTLIBRARIES = libconcord.la
 libconcord_la_SOURCES = remote.cpp remote_z.cpp libconcord.cpp binaryfile.cpp \
 	web.cpp libusb/libusbhid.cpp usblan.cpp binaryfile.h hid.h protocol_z.h \
-	 remote_info.h web.h protocol.h remote.h usblan.h xml_headers.h
+	 remote_info.h web.h protocol.h remote.h usblan.h xml_headers.h \
+	 operationfile.cpp remote_mh.cpp
 include_HEADERS = libconcord.h
-libconcord_la_LDFLAGS = -version-info 2:0:0 -lusb
-libconcord_la_LADD = usb
+libconcord_la_LDFLAGS = -version-info 2:0:0 -lusb -lzzip
+UDEVROOT ?= /
+UDEVLIBDIR ?= $(UDEVROOT)/lib
 
 # udev and friends support
 udev:
 	./gen_udev_support -u
 
-install_udev_generic:
-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/udev/rules.d
+old_udev:
+	./gen_udev_support -o
+
+generic_udev:
+	./gen_udev_support -g
+
+install_udev_common:
+	$(MKDIR_P) $(DESTDIR)$(UDEVLIBDIR)/udev/rules.d
 	$(install_sh_DATA) libconcord.rules \
+<<<<<<< Makefile.am
 		$(DESTDIR)$(sysconfdir)/udev/rules.d/60-libconcord.rules
 
 install_udev: udev install_udev_generic
+=======
+		$(DESTDIR)$(UDEVLIBDIR)/udev/rules.d/60-libconcord.rules
+	$(install_sh_DATA) libconcord-usbnet.rules \
+		$(DESTDIR)$(UDEVLIBDIR)/udev/rules.d/80-libconcord-usbnet.rules
+	$(install_sh_SCRIPT) start_concordance_dhcpd.sh \
+		$(DESTDIR)$(UDEVLIBDIR)/udev/
+	$(install_sh_SCRIPT) start_concordance_dhcpd_wrapper.sh \
+		$(DESTDIR)$(UDEVLIBDIR)/udev/
+
+install_udev: udev install_udev_common
+install_old_udev: old_udev install_udev_common
+install_generic_udev: generic_udev install_udev_common
+>>>>>>> 1.11.2.9
 
 old-udev:
 	./gen_udev_support -o
@@ -27,7 +49,7 @@ install_old-udev: old-udev install_udev_generic
 policykit:
 	./gen_udev_support -p
 
-install_policykit: policykit install_udev_generic
+install_policykit: policykit install_udev_common
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/PolicyKit/policy/
 	$(install_sh_DATA) libconcord.fdi \
@@ -38,7 +60,7 @@ install_policykit: policykit install_udev_generic
 consolekit:
 	./gen_udev_support -c
 
-install_consolekit: consolekit install_udev_generic
+install_consolekit: consolekit install_udev_common
 	$(MKDIR_P) $(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/
 	$(install_sh_DATA) libconcord.perms \
 		$(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.perms

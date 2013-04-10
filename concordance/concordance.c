@@ -1,7 +1,11 @@
 /*
  * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
  *
+<<<<<<< concordance.c
  * $Id$
+=======
+ * $Id$
+>>>>>>> 1.41.2.24
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,7 +116,7 @@ int set_canon(int flag)
 #define DEFAULT_FW_FILENAME_BIN "firmware.bin"
 #define DEFAULT_SAFE_FILENAME "safe.bin"
 
-const char * const VERSION = "0.24";
+const char * const VERSION = "0.23+CVS";
 
 struct options_t {
 	int binary;
@@ -140,14 +144,46 @@ enum {
 	MODE_VERSION
 };
 
+/*
+ * Tack a colon onto the end, and then right-pad it out to 23-chars. This means
+ * we can have strings of up to 21 chars (21 chars, 1 colon, and 1 space before
+ * the percentages start).
+ */
+void print_stage_name(int stage_id)
+{
+	const char *stage;
+	char output[24]; /* 21 + 1 + 1 + \0 */
+	stage = lc_cb_stage_str(stage_id);
+	strcpy(output, stage);
+	strcat(output, ":");
+	/* -22 is a 23-char-wide left-aligned string */
+	printf("%-22s", output);
+	return;
+}
 
 /*
  * Start callbacks
+ *
+ *   stage_id => integer of the stage
+ *   count => number of times we've been invoked
+ *   curr => current position (bytes, precent, etc.)
+ *   total => the number 'curr' is trying to reach
+ *   counter_type => what 'curr' represents (bytes, percent, etc.)
+ *   arg => an extra value we can ask libconcord to pass us.
+ *   stages => the array of stages that will be performed
  */
-void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
-	void *arg)
+void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
+	uint32_t total, uint32_t counter_type, void *arg,
+	const uint32_t *stages)
 {
-	int is_bytes;
+
+	if (stage_id == LC_CB_STAGE_NUM_STAGES) {
+#if _DEBUG
+		printf("Num stages: %d\n", count);
+#endif
+		return;
+	}
+
 #ifdef WIN32
 	CONSOLE_SCREEN_BUFFER_INFO sbi;
 #endif
@@ -163,19 +199,47 @@ void cb_print_percent_status(uint32_t count, uint32_t curr, uint32_t total,
 #else
 		printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 #endif
+	} else {
+		print_stage_name(stage_id);
 	}
 
-	is_bytes = 0;
-	if (arg) {
-		is_bytes = (int)(arg);
-	}
-
-	if (is_bytes) {
+	if (counter_type == LC_CB_COUNTER_TYPE_BYTES) {
 		printf("%3i%%  %4i KiB", curr*100/total, curr>>10);
 	} else {
 		printf("%3i%%          ", curr*100/total);
 	}
+
+	if (curr == total) {
+		printf("   done\n");
+	}
+
 	fflush(stdout);
+}
+
+/*
+ * Start helper functions
+ */
+void direct_warning()
+{
+	printf("WARNING: You have requested direct mode. This only affects\n");
+	printf("\t firmware updates. To do this safely you MUST be in\n");
+	printf("\t SAFEMODE! This is only for those devices where we\n");
+	printf("\t don't yet support live firmware updates. See the docs\n");
+	printf("\t for information on how to boot into safemode.\n");
+	printf("\t Press <enter> to continue.\n");
+	getchar();
+}
+
+void set_mode(int *mode, int val)
+{
+	if (*mode == MODE_UNSET) {
+		*mode = val;
+	} else {
+		fprintf(stderr,
+			"ERROR: More than one mode specified. Please specify");
+		fprintf(stderr, " only one.\n");
+		exit(1);
+	}
 }
 
 void print_ir_burst(uint32_t length)
@@ -207,7 +271,7 @@ void print_received_ir_signal(uint32_t carrier_clock, uint32_t *ir_signal,
 {
 	uint32_t index;
 	printf("\nASCII-graph of received IR signal:\n");
-	for (index=0; index < ir_signal_length; index += 2){
+	for (index = 0; index < ir_signal_length; index += 2){
 		print_ir_burst(ir_signal[index]);
 		print_ir_space(ir_signal[index+1]);
 	}
@@ -249,487 +313,74 @@ char get_cmd(char *prompt, char *allowed, char def) {
 	return result;
 }	
 
-int learn_ir_commands(uint8_t *data, uint32_t size, struct options_t *options)
+char *mode_string(int mode)
 {
-	int err = 0;
-	uint32_t carrier_clock = 0;
-	uint32_t *ir_signal = NULL;
-	uint32_t ir_signal_length = 0;
-	uint32_t index = 0;
-	char **key_names;
-	uint32_t key_names_length = 0;
-	char *post_string = NULL;
-	char user_cmd;
+	switch (mode) {
+	case MODE_CONNECTIVITY:
+		return "Connectivity Check";
+		break;
+	case MODE_WRITE_CONFIG:
+		return "Write Configuration";
+		break;
+	case MODE_WRITE_FIRMWARE:
+		return "Write Firmware";
+		break;
+	case MODE_LEARN_IR:
+		return "Learn IR";
+		break;
+	default:
+		return "Unknown";
+		break;
+	}
+}
 
-	err = get_key_names(data, size, &key_names, &key_names_length);
-	if ((err != 0) || (key_names_length == 0)) { return err; }
-	
-	printf("Received file contains %u key names to be learned.\n",
-		key_names_length);
-	
-	while (1) {
-		if (index >= key_names_length) {
-			index--;
-			printf("Last key in list!\n");
-		}
-		printf("\nKey name : <%s> : \n", key_names[index]);
-		user_cmd = get_cmd(
-			"[L]earn, [N]ext, [P]revious, [Q]uit",
-			"LlHhNnPpQq", 'L');
-		err = -1; 
-		/* have no code yet */
-		switch (user_cmd) {
-			case 'L':
-			case 'l':
-				/* learn from remote: */
-				printf("press corresponding key ");
-				printf("on original remote within 5 sec:\n");
-				printf("Learning IR signal:  ");
-				err = learn_from_remote(&carrier_clock,
-					&ir_signal, &ir_signal_length,
-					cb_print_percent_status, NULL);
-				if (err == 0) {
-					printf("       done\n");
-				}
-				break;
-			case 'P':
-			case 'p':
-				if (index > 0) {
-					index--;
-				} else {
-					printf("First key in list!\n");
-				}
-				break;
-			case 'N':
-			case 'n':
-				index++;
-				break;
-			default:
-				break;
-		}				
-		if ( err == 0 ) {
-			/* have new IR code: */
-			if ((*options).verbose) {
-				print_received_ir_signal(carrier_clock,
-					ir_signal, ir_signal_length, options);
-			}
-			err = encode_for_posting(carrier_clock, ir_signal,
-					ir_signal_length, &post_string);
-			/* done with learned signal, free memory: */
-			delete_ir_signal(ir_signal);
-		}
-			
-		if ( err == 0 ) {
-			/* have successfully encoded new code: */
-#ifdef _DEBUG				
-			if ((*options).verbose) {
-				printf("%s\n\n", post_string );
-			}
-#endif
-			if (!(*options).noweb) {
-				user_cmd = get_cmd(
-				"[U]pload new code, [R]etry same key, [N]ext key, [Q]uit",
-				"UuRrNnQq", 'U');
+void report_mode_mismatch(int mode, int file_mode, int force)
+{
+	if (force) {
+		fprintf(stderr, "WARNING:");
+	} else {
+		fprintf(stderr, "ERROR:");
+	}
+	fprintf(stderr, " Requested mode is: %s\n",
+		mode_string(mode));
+	fprintf(stderr, "       but file detected as: %s\n",
+		mode_string(file_mode));
+	fprintf(stderr, "Try not specifying a mode at all, I will figure it");
+	fprintf(stderr, " out for you.\n");
+}
+
+/*
+ * In certain cases we don't require filenames, this provides
+ * sane defaults.
+ */
+void populate_default_filename(int mode, int binary, char **file_name)
+{
+	switch (mode) {
+		case MODE_DUMP_CONFIG:
+			if (binary) {
+				*file_name = (char *)
+					strdup(DEFAULT_CONFIG_FILENAME_BIN);
 			} else {
-				/* no upload: just skip to next key */
-				user_cmd = 'N';
+				*file_name = (char *)
+					strdup(DEFAULT_CONFIG_FILENAME);
 			}
-			switch (user_cmd) {
-				case 'U':
-				case 'u':
-					printf("Upload to website:   ");
-					cb_print_percent_status(
-						0, 0, 1, NULL);
-					err = post_new_code(data, size, 
-						key_names[index], post_string);
-						if ( err == 0 ) {
-						cb_print_percent_status(
-							1, 1, 1, NULL);
-						printf("       done\n");
-						index++;
-					} else {
-						printf("       failed\n");
-					}
-					break;
-				case 'N':
-				case 'n':
-					index++;
-					break;
-				default:
-					break;
-			}
-			/* done, free memory */
-			delete_encoded_signal(post_string);
-		} else {
-			if (err > 0) {
-				fprintf(stderr, "\nERROR:Problemreceiving IR");
-				fprintf(stderr, " signal:\n\t%s \n",
-					lc_strerror(err));
-			}
-		}
-		
-		if (user_cmd == 'Q' || user_cmd == 'q') {
 			break;
-		}
-	}
-	/* done, free memory */
-	delete_key_names(key_names, key_names_length);
-	return 0;
-}
 
-/*
- * Start helper functions
- */
-void direct_warning()
-{
-	printf("WARNING: You have requested direct mode. This only affects\n");
-	printf("\t firmware updates. To do this safely you MUST be in\n");
-	printf("\t SAFEMODE! This is only for those devices where we\n");
-	printf("\t don't yet support live firmware updates. See the docs\n");
-	printf("\t for information on how to boot into safemode.\n");
-	printf("\t Press <enter> to continue.\n");
-	getchar();
-}
-
-void set_mode(int *mode, int val)
-{
-	if (*mode == MODE_UNSET) {
-		*mode = val;
-	} else {
-		fprintf(stderr,
-			"ERROR: More than one mode specified. Please specify");
-		fprintf(stderr, " only one.\n");
-		exit(1);
-	}
-}
-
-int dump_config(struct options_t *options, char *file_name,
-	lc_callback cb, void *cb_arg)
-{
-	int err = 0;
-
-	uint8_t *config;
-	uint32_t size = 0;
-
-	if ((err = read_config_from_remote(&config, &size, cb, (void *)1))) {
-		return err;
-	}
-
-	if ((err = write_config_to_file(config, size, file_name,
-			(*options).binary))) {
-		return err;
-	}
-
-	delete_blob(config);
-
-	return 0;
-}
-
-void print_time(int action)
-{
-	static const char * const dow[8] =
-	{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "" };
-
-	if (action == 0) {
-		printf("Remote time is ");
-	} else {
-		printf("Remote time has been set to ");
-	}
-
-	printf("%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
-		get_time_year(), get_time_month(), get_time_day(),
-		dow[get_time_dow() & 7], get_time_hour(), get_time_minute(),
-		get_time_second(), get_time_utc_offset(), get_time_timezone());
-}
-
-
-
-/*
- * Read the config from a file and write it to the remote
- */
-int upload_config(uint8_t *data, uint32_t size, struct options_t *options,
-	lc_callback cb, void *cb_arg)
-{
-	int err, i;
-
-	uint8_t *binary_data;
-	uint32_t binary_size;
-
-	binary_data = data;
-	binary_size = size;
-
-	if (!(*options).binary) {
-		if ((err = find_config_binary(data, size,
-					       &binary_data, &binary_size)))
-			return LC_ERROR;
-
-		if (!(*options).noweb)
-			post_preconfig(data, size);
-	}
-
-	printf("Preparing Update:    ");
-	if ((err = prep_config())) {
-		return err;
-	}
-	printf("                     done\n");
-	/*
-	 * We must invalidate flash before we erase and write so that
-	 * nothing will attempt to reference it while we're working.
-	 */
-	printf("Invalidating Flash:  ");
-	if ((err = invalidate_flash())) {
-		return err;
-	}
-	printf("                     done\n");
-	/*
-	 * Flash can be changed to 0, but not back to 1, so you must
-	 * erase the flash (to 1) in order to write the flash.
-	 */
-	printf("Erasing Flash:       ");
-	if ((err = erase_config(binary_size, cb, (void *)0))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Writing Config:      ");
-	if ((err = write_config_to_remote(binary_data, binary_size, cb,
-			(void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Verifying Config:    ");
-	if ((err = verify_remote_config(binary_data,
-				       binary_size, cb, (void *)1))) {
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Finalizing Update:   ");
-	if ((err = finish_config())) {
-		return err;
-	}
-	printf("                     done\n");
-
-	if ((*options).noreset) {
-		return 0;
-	}
-
-	printf("Resetting Remote:    ");
-	reset_remote();
-
-	deinit_concord();
-	for (i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-		sleep(WAIT_FOR_BOOT_SLEEP);
-		err = init_concord();
-		if (err == 0) {
-			err = get_identity(cb_print_percent_status, NULL);
-			if (err == 0) {
-				break;
+		case MODE_DUMP_FIRMWARE:
+			if (binary) {
+				*file_name = (char *)
+					strdup(DEFAULT_FW_FILENAME_BIN);
+			} else {
+				*file_name = (char *)
+					strdup(DEFAULT_FW_FILENAME);
 			}
-			deinit_concord();
-		}
-	}
+			break;
 
-	if (err != 0) {
-		return err;
+		case MODE_DUMP_SAFEMODE:
+			*file_name = (char *) strdup(DEFAULT_SAFE_FILENAME);
+			break;
 	}
-	printf("       done\n");
-
-	printf("Setting Time:        ");
-	if ((err = set_time())) {
-		return err;
-	}
-	printf("                     done\n");
-
-	if (!(*options).binary && !(*options).noweb) {
-		printf("Contacting website:  ");
-		if ((err = post_postconfig(data, size))) {
-			return err;
-		}
-		printf("                     done\n");
-	}
-
-	return 0;
 }
-
-int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
-{
-	uint8_t * safe = 0;
-	uint32_t safe_size;
-	int err = 0;
-
-	if ((err = read_safemode_from_remote(&safe, &safe_size, cb,
-			cb_arg))) {
-		delete_blob(safe);
-		return err;
-	}
-
-	if ((err = write_safemode_to_file(safe, safe_size, file_name))) {
-		delete_blob(safe);
-		return err;
-	}
-
-	delete_blob(safe);
-	return 0;
-}
-
-int upload_firmware(uint8_t *firmware, uint32_t firmware_size,
-	struct options_t *options, lc_callback cb, void *cb_arg)
-{
-	int err, i;
-	uint8_t *firmware_bin;
-	uint32_t firmware_bin_size;
-
-	err = 0;
-	firmware_bin = 0;
-
-	if ((err = is_fw_update_supported((*options).direct))) {
-		fprintf(stderr, "Sorry, firmware upgrades are not yet");
-		fprintf(stderr, " on your remote model yet.\n");
-		return err;
-	}
-
-	if ((*options).direct) {
-		direct_warning();
-	} else {
-		if (is_config_safe_after_fw() != 0) {
-			printf("NOTE: A firmware upgrade, will erase your");
-			printf(" remote's config and you will need to update");
-			printf(" it. You may want to make a backup with -c");
-			printf(" or otherwise just use the website.\n");
-			printf("Press <enter> to continue.\n");
-			getchar();
-		}
-	}
-
-	if ((*options).binary) {
-		firmware_bin = firmware;
-		firmware_bin_size = firmware_size;
-	} else {
-		if ((err = extract_firmware_binary(firmware, firmware_size,
-				&firmware_bin, &firmware_bin_size))) {
-			printf("Failed to extract firmware from file\n");
-			delete_blob(firmware_bin);
-			return err;
-		}
-	}
-
-	if (!(*options).direct) {
-		if ((err = prep_firmware())) {
-			printf("Failed to prepare remote for FW update\n");
-			if (firmware_bin != firmware) {
-				delete_blob(firmware_bin);
-			}
-			return err;
-		}
-	}
-
-	printf("Invalidating Flash:  ");
-	if ((err = invalidate_flash())) {
-		if (firmware_bin != firmware) {
-			delete_blob(firmware_bin);
-		}
-		return err;
-	}
-	printf("                     done\n");
-
-	printf("Erasing Flash:       ");
-	if ((err = erase_firmware((*options).direct, cb, (void *)0))) {
-		if (firmware_bin != firmware) {
-			delete_blob(firmware_bin);
-		}
-		return err;
-	}
-	printf("       done\n");
-
-	printf("Writing firmware:    ");
-	if ((err = write_firmware_to_remote(firmware_bin, firmware_bin_size,
-			(*options).direct, cb, cb_arg))) {
-		if (firmware_bin != firmware) {
-			delete_blob(firmware_bin);
-		}
-		return err;
-	}
-	printf("       done\n");
-
-	/* Done with this... */
-	if (firmware_bin != firmware) {
-		delete_blob(firmware_bin);
-	}
-
-	if (!(*options).direct) {
-		if ((err = finish_firmware())) {
-			printf("Failed to finalize FW update\n");
-			return err;
-		}
-	}
-
-	if ((*options).noreset) {
-		return 0;
-	}
-
-	printf("Resetting Remote:    ");
-	reset_remote();
-
-	deinit_concord();
-	for (i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-		sleep(WAIT_FOR_BOOT_SLEEP);
-		err = init_concord();
-		if (err == 0) {
-			err = get_identity(cb_print_percent_status, NULL);
-			if (err == 0) {
-				break;
-			}
-			deinit_concord();
-		}
-	}
-
-	if (err != 0) {
-		return err;
-	}
-	printf("                     done\n");
-
-	printf("Setting Time:        ");
-	if ((err = set_time())) {
-		return err;
-	}
-	printf("                     done\n");
-
-	if (!(*options).binary && !(*options).noweb) {
-		printf("Contacting website:  ");
-		if ((err = post_postfirmware(firmware, firmware_size))) {
-			return err;
-		}
-		printf("                     done\n");
-	}
-
-	return 0;
-}
-
-int dump_firmware(struct options_t *options, char *file_name,
-	lc_callback cb, void *cb_arg)
-{
-	int err = 0;
-	uint8_t *firmware = 0;
-	uint32_t firmware_size;
-
-	if ((err = read_firmware_from_remote(&firmware, &firmware_size, cb,
-			cb_arg))) {
-		delete_blob(firmware);
-		return err;
-	}
-
-	if ((err = write_firmware_to_file(firmware, firmware_size, file_name,
-			(*options).binary))) {
-		delete_blob(firmware);
-		return err;
-	}
-
-	delete_blob(firmware);
-	return 0;
-}
-
 
 /*
  * Parse our options.
@@ -887,73 +538,6 @@ void parse_options(struct options_t *options, int *mode, char **file_name,
 
 }
 
-int detect_mode(uint8_t *data, uint32_t size, int *mode)
-{
-	int err, type;
-
-	*mode = MODE_UNSET;
-	err = identify_file(data, size, &type);
-	if (err) {
-		return err;
-	}
-
-	switch (type) {
-	case LC_FILE_TYPE_CONNECTIVITY:
-		*mode = MODE_CONNECTIVITY;
-		break;
-	case LC_FILE_TYPE_CONFIGURATION:
-		*mode = MODE_WRITE_CONFIG;
-		break;
-	case LC_FILE_TYPE_FIRMWARE:
-		*mode = MODE_WRITE_FIRMWARE;
-		break;
-	case LC_FILE_TYPE_LEARN_IR:
-		*mode = MODE_LEARN_IR;
-		break;
-	default:
-		return LC_ERROR;
-		break;
-	}
-
-	return 0;
-}
-
-char *mode_string(int mode)
-{
-	switch (mode) {
-	case MODE_CONNECTIVITY:
-		return "Connectivity Check";
-		break;
-	case MODE_WRITE_CONFIG:
-		return "Write Configuration";
-		break;
-	case MODE_WRITE_FIRMWARE:
-		return "Write Firmware";
-		break;
-	case MODE_LEARN_IR:
-		return "Learn IR";
-		break;
-	default:
-		return "Unknown";
-		break;
-	}
-}
-
-void report_mode_mismatch(int mode, int file_mode, int force)
-{
-	if (force) {
-		fprintf(stderr, "WARNING:");
-	} else {
-		fprintf(stderr, "ERROR:");
-	}
-	fprintf(stderr, " Requested mode is: %s\n",
-		mode_string(mode));
-	fprintf(stderr, "       but file detected as: %s\n",
-		mode_string(file_mode));
-	fprintf(stderr, "Try not specifying a mode at all, I will figure it");
-	fprintf(stderr, " out for you.\n");
-}
-
 void help()
 {
 	printf("There are two ways to invoke this software. The primary");
@@ -1036,9 +620,286 @@ void help()
 
 }
 
+
 /*
- * Print all version info in a format readable by humans.
+ * Begin functions to actually do work
  */
+int learn_ir_commands(struct options_t *options, lc_callback cb, void *cb_arg)
+{
+	int err = 0;
+	uint32_t carrier_clock = 0;
+	uint32_t *ir_signal = NULL;
+	uint32_t ir_signal_length = 0;
+	uint32_t index = 0;
+	char **key_names;
+	uint32_t key_names_length = 0;
+	char *post_string = NULL;
+	char user_cmd;
+
+	err = get_key_names(&key_names, &key_names_length);
+	if ((err != 0) || (key_names_length == 0))
+		return err;
+	
+	printf("Received file contains %u key names to be learned.\n",
+		key_names_length);
+	
+	while (1) {
+		if (index >= key_names_length) {
+			index--;
+			printf("Last key in list!\n");
+		}
+		printf("\nKey name : <%s> : \n", key_names[index]);
+		user_cmd = get_cmd(
+			"[L]earn, [N]ext, [P]revious, [Q]uit",
+			"LlHhNnPpQq", 'L');
+		err = -1; 
+		/* have no code yet */
+		switch (user_cmd) {
+			case 'L':
+			case 'l':
+				/* learn from remote: */
+				printf("press corresponding key ");
+				printf("on original remote within 5 sec:\n");
+				err = learn_from_remote(&carrier_clock,
+					&ir_signal, &ir_signal_length,
+					cb_print_percent_status, NULL);
+				break;
+			case 'P':
+			case 'p':
+				if (index > 0) {
+					index--;
+				} else {
+					printf("First key in list!\n");
+				}
+				break;
+			case 'N':
+			case 'n':
+				index++;
+				break;
+			default:
+				break;
+		}				
+		if ( err == 0 ) {
+			/* have new IR code: */
+			if ((*options).verbose) {
+				print_received_ir_signal(carrier_clock,
+					ir_signal, ir_signal_length, options);
+			}
+			err = encode_for_posting(carrier_clock, ir_signal,
+					ir_signal_length, &post_string);
+			/* done with learned signal, free memory: */
+			delete_ir_signal(ir_signal);
+		}
+			
+		if ( err == 0 ) {
+			/* have successfully encoded new code: */
+#ifdef _DEBUG				
+			if ((*options).verbose) {
+				printf("%s\n\n", post_string );
+			}
+#endif
+			if (!(*options).noweb) {
+				user_cmd = get_cmd(
+				"[U]pload new code, [R]etry same key, [N]ext key, [Q]uit",
+				"UuRrNnQq", 'U');
+			} else {
+				/* no upload: just skip to next key */
+				user_cmd = 'N';
+			}
+			switch (user_cmd) {
+				case 'U':
+				case 'u':
+					/*printf("Upload to website:   ");
+					cb_print_percent_status(
+						0, 0, 0, 1,
+						LC_CB_COUNTER_TYPE_STEPS, NULL);
+					*/
+					err = post_new_code(key_names[index],
+						post_string, cb, cb_arg);
+					if ( err == 0 ) {
+					/*
+						cb_print_percent_status(
+							0, 1, 1, 1,
+							LC_CB_COUNTER_TYPE_STEPS,
+							NULL);
+						printf("       done\n");*/
+						index++;
+					} else {
+						printf("       failed\n");
+					}
+					break;
+				case 'N':
+				case 'n':
+					index++;
+					break;
+				default:
+					break;
+			}
+			/* done, free memory */
+			delete_encoded_signal(post_string);
+		} else {
+			if (err > 0) {
+				fprintf(stderr, "\nERROR:Problemreceiving IR");
+				fprintf(stderr, " signal:\n\t%s \n",
+					lc_strerror(err));
+			}
+		}
+		
+		if (user_cmd == 'Q' || user_cmd == 'q') {
+			break;
+		}
+	}
+	/* done, free memory */
+	delete_key_names(key_names, key_names_length);
+	return 0;
+}
+
+int dump_config(struct options_t *options, char *file_name,
+	lc_callback cb, void *cb_arg)
+{
+	int err = 0;
+	uint8_t *config;
+	uint32_t size = 0;
+
+	if ((err = read_config_from_remote(&config, &size, cb, NULL))) {
+		return err;
+	}
+
+	if ((err = write_config_to_file(config, size, file_name,
+			(*options).binary))) {
+		return err;
+	}
+
+	delete_blob(config);
+
+	return 0;
+}
+
+void print_time(int action)
+{
+	static const char * const dow[8] =
+	{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "" };
+
+	if (action == 0) {
+		printf("Remote time is ");
+	} else {
+		printf("Remote time has been set to ");
+	}
+
+	printf("%04i/%02i/%02i %s %02i:%02i:%02i %+i %s\n",
+		get_time_year(), get_time_month(), get_time_day(),
+		dow[get_time_dow() & 7], get_time_hour(), get_time_minute(),
+		get_time_second(), get_time_utc_offset(), get_time_timezone());
+}
+
+int upload_config(struct options_t *options, lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	/*
+	 * Tell the website we're going to start. This, it seems creates a
+	 * session object on their side, because if you miss the pre-config
+	 * communication, you get a no-session error.
+	 */
+	if (!(*options).binary && !(*options).noweb) {
+		if ((err = post_preconfig(cb, cb_arg)))
+			return err;
+	}
+
+	if ((err = update_configuration(cb, cb_arg,
+			(*options).noreset))) {
+		return err;
+	}
+
+	/* Tell the website we're done */
+	if (!(*options).binary && !(*options).noweb) {
+		if ((err = post_postconfig(cb, cb_arg))) {
+			return err;
+		}
+	}
+
+	return 0;
+}
+
+int dump_safemode(char *file_name, lc_callback cb, void *cb_arg)
+{
+	uint8_t * safe = 0;
+	uint32_t safe_size;
+	int err = 0;
+
+	if ((err = read_safemode_from_remote(&safe, &safe_size, cb,
+			cb_arg))) {
+		delete_blob(safe);
+		return err;
+	}
+
+	if ((err = write_safemode_to_file(safe, safe_size, file_name))) {
+		delete_blob(safe);
+		return err;
+	}
+
+	delete_blob(safe);
+	return 0;
+}
+
+int upload_firmware(struct options_t *options, lc_callback cb, void *cb_arg)
+{
+	int err;
+
+	if ((err = is_fw_update_supported((*options).direct))) {
+		fprintf(stderr, "Sorry, firmware upgrades are not yet");
+		fprintf(stderr, " on your remote model yet.\n");
+		return err;
+	}
+
+	if ((*options).direct) {
+		direct_warning();
+	} else {
+		if (is_config_safe_after_fw() != 0) {
+			printf("NOTE: A firmware upgrade, will erase your");
+			printf(" remote's config and you will need to update");
+			printf(" it. You may want to make a backup with -c");
+			printf(" or otherwise just use the website.\n");
+			printf("Press <enter> to continue.\n");
+			getchar();
+		}
+	}
+
+	if ((err = update_firmware(cb, cb_arg, (*options).noreset,
+			(*options).direct)))
+		return err;
+
+	if (!(*options).binary && !(*options).noweb) {
+		if ((err = post_postfirmware(cb, cb_arg)))
+			return err;
+	}
+
+	return 0;
+}
+
+int dump_firmware(struct options_t *options, char *file_name,
+	lc_callback cb, void *cb_arg)
+{
+	int err = 0;
+	uint8_t *firmware = 0;
+	uint32_t firmware_size;
+
+	if ((err = read_firmware_from_remote(&firmware, &firmware_size, cb,
+			cb_arg))) {
+		delete_blob(firmware);
+		return err;
+	}
+
+	if ((err = write_firmware_to_file(firmware, firmware_size, file_name,
+			(*options).binary))) {
+		delete_blob(firmware);
+		return err;
+	}
+
+	delete_blob(firmware);
+	return 0;
+}
+
 int print_version_info(struct options_t *options)
 {
 	const char *cn;
@@ -1062,8 +923,8 @@ int print_version_info(struct options_t *options)
 	if ((*options).verbose)
 		printf("  Firmware Type: %i\n", get_fw_type());
 
-	printf("  Hardware Version: %i.%i\n", get_hw_ver_maj(),
-		get_hw_ver_min());
+	printf("  Hardware Version: %i.%i.%i\n", get_hw_ver_maj(),
+		get_hw_ver_min(), get_hw_ver_mic());
 
 	if ((*options).verbose) {
 		int size = get_flash_size();
@@ -1100,45 +961,13 @@ int print_version_info(struct options_t *options)
 }
 
 /*
- * In certain cases we don't require filenames, this provides
- * sane defaults.
+ * MAIN
  */
-void populate_default_filename(int mode, int binary, char **file_name)
-{
-	switch (mode) {
-		case MODE_DUMP_CONFIG:
-			if (binary) {
-				*file_name = (char *)
-					strdup(DEFAULT_CONFIG_FILENAME_BIN);
-			} else {
-				*file_name = (char *)
-					strdup(DEFAULT_CONFIG_FILENAME);
-			}
-			break;
-
-		case MODE_DUMP_FIRMWARE:
-			if (binary) {
-				*file_name = (char *)
-					strdup(DEFAULT_FW_FILENAME_BIN);
-			} else {
-				*file_name = (char *)
-					strdup(DEFAULT_FW_FILENAME);
-			}
-			break;
-
-		case MODE_DUMP_SAFEMODE:
-			*file_name = (char *) strdup(DEFAULT_SAFE_FILENAME);
-			break;
-	}
-}
-
 int main(int argc, char *argv[])
 {
 	struct options_t options;
 	char *file_name;
 	int mode, file_mode, err;
-	uint8_t *data;
-	uint32_t size;
 
 #ifdef WIN32
 	con=GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1173,10 +1002,17 @@ int main(int argc, char *argv[])
 	}
 
 	/*
-	 * OK, if we have a filename go ahead and read the file...
+	 * We used to delay remote initialization until after all the figuring
+	 * out the mode and read the file stuff... but with zwave support we
+	 * need to know what type of remote we're dealing with early on.
 	 */
-	data = 0;
-	size = 0;
+
+	err = init_concord();
+	if (err != 0) {
+		fprintf(stderr, "ERROR: Couldn't initializing libconcord: %s\n",
+			lc_strerror(err));
+		exit(1);
+	}
 
 	/*
  	 * Alright, at this point, if there's going to be a filename,
@@ -1184,18 +1020,34 @@ int main(int argc, char *argv[])
  	 */
 	if (file_name && (mode != MODE_DUMP_CONFIG && mode != MODE_DUMP_FIRMWARE
 			  && mode != MODE_DUMP_SAFEMODE)) {
-		if (read_file(file_name, &data, &size)) {
-			fprintf(stderr, "ERROR: Cannot read input file: %s\n",
+
+		int type;
+		if ((err = read_and_parse_file(file_name, &type))) {
+			fprintf(stderr,
+				"ERROR: Cannot read input file: %s\n",
 				file_name);
 			exit(1);
 		}
-		/*
-		 * Now that the file is read, see if we can recognize it:
-		 */
-		if (detect_mode(data, size, &file_mode)) {
-			fprintf(stderr, "WARNING: Cannot determine mode of");
-			fprintf(stderr, " operation from file.\n");
+
+		switch (type) {
+		case LC_FILE_TYPE_CONNECTIVITY:
+			file_mode = MODE_CONNECTIVITY;
+			break;
+		case LC_FILE_TYPE_CONFIGURATION:
+			file_mode = MODE_WRITE_CONFIG;
+			break;
+		case LC_FILE_TYPE_FIRMWARE:
+			file_mode = MODE_WRITE_FIRMWARE;
+			break;
+		case LC_FILE_TYPE_LEARN_IR:
+			file_mode = MODE_LEARN_IR;
+			break;
+		default:
+			fprintf(stderr, "ERROR: Couldn't determine filetype");
+			exit(1);
+			break;
 		}
+
 		/*
 		 * If we don't have a mode, lets detect that mode based on
 		 * the file.
@@ -1220,6 +1072,17 @@ int main(int argc, char *argv[])
 	}
 
 	/*
+	 * The is..supported() functions return 0 for yes, so 1 is NO
+	 */
+	if ((mode == MODE_DUMP_CONFIG && is_config_dump_supported()) ||
+	    ((mode == MODE_DUMP_FIRMWARE || mode == MODE_DUMP_SAFEMODE) &&
+	     is_fw_dump_supported())) {
+		fprintf(stderr, "Sorry, that mode is not yet supported on your"
+			" remote by libconcord.\n");
+		exit(1);
+	}
+
+	/*
 	 * In a few special cases, we populate a default filename. NEVER
 	 * if we're are writing to the device, however.
 	 *
@@ -1231,12 +1094,6 @@ int main(int argc, char *argv[])
 		populate_default_filename(mode, options.binary, &file_name);
 	}
 
-	err = init_concord();
-	if (err != 0) {
-		fprintf(stderr, "ERROR: Couldn't initializing libconcord: %s\n",
-			lc_strerror(err));
-		exit(1);
-	}
 
 	/*
 	 * If we're in reset mode, not only do we not need to read and print
@@ -1250,7 +1107,7 @@ int main(int argc, char *argv[])
 	 */
 	if (mode == MODE_RESET) {
 		printf("Resetting...\n");
-		reset_remote();
+		reset_remote(NULL, NULL);
 		goto cleanup;
 	}
 
@@ -1258,15 +1115,13 @@ int main(int argc, char *argv[])
 	 * Get and print all the version info
 	 */
 
-	printf("Requesting Identity: ");
 	err = get_identity(cb_print_percent_status, NULL);
 	if (err != 0 && err != LC_ERROR_INVALID_CONFIG) {
 		fprintf(stderr, "ERROR: failed to requesting identity\n");
 		goto cleanup;
 	}
-	printf("       done\n");
 	if (err == LC_ERROR_INVALID_CONFIG) {
-		printf("WARNING: Invalid config found\n");
+		printf("WARNING: Invalid config found.\n");
 	}
 
 	/*
@@ -1279,27 +1134,24 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_CONNECTIVITY:
-			if (!options.noweb)
-				printf("Contacting website:  ");
-				err = post_connect_test_success(data, size);
-				printf("                     done\n");
+			if (!options.noweb) {
+				err = post_connect_test_success(
+					cb_print_percent_status, NULL);
+			}
 			break;
 
 		case MODE_DUMP_CONFIG:
-			printf("Dumping config:      ");
 			err = dump_config(&options, file_name,
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to dump config: %s\n",
 					lc_strerror(err));
-			} else {
-				printf("       done\n");
 			}
 			break;
 
 		case MODE_WRITE_CONFIG:
-			err = upload_config(data, size, &options,
-				cb_print_percent_status, NULL);
+			err = upload_config(&options, cb_print_percent_status,
+					NULL);
 			if (err != 0) {
 				printf("Failed to upload config: %s\n",
 					lc_strerror(err));
@@ -1307,20 +1159,17 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_DUMP_FIRMWARE:
-			printf("Dumping firmware:    ");
 			err = dump_firmware(&options, file_name,
 				cb_print_percent_status, NULL);
 			if (err != 0) {
 				printf("Failed to dump firmware: %s\n",
 					lc_strerror(err));
-			} else {
-				printf("       done\n");
 			}
 			break;
 
 		case MODE_WRITE_FIRMWARE:
-			err = upload_firmware(data, size, &options,
-				cb_print_percent_status, NULL);
+			err = upload_firmware(&options, cb_print_percent_status,
+				NULL);
 			if (err != 0) {
 				printf("Failed to upload firmware: %s\n",
 					lc_strerror(err));
@@ -1328,19 +1177,17 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_DUMP_SAFEMODE:
-			printf("Dumping safemode fw: ");
 			err = dump_safemode(file_name, cb_print_percent_status,
 				NULL);
 			if (err != 0) {
 				printf("Failed to dump safemode: %s\n",
 					lc_strerror(err));
-			} else {
-				printf("       done\n");
 			}
 			break;
 
 		case MODE_LEARN_IR:
-			err = learn_ir_commands(data, size, &options);
+			err = learn_ir_commands(&options,
+				cb_print_percent_status, NULL);
 			break;
 
 		case MODE_GET_TIME:
@@ -1349,7 +1196,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case MODE_SET_TIME:
-			err = set_time();
+			err = set_time(cb_print_percent_status, NULL);
 			print_time(1);
 			break;
 
@@ -1361,9 +1208,7 @@ int main(int argc, char *argv[])
 			
 cleanup:
 
-	if (data) {
-		delete_blob(data);
-	}
+	delete_opfile_obj();
 
 	deinit_concord();
 
