@@ -14,10 +14,29 @@
 # Copyright 2009 Phil Dibowitz
 #
 
-UDEV_POLICY_TEMPLATE='ATTR{idVendor}=="%s", ATTR{idProduct}=="%s", SYMLINK+="harmony-%%k"'
-UDEV_NEW_NO_POLICY_TEMPLATE='ATTR{idVendor}=="%s", ATTR{idProduct}=="%s", ENV{ID_REMOTE_CONTROL}="1"'
-UDEV_OLD_NO_POLICY_TEMPLATE='SYSFS{idVendor}=="%s", SYSFS{idProduct}=="%s", MODE="0660", GROUP="dialout"'
+# CONDITIONS
+# varios "conditions" to make udev rules
 
+# A partial template, used largely when generating one-line per device
+UDEV_CONDITION_PARTIAL_TEMPLATE='ATTR{idVendor}=="%s", ATTR{idProduct}=="%s"'
+# The above, but also with a USB specifier, for the one-line-for-all version
+UDEV_CONDITION_TEMPLATE="SUBSYSTEM==\"usb\", $UDEV_CONDITION_PARTIAL_TEMPLATE"
+# The older syntax for ancient udev. This one is also "partial" since you
+# have to specify each device ID separately on this version of udev.
+UDEV_CONDITION_OLD_TEMPLATE='SYSFS{idVendor}=="%s", SYSFS{idProduct}=="%s"'
+
+# ACTIONS
+# The "action" part of udev rules.
+
+# When using udev-acl, this instructs it to give access to the current
+# console user.
+UDEV_ACTION='ENV{ID_REMOTE_CONTROL}="1"'
+# This says give r/w to the dialout group
+UDEV_ACTION_GENERIC='MODE="0660", GROUP="dialout"'
+# This says make a symlink in /dev called "harmony-<id>"
+UDEV_ACTION_POLICYKIT='SYMLINK+="harmony-%%k"'
+
+# Stuff for HAL. Deprecated.
 HAL_PRE_TEMPLATE='    <match key="usb_device.vendor_id" int="0x%s">'
 HAL_RULE_TEMPLATE='      <match key="usb_device.product_id" int="0x%s">
         <append key="info.capabilities" type="strlist">access_control</append>
@@ -27,13 +46,15 @@ HAL_RULE_TEMPLATE='      <match key="usb_device.product_id" int="0x%s">
       </match>'
 HAL_POST='    </match>'
 
-NATIONAL_VID=0400
-NATIONAL_PID=c359
-LOGITECH_VID=046d
-LOGITECH_MIN_PID=c110
-LOGITECH_MAX_PID=c14f
+NATIONAL_VID='0400'
+NATIONAL_PID='c359'
+LOGITECH_VID='046d'
+LOGITECH_MIN_PID='c110'
+LOGITECH_MAX_PID='c14f'
+LOGITECH_PID_GLOB='c1[1-4][0-9a-f]'
 
 UDEV_FILE='libconcord.rules'
+UDEV_USBNET_FILE='libconcord-usbnet.rules'
 HAL_POLICY_FILE='libconcord.fdi'
 POLICYKIT_FILE='org.freedesktop.hal.device-access.libconcord.policy'
 CONSOLEKIT_FILE='libconcord.perms'
@@ -61,7 +82,7 @@ emit_for_all() {
 #
 # UDEV FUNCTIONS
 #
-emit_udev_header() {
+emit_old_udev_header() {
     file="$1"
     cat >$file <<END
 # Neat trick so that non-harmony devices don't read through a million rules
@@ -73,7 +94,7 @@ LABEL="harmony_usb_rules"
 END
 }
 
-emit_udev_footer() {
+emit_old_udev_footer() {
     file="$1"
     cat >>$file <<END
 GOTO="harmony_rules_end"
@@ -82,25 +103,71 @@ END
 }
 
 emit_udev_rules() {
+  file="$1"
+  mode="$2"
+
+  template="$UDEV_CONDITION_TEMPLATE"
+  if [ "$mode" == 'generic_udev' ] ; then
+    template="$template, $UDEV_ACTION_GENERIC"
+  else
+    template="$template, $UDEV_ACTION"
+  fi
+
+  printf "$template\n" $NATIONAL_VID $NATIONAL_PID >>$file
+  printf "$template\n" $LOGITECH_VID $LOGITECH_PID_GLOB >>$file
+}
+
+# Rule for the usbnet family of remotes to start a DHCP daemon upon detection.
+emit_udev_usbnet_rules() {
     file="$1"
-    type="$2"
-    if [ "$type" == 'policykit' -o "$type" == 'consolekit' ]; then
-        template="$UDEV_POLICY_TEMPLATE"
-    elif [ "$type" == 'old_udev' ]; then
-        template="$UDEV_OLD_NO_POLICY_TEMPLATE"
-    else
-        template="$UDEV_NEW_NO_POLICY_TEMPLATE"
-    fi
+    cat >$file <<END
+SUBSYSTEM=="net", ENV{ID_VENDOR_ID}=="046d", ENV{ID_MODEL_ID}=="c11f", \
+RUN+="start_concordance_dhcpd_wrapper.sh"
+END
+}
+
+emit_old_udev_rules() {
+    file="$1"
+    mode="$2"
+
+    case "$mode" in
+      policykit|consolekit)
+        template="$UDEV_CONDITION_PARTIAL_TEMPLATE, $UDEV_ACTION_POLICYKIT"
+        ;;
+      old_udev)
+        template="$UDEV_CONDITION_OLD_TEMPLATE, $UDEV_ACTION_GENERIC"
+        ;;
+    esac
 
     emit_for_all $file "$template" 'yes'
 }
 
-create_udev_file() {
+create_udev_files() {
     mode=$1
+
     echo -n "Creating udev file: $UDEV_FILE ... "
-    emit_udev_header $UDEV_FILE
-    emit_udev_rules $UDEV_FILE $mode
-    emit_udev_footer $UDEV_FILE
+    # delete wahtever used to be there
+    rm -f $UDEV_FILE
+
+    case "$mode" in
+      policykit|consolekit|old_udev)
+        emit_old_udev_header $UDEV_FILE
+        emit_old_udev_rules $UDEV_FILE $mode
+        emit_old_udev_footer $UDEV_FILE
+        ;;
+      udev|generic_udev)
+        emit_udev_rules $UDEV_FILE $mode
+        ;;
+      *)
+        echo "BAD MODE: $mode"
+        exit 1
+        ;;
+    esac
+    echo 'done'
+    # USBNET rule needs to be in a separate file because it depends on
+    # 75-net-description.rules.
+    echo -n "Creating udev file: $UDEV_USBNET_FILE ... "
+    emit_udev_usbnet_rules $UDEV_USBNET_FILE
     echo 'done'
 }
 
@@ -202,16 +269,22 @@ usage() {
 # MAIN
 #
 
-while getopts upco opt; do
+while getopts cgopu opt; do
     case $opt in
-        u)
-            MODE='udev_only'
+        c)
+            MODE='consolekit'
+            ;;
+        g)
+            MODE='generic_udev'
+            ;;
+        o)
+            MODE='old_udev'
             ;;
         p)
             MODE='policykit'
             ;;
-        c)
-            MODE='consolekit'
+        u)
+            MODE='udev'
             ;;
         o)
             MODE='old_udev'
@@ -219,6 +292,7 @@ while getopts upco opt; do
         *)
             usage
             exit 1
+            ;;
     esac
 done
 
@@ -227,7 +301,7 @@ if [ "$MODE" == '' ]; then
     exit 1
 fi
 
-create_udev_file $MODE
+create_udev_files $MODE
 if [ "$MODE" == 'policykit' ]; then
     create_hal_policy_file
     create_policykit_file

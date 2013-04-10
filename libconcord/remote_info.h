@@ -92,7 +92,31 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },			// 60
+	{ MFG_HAR,	"Harmony 900",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony 1100",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony 700",		"Molson" },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony 700i",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+// 70
+	{ MFG_HAR,	"Harmony 600",			NULL },
+	{ MFG_HAR,	"Harmony 650",			NULL },
+	{ MFG_HAR,	"Harmony 600i",			NULL },
+	{ MFG_HAR,	"Harmony 650i",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony 300",			NULL },
+	{ MFG_HAR,	"Harmony 300i",			NULL },
+	{ MFG_HAR,	"Harmony 200",			NULL },
+// 80
+	{ MFG_HAR,	"Harmony 200i",			NULL },
+	{ MFG_HAR,	"Harmony Link",			NULL },
+	{ MFG_HAR,	"Harmony Link (EMEA)",		NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
@@ -101,7 +125,8 @@ static const TModel ModelList[]={
 	{ MFG_HAR,	"Harmony 515",		NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL },			// 70
+	{ MFG_UNK,	"Unknown",			NULL }
+// 90
 };
 
 static const unsigned int max_model=sizeof(ModelList)/sizeof(TModel)-1;
@@ -352,7 +377,7 @@ static const TArchInfo ArchList[]={
 		0x000110,			// serial_address
 		0x000000,			// flash_base
 		0x010000,			// firmware_base
-		0x020000,			// config_base
+		REGION_USER_CONFIG,		// config_base
 		0,				// firmware_update_base
 		0,				// firmware_4847_offset
 		0x1, /* hack */			// cookie
@@ -364,16 +389,16 @@ static const TArchInfo ArchList[]={
 		0,				// eeprom_size
 		"USBN9604",			// usb
 	},
-	/* arch 11 */
+	/* arch 11: 1100 */
 	{
 		0,				// serial_location
 		0,				// serial_address
 		0,				// flash_base
 		0,				// firmware_base
-		0,				// config_base
+		REGION_USER_CONFIG,		// config_base
 		0,				// firmware_update_base
 		0,				// firmware_4847_offset
-		0,				// cookie
+		0x1, /* hack to make config test pass */	// cookie
 		0,				// cookie_size
 		0,				// end_vector
 		"",				// micro
@@ -435,6 +460,42 @@ static const TArchInfo ArchList[]={
 		0,				// ram_size
 		0,				// eeprom_size
 		"Internal",			// usb
+	},
+	/* arch 15: 900 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		REGION_USER_CONFIG,		// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0x1, /* hack to make config test pass */	// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
+	},
+	/* arch 16: 300 */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0x4D505347,			// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
 	}
 };
 

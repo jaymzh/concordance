@@ -21,16 +21,18 @@
  * (C) Copyright Phil Dibowitz 2007
  */
 
+#include "remote.h"
+
 #include <string.h>
 #include <errno.h>
+
+#include <iostream>
+
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"
 #include "protocol.h"
-#include "remote.h"
 #include "remote_info.h"
-
-#include <iostream>
 
 void setup_ri_pointers(TRemoteInfo &ri)
 {
@@ -45,17 +47,26 @@ void setup_ri_pointers(TRemoteInfo &ri)
 	ri.arch = (ri.architecture < sizeof(ArchList)/sizeof(TArchInfo))
 			? &ArchList[ri.architecture] : NULL;
 
-	ri.model = (ri.skin<max_model)
+	ri.model = (ri.skin < max_model)
 			? &ModelList[ri.skin] : &ModelList[max_model];
 }
 
 void make_guid(const uint8_t * const in, char*&out)
 {
 	char x[48];
-	sprintf(x,
-	"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
-		in[3], in[2], in[1], in[0], in[5], in[4], in[7], in[6],
-		in[8], in[9], in[10], in[11], in[12], in[13], in[14], in[15]);
+	// usbnet remotes seem to use a more normal byte ordering for serial #'s
+	if (is_usbnet_remote() || is_mh_remote()) {
+		sprintf(x,
+		"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+			in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7],
+			in[8], in[9], in[10], in[11], in[12], in[13], in[14], in[15]);
+	}
+	else {
+		sprintf(x,
+		"{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+			in[3], in[2], in[1], in[0], in[5], in[4], in[7], in[6],
+			in[8], in[9], in[10], in[11], in[12], in[13], in[14], in[15]);
+	}
 	out = strdup(x);
 }
 
@@ -65,7 +76,6 @@ void make_serial(uint8_t *ser, TRemoteInfo &ri)
 	make_guid(ser+16, ri.serial2);
 	make_guid(ser+32, ri.serial3);
 }
-
 
 int CRemote::Reset(uint8_t kind)
 {
@@ -90,7 +100,7 @@ int CRemote::Reset(uint8_t kind)
  * Then populate our struct with all the relevant info.
  */
 int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
-	lc_callback cb, void *arg)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 	uint32_t cb_count = 0;
@@ -123,6 +133,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	ri.fw_ver_minor = rsp[1] & 0x0F;
 	ri.hw_ver_major = rsp[2] >> 4;
 	ri.hw_ver_minor = rsp[2] & 0x0F;
+	ri.hw_ver_micro = 0; /* usbnet remotes have a non-zero micro version */
 	ri.flash_id = rsp[3];
 	ri.flash_mfg = rsp[4];
 	ri.architecture = rx_len < 6 ? 2 : rsp[5] >> 4;
@@ -145,7 +156,8 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 		return LC_ERROR_READ;
 	}
 	if (cb) {
-		cb(cb_count++, 1, 2, arg);
+		cb(cb_stage, cb_count++, 1, 2,
+			LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	/*
@@ -171,7 +183,7 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 		ri.config_bytes_used = 0;
 		ri.max_config_size = 1;
 	}
-		
+
 	// read serial (see specs/protocol.txt for details)
 	switch (ri.arch->serial_location) {
 	case SERIAL_LOCATION_EEPROM:
@@ -192,7 +204,8 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 	}
 
 	if (cb) {
-		cb(cb_count++, 2, 2, arg);
+		cb(cb_stage, cb_count++, 2, 2,
+			LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	make_serial(rsp, ri);
@@ -202,12 +215,10 @@ int CRemote::GetIdentity(TRemoteInfo &ri, THIDINFO &hid,
 
 int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 	unsigned int protocol, bool verify, lc_callback cb,
-	void *cb_arg)
+	void *cb_arg, uint32_t cb_stage)
 {
-
 	uint32_t cb_count = 0;
-	const unsigned int max_chunk_len = 
-		protocol == 0 ? 700 : 1022;
+	const unsigned int max_chunk_len = protocol == 0 ? 700 : 1022;
 
 	/*
 	 * This is a mapping of the lower-half of the first command byte to
@@ -225,7 +236,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 
 	uint8_t *pr = rd;
 	const uint32_t end = addr+len;
-	unsigned int bytes_read=0;
+	unsigned int bytes_read = 0;
 	int err = 0;
 
 	do {
@@ -235,7 +246,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		cmd[2] = (addr >> 8) & 0xFF;
 		cmd[3] = addr & 0xFF;
 		unsigned int chunk_len = end-addr;
-		if (chunk_len > max_chunk_len) 
+		if (chunk_len > max_chunk_len)
 			chunk_len = max_chunk_len;
 		cmd[4] = (chunk_len >> 8) & 0xFF;
 		cmd[5] = chunk_len & 0xFF;
@@ -243,7 +254,7 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		if ((err = HID_WriteReport(cmd)))
 			break;
 
-		uint8_t seq=1;
+		uint8_t seq = 1;
 
 		do {
 			uint8_t rsp[68];
@@ -285,21 +296,28 @@ int CRemote::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
 		} while (err == 0);
 
 		if (cb) {
-			cb(cb_count++, bytes_read, len, cb_arg);
+			cb(cb_stage, cb_count++, bytes_read, len,
+				LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
 		}
 	} while (err == 0 && addr < end);
 
 	return err;
 }
 
-int CRemote::InvalidateFlash(void)
+int CRemote::InvalidateFlash(lc_callback cb, void *cb_arg, uint32_t lc_stage)
 {
-	const uint8_t ivf[64]={ COMMAND_WRITE_MISC | 0x01, 
+	const uint8_t ivf[64]={ COMMAND_WRITE_MISC | 0x01,
 				COMMAND_MISC_INVALIDATE_FLASH };
 	int err;
 
+	if (cb)
+		cb(lc_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+
 	if ((err = HID_WriteReport(ivf)))
 		return err;
+
+	if (cb)
+		cb(lc_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	uint8_t rsp[68];
 	if ((err = HID_ReadReport(rsp)))
@@ -310,12 +328,15 @@ int CRemote::InvalidateFlash(void)
 		return 1;
 	}
 
+	if (cb)
+		cb(lc_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+
 	return 0;
 }
 
 
 int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
-	lc_callback cb, void *arg)
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	const unsigned int *sectors = ri.flash->sectors;
 	const unsigned int flash_base = ri.arch->flash_base;
@@ -358,7 +379,8 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 			break;
 
 		if (cb) {
-			cb(i, i+1, num_sectors, arg);
+			cb(cb_stage, i, i+1, num_sectors,
+				LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 		}
 		debug("erase sector %2i: %06X - %06X", n, sector_begin,
 			sector_end);
@@ -369,10 +391,14 @@ int CRemote::EraseFlash(uint32_t addr, uint32_t len,  const TRemoteInfo &ri,
 	return err;
 }
 
-int CRemote::PrepFirmware(const TRemoteInfo &ri)
+int CRemote::PrepFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage)
 {
 	int err = 0;
 	uint8_t data[1] = { 0x00 };
+
+	if (cb)
+		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
 		/*
@@ -381,10 +407,16 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri)
 		 *    restart config
 		 *    write "1" to flash addr 200000
 		 */
-		if ((err = WriteMiscByte(0x09, 1, COMMAND_MISC_RESTART_CONFIG, data)))
+		if ((err = WriteMiscByte(0x09, 1, COMMAND_MISC_RESTART_CONFIG,
+				data)))
 			return LC_ERROR;
+
+		if (cb)
+			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
+
 		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
-				NULL)))
+				NULL, 0)))
 			return LC_ERROR;
 	} else {
 		/*
@@ -394,65 +426,105 @@ int CRemote::PrepFirmware(const TRemoteInfo &ri)
 		 */
 		if ((err = WriteRam(0, 1, data)))
 			return LC_ERROR_WRITE;
+
+		if (cb)
+			cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
+
 		if ((err = ReadRam(0, 1, data)))
 			return LC_ERROR_WRITE;
 		if (data[0] != 0)
 			return LC_ERROR_VERIFY;
 	}
+	if (cb)
+		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
 
-int CRemote::FinishFirmware(const TRemoteInfo &ri)
+int CRemote::FinishFirmware(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage)
 {
 	int err = 0;
+
+	if (cb)
+		cb(cb_stage, 0, 0, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	uint8_t data[1];
 	if (ri.arch->firmware_update_base == ri.arch->firmware_base) {
 		data[0] = 0x02;
 		if ((err = WriteFlash(0x200000, 1, data, ri.protocol, NULL,
-			NULL)))
+			NULL, 0)))
 			return LC_ERROR;
+		if (cb)
+			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 	} else {
 		data[0] = 0x02;
 		if ((err = WriteRam(0, 1, data))) {
 			debug("Failed to write 2 to RAM 0");
 			return LC_ERROR_WRITE;
 		}
+		if (cb)
+			cb(cb_stage, 1, 1, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 		if ((err = ReadRam(0, 1, data))) {
 			debug("Failed to from RAM 0");
 			return LC_ERROR_WRITE;
 		}
+		if (cb)
+			cb(cb_stage, 2, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
 		if (data[0] != 2) {
-			printf("byte is %d\n",data[0]);
+			printf("byte is %d\n", data[0]);
 			debug("Finalize byte didn't match");
 			return LC_ERROR_VERIFY;
 		}
 	}
+	if (cb)
+		cb(cb_stage, 3, 3, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
 
-int CRemote::PrepConfig(const TRemoteInfo &ri)
+int CRemote::PrepConfig(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
+	uint32_t cb_stage)
 {
 	int err;
 	uint8_t data_zero[1] = { 0x00 };
 
 	if (ri.architecture != 14) {
+		if (cb) {
+			cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
+			cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+				NULL);
+		}
 		return 0;
 	}
+
+	if (cb)
+		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	if ((err = WriteMiscByte(0x02, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
 		return err;
 	}
+
+	if (cb)
+		cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+
 	if ((err = WriteMiscByte(0x05, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
 		return err;
 	}
 
+	if (cb)
+		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+
 	return 0;
 }
 
-int CRemote::FinishConfig(const TRemoteInfo &ri)
+int CRemote::FinishConfig(const TRemoteInfo &ri, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage)
 {
 	int err;
 	uint8_t data_one[1]  = { 0x01 };
@@ -462,12 +534,22 @@ int CRemote::FinishConfig(const TRemoteInfo &ri)
 		return 0;
 	}
 
+	if (cb)
+		cb(cb_stage, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+
 	if ((err = WriteMiscByte(0x03, 1, COMMAND_MISC_RESTART_CONFIG, data_one))) {
 		return err;
 	}
+
+	if (cb)
+		cb(cb_stage, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+
 	if ((err = WriteMiscByte(0x06, 1, COMMAND_MISC_RESTART_CONFIG, data_zero))) {
 		return err;
 	}
+
+	if (cb)
+		cb(cb_stage, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
 	return 0;
 }
@@ -483,11 +565,10 @@ int CRemote::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
 }
 
 int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
-	unsigned int protocol, lc_callback cb, void *arg)
+	unsigned int protocol, lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
-
 	uint32_t cb_count = 0;
-	const unsigned int max_chunk_len = 
+	const unsigned int max_chunk_len =
 		protocol == 0 ? 749 : 3150;
 
 	/* mapping of lenghts - see specs/protocol.txt */
@@ -534,7 +615,7 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 			bytes_written += block_len;
 			chunk_len -= block_len;
 		}
-		
+
 		uint8_t end_cmd[64] = { COMMAND_DONE, COMMAND_WRITE_FLASH };
 		HID_WriteReport(end_cmd);
 
@@ -543,7 +624,8 @@ int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
 			break;
 
 		if (cb) {
-			cb(cb_count++, bytes_written, len, arg);
+			cb(cb_stage, cb_count++, bytes_written, len,
+				LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
 		}
 	} while (addr < end);
 
@@ -665,7 +747,7 @@ int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 {
 	int err = 0;
 
-	if(ri.architecture < 8) {
+	if (ri.architecture < 8) {
 		uint8_t tsv[8];
 		err = ReadMiscByte(0, 6, COMMAND_MISC_STATE, tsv);
 		ht.second = tsv[0];
@@ -693,10 +775,16 @@ int CRemote::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
 	return err;
 }
 
-int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
+int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
+	lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
 	int err = 0;
 	uint8_t rsp[68];
+	int cb_count = 0;
+
+	if (cb)
+		cb(cb_stage, cb_count++, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	if (ri.architecture < 8) {
 		uint8_t tsv[8];
@@ -708,6 +796,10 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 		tsv[5] = ht.year - 2000;
 		if ((err = WriteMiscByte(0, 6, COMMAND_MISC_STATE, tsv)))
 			return err;
+		if (cb)
+			cb(cb_stage, cb_count++, 1, 3, LC_CB_COUNTER_TYPE_STEPS,
+				cb_arg, NULL);
+
 		tsv[0] = ht.second;
 		err = WriteMiscByte(0, 1, COMMAND_MISC_STATE, tsv);
 	} else {
@@ -721,6 +813,9 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 		tsv[6] = ht.year-2000;
 		if ((err = WriteMiscWord(0, 7, COMMAND_MISC_STATE, tsv)))
 			return err;
+		if (cb)
+			cb(cb_stage, cb_count++, 1, 3, LC_CB_COUNTER_TYPE_STEPS,
+				cb_arg, NULL);
 		tsv[0] = ht.second;
 		if ((err = WriteMiscWord(0, 1, COMMAND_MISC_STATE, tsv)))
 			return err;
@@ -733,6 +828,9 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 			err = HID_WriteReport(rcc);
 		}
 	}
+	if (cb)
+		cb(cb_stage, cb_count++, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
         if (err != 0) {
 		return err;
@@ -754,6 +852,9 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht)
 	} else {
 		err = 0;
 	}
+	if (cb)
+		cb(cb_stage, cb_count++, 3, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
+			NULL);
 
 	return err;
 }
@@ -782,9 +883,8 @@ bool check_seq(int received_seq, uint8_t &expected_seq)
 }
 
 int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
-	uint32_t &t_on, uint32_t &t_off, uint32_t &t_total, 
-	uint32_t &ir_count,
-	uint32_t *&ir_signal, uint32_t &freq)
+	uint32_t &t_on, uint32_t &t_off, uint32_t &t_total,
+	uint32_t &ir_count, uint32_t *&ir_signal, uint32_t &freq)
 {
 	const uint32_t len = rsp[63];
 	if ((len & 1) != 0) {
@@ -848,8 +948,8 @@ int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
 						freq = static_cast<uint32_t>(
 							static_cast<uint64_t>(t)
 								*1000000/(t_on));
-						debug("%i Hz",freq);
-						debug("+%i",t_on);
+						debug("%i Hz", freq);
+						debug("+%i", t_on);
 						ir_signal[ir_count++] = t_on;
 					}
 					break;
@@ -860,31 +960,20 @@ int _handle_ir_response(uint8_t rsp[64], uint32_t &ir_word,
 	return 0;
 }
 
-
-int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
-		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg)
+// This section of IR learning code is common between pure HID and MH remotes.
+// 'seq' is the starting sequence number, which differs between HID and MH.
+int LearnIRInnerLoop(uint32_t *freq, uint32_t **ir_signal,
+	uint32_t *ir_signal_length, uint8_t seq)
 {
 	int err = 0;
 	uint8_t rsp[68];
 
-	static const uint8_t start_ir_learn[64] = { COMMAND_START_IRCAP };
-	static const uint8_t stop_ir_learn[64] = { COMMAND_STOP_IRCAP };
-
-	if (cb) {
-		cb(0, 0, 1, cb_arg);
-	}
-
-	if (HID_WriteReport(start_ir_learn) != 0) {
-		return LC_ERROR_WRITE;
-	}
-
-	uint8_t seq = 0;
 	// Count of how man IR words we've received.
 	uint32_t ir_word = 0;
 	// Time button is on and off
 	uint32_t t_on = 0;
 	uint32_t t_off = 0;
-	// total duration of received signal: 
+	// total duration of received signal:
 	// abort when > MAX_IR_SIGNAL_DURATION
 	uint32_t t_total = 0;
 
@@ -898,7 +987,7 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 	 * - signal interrupted for IR_LEARN_DONE_TIMEOUT or longer
 	 */
 	while ((err == 0) && (t_off < IR_LEARN_DONE_TIMEOUT * 1000)) {
-		if ((err = HID_ReadReport(rsp, ir_word ? 
+		if ((err = HID_ReadReport(rsp, ir_word ?
 			IR_LEARN_DONE_TIMEOUT : IR_LEARN_START_TIMEOUT))) {
 			err = LC_ERROR_READ;
 			break;
@@ -908,14 +997,14 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 			if (!check_seq(rsp[1], seq)) {
 				err = LC_ERROR;
 				break;
- 			}
+			}
 			seq += 0x10;
 			/*
 			 * This will handle the IR response including updating
 			 * t_off so we can exit the loop if long enough time
 			 * goes by without action.
 			 */
-			err = _handle_ir_response(rsp, ir_word, t_on, t_off, 
+			err = _handle_ir_response(rsp, ir_word, t_on, t_off,
 				t_total, *ir_signal_length, *ir_signal,	*freq);
 			if (err != 0) {
 				break;
@@ -944,6 +1033,29 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 		}
 	}
 
+	return err;
+}
+
+int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
+		uint32_t *ir_signal_length, lc_callback cb, void *cb_arg,
+		uint32_t cb_stage)
+{
+	int err = 0;
+	uint8_t rsp[68];
+
+	static const uint8_t start_ir_learn[64] = { COMMAND_START_IRCAP };
+	static const uint8_t stop_ir_learn[64] = { COMMAND_STOP_IRCAP };
+
+	if (cb) {
+		cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+	}
+
+	if (HID_WriteReport(start_ir_learn) != 0) {
+		return LC_ERROR_WRITE;
+	}
+
+	err = LearnIRInnerLoop(freq, ir_signal, ir_signal_length, 0);
+
 	if (HID_WriteReport(stop_ir_learn) != 0) {
 		err = LC_ERROR_WRITE;
 	}
@@ -954,10 +1066,10 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 			err = LC_ERROR_READ;
 			break;
 		}
-	} while ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE); 
+	} while ((rsp[0] & COMMAND_MASK) != RESPONSE_DONE);
 
 	if (cb && !err) {
-		cb(1, 1, 1, cb_arg);
+		cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 	}
 
 	return err;

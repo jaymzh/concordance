@@ -142,8 +142,13 @@ int FindRemote(THIDINFO &hid_info)
 	 *
 	 * This is ONLY available when on Linux. We don't check for an error
 	 * because it will error if no kernel driver is attached to it.
+	 *
+	 * Don't attempt to do this if this is a usbnet remote as it will
+	 * unload the zaurus driver, which is not desired.
 	 */
-	usb_detach_kernel_driver_np(h_hid, 0);
+	if (!(h_dev && (h_dev->descriptor.idProduct == 0xC11F))) {
+		usb_detach_kernel_driver_np(h_hid, 0);
+	}
 #endif
 
 	int err;

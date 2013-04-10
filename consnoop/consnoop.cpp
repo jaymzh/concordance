@@ -350,11 +350,11 @@ void decode_z_hid_udp(int *mode, const uint8_t * const data)
 		case COMMAND_WRITE_UPDATE_HEADER:
 			if (!type) {
 				printf("Write Update Header:");
-				print_z_params(param_ptr, length);
-				printf("\n");
-				break;
+			} else {
+				printf("Write Update Header Response:");
 			}
-			printf("Write Update Header Response\n");
+			print_z_params(param_ptr, length);
+			printf("\n");
 			break;
 		case COMMAND_WRITE_UPDATE_DATA:
 			if (!type) {
@@ -387,11 +387,11 @@ void decode_z_hid_udp(int *mode, const uint8_t * const data)
 		case COMMAND_FINISH_UPDATE:
 			if (!type) {
 				printf("Write Finish Update:");
-				print_z_params(param_ptr, length);
-				printf("\n");
-				break;
+			} else {
+				printf("Write Finish Update Response:");
 			}
-			printf("Finish Update Response\n");
+			print_z_params(param_ptr, length);
+			printf("\n");
 			break;
 		case COMMAND_Z_RESET:
 			if (!type) {

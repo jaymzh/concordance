@@ -70,7 +70,13 @@ static void UrlEncode(const char *in, string &out)
 	const size_t len = strlen(in);
 	for(size_t i = 0; i < len; ++i) {
 		const char c = in[i];
-		if(urlencodemap[c>>3] & (1 << (c & 7))) {
+		if (c == ' ') {
+			out += '+';
+		} else if (c == '(') {
+			out += "%28";
+		} else if (c == ')') {
+			out += "%29";
+		} else if(urlencodemap[c>>3] & (1 << (c & 7))) {
 			char hex[4];
 			sprintf(hex, "%%%02X", c);
 			out += hex;
@@ -148,9 +154,21 @@ static int Zap(string &server, const char *s1, const char *s2)
 	return 0;
 }
 
+// If find_attributes is set to true, finds an XML tag with attributes and will
+// return the attributes.  For example, if you have: <ELEMENT A="B" C="D"/> and
+// you search for a tag called "ELEMENT" the function will return A="B" C="D".
 int GetTag(const char *find, uint8_t* data, uint32_t data_size,
-	uint8_t *&found, string *s=NULL)
+	uint8_t *&found, string *s=NULL, bool find_attributes=false)
 {
+	char tag_name_end = '>';
+	char tag_start = '<';
+	char tag_end = '>';
+	if (find_attributes) {
+		tag_name_end = ' ';
+		tag_start = '/';
+		tag_end = '/';
+	}
+
 	const size_t find_len = strlen(find);
 	uint8_t * search = data;
 
@@ -175,7 +193,7 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 		// Point past <, at tag name
 		search++;
 		// Check to see if this is the tag we want
-		if (search[find_len] == '>'
+		if (search[find_len] == tag_name_end
 		   && !strnicmp(find, reinterpret_cast<const char*>(search), find_len)) {
 			// Point past >, at tag content
 			search += find_len + 1;
@@ -192,7 +210,7 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 				 * Here we keep adding chars until the next tag
 				 * which, in theory, should be the end-tag.
 				 */
-				while (*search && *search != '<') {
+				while (*search && *search != tag_start) {
 					*s += *search;
 					search++;
 					if (search >= data + data_size) {
@@ -205,7 +223,7 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 
 		// Loop searching for end of tag character
 		while (1) {
-			if (*search == '>') {
+			if (*search == tag_end) {
 				break;
 			}
 			if (search >= data + data_size) {
@@ -214,6 +232,31 @@ int GetTag(const char *find, uint8_t* data, uint32_t data_size,
 			search++;
 		}
 	}
+}
+
+// Given a set of XML attributes, e.g., ATTR1="VALUE1" ATTR2="VALUE2", this
+// function will find a given attribute and return its value.
+int GetAttribute(const char *find, string data, string *result)
+{
+	if ((find == NULL) || (result == NULL))
+		return -1;
+
+	size_t start_pos;
+	size_t end_pos;
+	string to_find = find;
+	to_find.append("=\"");
+	
+	start_pos = data.find(to_find);
+	if (start_pos == string::npos)
+		return -1;
+	start_pos += to_find.length();
+
+	end_pos = data.find("\"", start_pos);
+	if (end_pos == string::npos)
+		return -1;
+
+	*result = data.substr(start_pos, end_pos - start_pos);
+	return 0;
 }
 
 int encode_ir_signal(uint32_t carrier_clock, 
@@ -251,12 +294,24 @@ int encode_ir_signal(uint32_t carrier_clock,
 	return 0;
 }
 
+int add_usbnet_headers(char *post_data, TRemoteInfo &ri)
+{
+	sprintf(post_data+strlen(post_data), post_xml_usbnet1, ri.home_id, 
+		ri.node_id, ri.tid);
+	for (int i=0; i<ri.num_regions; i++) {
+		sprintf(post_data+strlen(post_data),
+			post_xml_usbnet_region, ri.region_ids[i],
+			ri.region_versions[i]);
+	}
+	sprintf(post_data+strlen(post_data), "%s", post_xml_usbnet2);
+	sprintf(post_data+strlen(post_data), "%s", ri.xml_user_rf_setting);
+	sprintf(post_data+strlen(post_data), "%s", post_xml_usbnet3);
+}
 
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
-	bool has_userid, bool add_cookiekeyval = false,
-	string *learn_seq = NULL, string *learn_key = NULL)
+	bool has_userid, bool add_cookiekeyval, bool z_post,
+	string *learn_seq, string *learn_key)
 {
-
 	uint8_t *x = xml;
 	int err;
 	if ((err = GetTag(root, x, xml_size - (x - xml), x)))
@@ -297,12 +352,25 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 	if (learn_seq == NULL) {
 		char serial[144];
 		sprintf(serial, "%s%s%s", ri.serial1, ri.serial2, ri.serial3);
-		char post_data[2000];
-		sprintf(post_data, post_xml,
-			ri.fw_ver_major, ri.fw_ver_minor, ri.fw_type,
-			serial, ri.hw_ver_major, ri.hw_ver_minor,
-			ri.flash_mfg, ri.flash_id, ri.protocol,
-			ri.architecture, ri.skin);
+		char post_data[4000]; // large enough for extra usbnet headers
+		if (z_post) {
+			sprintf(post_data, z_post_xml,
+				ri.hw_ver_major, ri.hw_ver_minor,
+				ri.flash_mfg, ri.flash_id,
+				ri.fw_ver_major, ri.fw_ver_minor);
+		} else {
+			sprintf(post_data, post_xml,
+				ri.fw_ver_major, ri.fw_ver_minor, ri.fw_type,
+				serial, ri.hw_ver_major, ri.hw_ver_minor,
+				ri.hw_ver_micro, ri.flash_mfg, ri.flash_id,
+				ri.protocol, ri.architecture, ri.skin);
+			if (is_usbnet_remote()) {
+				add_usbnet_headers(post_data, ri);
+			} else {
+				sprintf(post_data+strlen(post_data), "%s", 
+					post_xml_trailer);
+			}
+		}
 
 		debug("post data: %s",post_data);
 
