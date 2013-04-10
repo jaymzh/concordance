@@ -1,3 +1,14 @@
+1.0
+Released:
+phil@ipom.com:
+- libconcord: revamp API for zwave support
+- libconcord: support for 890/895 remotes
+swt@techie.net
+- libconcord: support for 900/1000/1100 remotes
+- libconcord: support for 200/300 remotes
+- libconcord: support for Harmony One remotes
+- libconcord: various improvements to new zwave API for clients
+
 0.24
 Released: 03/18/12
 phil@ipom.com:
