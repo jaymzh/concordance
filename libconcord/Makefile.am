@@ -23,11 +23,6 @@ generic_udev:
 install_udev_common:
 	$(MKDIR_P) $(DESTDIR)$(UDEVLIBDIR)/udev/rules.d
 	$(install_sh_DATA) libconcord.rules \
-<<<<<<< Makefile.am
-		$(DESTDIR)$(sysconfdir)/udev/rules.d/60-libconcord.rules
-
-install_udev: udev install_udev_generic
-=======
 		$(DESTDIR)$(UDEVLIBDIR)/udev/rules.d/60-libconcord.rules
 	$(install_sh_DATA) libconcord-usbnet.rules \
 		$(DESTDIR)$(UDEVLIBDIR)/udev/rules.d/80-libconcord-usbnet.rules
@@ -39,7 +34,6 @@ install_udev: udev install_udev_generic
 install_udev: udev install_udev_common
 install_old_udev: old_udev install_udev_common
 install_generic_udev: generic_udev install_udev_common
->>>>>>> 1.11.2.9
 
 old-udev:
 	./gen_udev_support -o
