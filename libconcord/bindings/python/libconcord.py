@@ -1,11 +1,7 @@
 #
 # vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=4 expandtab:
 #
-<<<<<<< libconcord.py
 # $Id$
-=======
-# $Id$
->>>>>>> 1.9.2.5
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
