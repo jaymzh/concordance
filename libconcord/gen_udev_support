@@ -286,9 +286,6 @@ while getopts cgopu opt; do
         u)
             MODE='udev'
             ;;
-        o)
-            MODE='old_udev'
-            ;;
         *)
             usage
             exit 1

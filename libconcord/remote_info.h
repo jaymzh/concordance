@@ -31,7 +31,8 @@ static const char *MFG_HK="Harman Kardon";
 static const char *MFG_MON="Monster";
 
 static const TModel ModelList[]={
-	{ MFG_UNK,	"0",				NULL },				// 0
+// 0
+	{ MFG_UNK,	"0",				NULL },
 	{ MFG_UNK,	"1",				NULL },
 	{ MFG_HAR,	"Harmony 745",		NULL },
 	{ MFG_HAR,	"Harmony 768",		NULL },
@@ -41,7 +42,8 @@ static const TModel ModelList[]={
 	{ MFG_HAR,	"Harmony 748",		NULL },
 	{ MFG_UNK,	"8",				NULL },
 	{ MFG_HAR,	"Harmony 659",		NULL },
-	{ MFG_HAR,	"Harmony 688",		NULL },				// 10
+// 10
+	{ MFG_HAR,	"Harmony 688",		NULL },
 	{ MFG_HAR,	"Harmony 655",		NULL },
 	{ MFG_HAR,	"Harmony 676",		NULL },
 	{ MFG_HAR,	"Harmony 628",		NULL },
@@ -51,7 +53,8 @@ static const TModel ModelList[]={
 	{ MFG_HAR,	"Harmony 885",		"Espresso" },
 	{ MFG_HAR,	"Harmony 520",		"Mocha Decaf" },
 	{ MFG_HAR,	"Harmony 890",		"Cappuccino" },
-	{ MFG_HAR,	"Harmony 891",		"Whisky" },			// 20
+// 20
+	{ MFG_HAR,	"Harmony 891",		"Whisky" },
 	{ MFG_HAR,	"Harmony 892",		"Sugar" },
 	{ MFG_HAR,	"Harmony 525",		"Mocha Decaf" },
 	{ MFG_HAR,	"Harmony 895",		"Cappuccino" },
@@ -61,7 +64,8 @@ static const TModel ModelList[]={
 	{ MFG_MON,	"AVL-300",			"Whisky" },
 	{ MFG_MON,	"AVL-300",			"Sugar" },
 	{ MFG_MON,	"AVL-300",			"Godzilla" },
-	{ MFG_MON,	"AVL-300",			"Whisky" },			// 30
+// 30
+        { MFG_MON,	"AVL-300",			"Whisky" },
 	{ MFG_MON,	"AVL-300",			"Sugar" },
 	{ MFG_MON,	"AVL-200",			"Godzilla" },
 	{ MFG_MON,	"AVL-200",			"Godzilla" },
@@ -71,7 +75,8 @@ static const TModel ModelList[]={
 	{ MFG_MON,	"AV-100",			NULL },
 	{ MFG_MON,	"AV-100",			NULL },
 	{ MFG_HAR,	"Harmony 880 Pro", "Espresso" },
-	{ MFG_HAR,	"Harmony 890 Pro", "Cappuccino" },		// 40
+// 40
+	{ MFG_HAR,	"Harmony 890 Pro", "Cappuccino" },
 	{ MFG_HAR,	"Harmony 550",		"Mocha Grande" },
 	{ MFG_HK,	"TC-30",			NULL },
 	{ MFG_HK,	"TC-30",			NULL },
@@ -81,7 +86,8 @@ static const TModel ModelList[]={
 	{ MFG_COOL,	"Harmony 882",		"Espresso" },
 	{ MFG_HAR,	"Harmony 555",		"Mocha Grande" },
 	{ MFG_HAR,	"Harmony 1000",		"Cognac" },
-	{ MFG_HAR,	"Harmony 670",		NULL },				// 50
+// 50
+	{ MFG_HAR,	"Harmony 670",		NULL },	
 	{ MFG_COOL,	"Harmony 552",		"Mocha Grande" },
 	{ MFG_HAR,	"Harmony 1000i",	"Cognac" },
 	{ MFG_UNK,	"Unknown",			NULL },
@@ -91,18 +97,19 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL },			// 60
+// 60
+	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 900",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 1100",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 700",		"Molson" },
-	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,      "Harmony 515",          NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 700i",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL },
 // 70
+	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 600",			NULL },
 	{ MFG_HAR,	"Harmony 650",			NULL },
 	{ MFG_HAR,	"Harmony 600i",			NULL },
@@ -112,8 +119,8 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 300",			NULL },
 	{ MFG_HAR,	"Harmony 300i",			NULL },
-	{ MFG_HAR,	"Harmony 200",			NULL },
 // 80
+	{ MFG_HAR,	"Harmony 200",			NULL },
 	{ MFG_HAR,	"Harmony 200i",			NULL },
 	{ MFG_HAR,	"Harmony Link",			NULL },
 	{ MFG_HAR,	"Harmony Link (EMEA)",		NULL },
@@ -122,11 +129,10 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_HAR,	"Harmony 700",		"Molson" },
-	{ MFG_HAR,	"Harmony 515",		NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL }
 // 90
+	{ MFG_UNK,	"Unknown",			NULL }
 };
 
 static const unsigned int max_model=sizeof(ModelList)/sizeof(TModel)-1;

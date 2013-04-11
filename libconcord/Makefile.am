@@ -35,11 +35,6 @@ install_udev: udev install_udev_common
 install_old_udev: old_udev install_udev_common
 install_generic_udev: generic_udev install_udev_common
 
-old-udev:
-	./gen_udev_support -o
-
-install_old-udev: old-udev install_udev_generic
-
 policykit:
 	./gen_udev_support -p
 
