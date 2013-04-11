@@ -10,6 +10,9 @@ source, see the instructions below.
 You *MUST* install libusb and libzzip. These libraries are in most
 distributions, so apt-get/yum/up2date/urpmi/etc. it.
 
+Also, if you are using 900/1000/1100 remotes, then dnsmasq is a requirement,
+as well as installing the udev support files for libconcord (see below).
+
 If you're compiling libconcord from source, you'll also need the development
 packages - usually libusb-dev or libusb-devel (and libzzip-dev/libzzip-devel),
 depending on your distribution.
