@@ -128,7 +128,6 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_HAR,	"Harmony 700",		"Molson" },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 // 90
