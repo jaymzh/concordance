@@ -1,15 +1,18 @@
 1.0
-Released:
+Released: 04/15/13
 phil@ipom.com:
-- libconcord: revamp API for zwave support
-- libconcord: support for 890/895 remotes
+- libconcord: revamp API for zwave support.
+- libconcord: support for 890/895 remotes. Fixes bug 3031064.
 swt@techie.net:
-- libconcord: support for 900/1000/1100 remotes
-- libconcord: support for 200/300 remotes
-- libconcord: support for Harmony One remotes
-- libconcord: various improvements to new zwave API for clients
-- libconcord: fixed firmware updates for 688
-- libconcord: Fixed error on reset for 785
+- libconcord: support for 900/1000/1100 remotes. Fixes bug 3011846.
+- libconcord: support for 200/300 remotes. Fixes bug 3436081,3005694.
+- libconcord: support for Harmony One remotes. Fixes bug 3518595.
+- libconcord: various improvements to new zwave API for clients.
+- libconcord: fixed firmware updates for 688. Fixes bug 3536438.
+- libconcord: Fixed error on reset for 785.
+- consnoop: Fix compliation issue. Fixes bug 3518597.
+anonymous:
+- libconcord: Fix python bidngins on OSX. Fixes bug 3387484.
 
 0.24
 Released: 03/18/12
