@@ -4,6 +4,17 @@
 
 You'll need the Xcode tools installed before you can do anything.
 
+You'll need to install pkgconfig. I used the Mac package here:
+
+http://macpkg.sourceforge.net/
+
+You will then need to set the following in your environment for everything
+else to go smoothly:
+
+  export PATH=$PATH:/opt/pkgconfig/bin
+  export PKG_CONFIG=/opt/pkgconfig/bin/pkg-config
+  export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/X11/lib/pkgconfig
+
 You must install libusb-1.0. It's fairly straight forward to install, it should
 be:
    ./configure --prefix=/usr
