@@ -48,8 +48,8 @@
 static SOCKET sock = SOCKET_ERROR;
 
 const char * const remote_ip_address = "169.254.1.2";
-const u_short remote_port            = 3074;
-const int connect_timeout            = 1; // try to connect for 1 seconds
+const uint16_t remote_port = 3074;
+const int connect_timeout = 1; // try to connect for 1 seconds
 
 const char * const http_get_cmd = "\
 GET /xmluserrfsetting HTTP/1.1\r\n\

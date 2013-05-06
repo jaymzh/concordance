@@ -4,7 +4,7 @@
 
 You'll need the Xcode tools installed before you can do anything.
 
-You *MUST* install libusb. It's fairly straight forward to install, it should
+You must install libusb-1.0. It's fairly straight forward to install, it should
 be:
    ./configure --prefix=/usr
    make
@@ -12,6 +12,18 @@ be:
 
 If you get errors about -System while building libusb, upgrade your version of
 Xcode.
+
+You must install libusb-0.1-compat as well. It requires libusb-1.0, so install
+that first. It is also straight forward:
+   ./configure --prefix=/usr
+   make
+   sudo make install
+
+Finally, you will need to install libzzip, which again is straight forward:
+   ./configure --prefix=/usr
+   make
+   sudo make install
+ 
 
 1. BUILD THE LIBRARY
 
