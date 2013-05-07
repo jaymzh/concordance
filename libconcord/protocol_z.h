@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +31,7 @@
 #define SERVICE_FAMILY_TEST 12
 
 // Literal for 890 only
-#define TYPE_REQUEST 0			
+#define TYPE_REQUEST 0
 // Literal for 890 only
 #define TYPE_RESPONSE 1
 

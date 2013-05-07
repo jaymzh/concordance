@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,29 +25,29 @@
 
 class binaryfile {
 protected:
-	FILE *m_f;
+    FILE *m_f;
 public:
-	binaryfile();
-	~binaryfile();
-	int close(void);
+    binaryfile();
+    ~binaryfile();
+    int close(void);
 };
 
 class binaryoutfile : public binaryfile {
 public:
-	binaryoutfile();
-	~binaryoutfile() {};
-	int open(const char*path);
-	size_t write(const uint8_t *b, uint32_t len);
-	size_t write(const char *c);
+    binaryoutfile();
+    ~binaryoutfile() {};
+    int open(const char*path);
+    size_t write(const uint8_t *b, uint32_t len);
+    size_t write(const char *c);
 };
 
 class binaryinfile : public binaryfile {
 public:
-	binaryinfile();
-	~binaryinfile() {};
-	int open(const char *path);
-	unsigned int getlength(void);
-	size_t read(uint8_t *b, uint32_t len);
+    binaryinfile();
+    ~binaryinfile() {};
+    int open(const char *path);
+    unsigned int getlength(void);
+    size_t read(uint8_t *b, uint32_t len);
 };
 
 #endif

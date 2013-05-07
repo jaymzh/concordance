@@ -1,7 +1,5 @@
 INDENTATION
-Concordance currently uses tab-character indentation. While 4- or 8-space
-indentation would be preferrable, it's not what we have now, so please keep
-the existing indentation.
+Concordance currently uses 4-space indentation.
 
 
 PAGE-WIDTH
@@ -27,6 +25,35 @@ and not:
    if ( i == 2 ) {
 
 The same thing for i[2] as opposed to i[ 2 ].
+
+
+INDENTATION
+When breaking lines that are arguments to a function or parameters to a
+definition, align the second row with the columb the first row began at:
+
+  some_function(one, two, three, four, five, six, seven, eight, nine, ten,
+                eleven, twelve);
+
+If your function call is nested or very long and you'd rather not do that, you
+must start the first argument on it's own line like so:
+
+  some_function(
+    one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve,
+    thirteen);
+
+
+BRACKETS
+Do not use brackets around single-line if-statements unless it would be very
+unclear without them. In otherwords, do this:
+
+  if (condition)
+    thing();
+
+and not:
+
+  if (condition) {
+    thing();
+  }
 
 
 CROSS-PLATFORM NOTES

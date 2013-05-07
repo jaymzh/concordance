@@ -1,7 +1,5 @@
 #
-# vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
-#
-# $Id$
+# vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,8 +20,8 @@
 
 use ExtUtils::MakeMaker;
 WriteMakefile(
-	'NAME'    => 'concord',        # Name of package
-	'LIBS'    => ['-lconcord'],    # Name of custom libraries
-	'OBJECT'  => 'concord_wrap.o'  # Object files
+    'NAME'    => 'concord',        # Name of package
+    'LIBS'    => ['-lconcord'],    # Name of custom libraries
+    'OBJECT'  => 'concord_wrap.o'  # Object files
 );
 

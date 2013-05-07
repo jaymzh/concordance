@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,108 +24,108 @@
 const char *config_header="\
 <?xml version=\"1.0\"?>\r\n\
 <INFORMATION>\r\n\
-	<USERMESSAGES>\r\n\
-		<USERMESSAGE>\r\n\
-			<VERSIONS>\r\n\
-				<VERSION>\r\n\
-					<PROTOCOL>%i</PROTOCOL>\r\n\
-					<SKIN>%i</SKIN>\r\n\
-					<FLASH>0x%02X:0x%02X</FLASH>\r\n\
-					<BOARD>%i.%i.0</BOARD>\r\n\
-					<SOFTWARETYPE>%i</SOFTWARETYPE>\r\n\
-				</VERSION>\r\n\
-			</VERSIONS>\r\n\
-			<TYPE>DoNothing</TYPE>\r\n\
-			<ABORTPROCESSING>True</ABORTPROCESSING>\r\n\
-		</USERMESSAGE>\r\n\
-		<USERMESSAGE>\r\n\
-			<VERSIONS>\r\n\
-				<VERSION></VERSION>\r\n\
-			</VERSIONS>\r\n\
-			<TYPE>Warning</TYPE>\r\n\
-			<TEXT>This configuration file is not compatible with your Harmony Remote.</TEXT>\r\n\
-		</USERMESSAGE>\r\n\
-		<USERMESSAGE>\r\n\
-			<VERSIONS>\r\n\
-				<VERSION></VERSION>\r\n\
-			</VERSIONS>\r\n\
-			<TYPE>Abort</TYPE>\r\n\
-		</USERMESSAGE>\r\n\
-	</USERMESSAGES>\r\n\
-	<INTENDEDVERSION>\r\n\
-		<PROTOCOL>%i</PROTOCOL>\r\n\
-		<SKIN>%i</SKIN>\r\n\
-		<FLASH>0x%02X:0x%02X</FLASH>\r\n\
-		<BOARD>%i.%i.0</BOARD>\r\n\
-		<SOFTWARETYPE>%i</SOFTWARETYPE>\r\n\
-	</INTENDEDVERSION>\r\n\
-	<TRANSFERTYPE>Winsock</TRANSFERTYPE>\r\n\
-	<CONFIGURATION>\r\n\
-		<CONFIGOPTION>\r\n\
-			<KEY>InstructionNoHarmony</KEY>\r\n\
-			<TITLE>No Harmony Detected</TITLE>\r\n\
-			<IMAGE>0</IMAGE>\r\n\
-			<VALUE>Plug the USB cable into your Harmony, or press any button on your Harmony to wake it up.</VALUE>\r\n\
-		</CONFIGOPTION>\r\n\
-	</CONFIGURATION>\r\n"
+    <USERMESSAGES>\r\n\
+        <USERMESSAGE>\r\n\
+            <VERSIONS>\r\n\
+                <VERSION>\r\n\
+                    <PROTOCOL>%i</PROTOCOL>\r\n\
+                    <SKIN>%i</SKIN>\r\n\
+                    <FLASH>0x%02X:0x%02X</FLASH>\r\n\
+                    <BOARD>%i.%i.0</BOARD>\r\n\
+                    <SOFTWARETYPE>%i</SOFTWARETYPE>\r\n\
+                </VERSION>\r\n\
+            </VERSIONS>\r\n\
+            <TYPE>DoNothing</TYPE>\r\n\
+            <ABORTPROCESSING>True</ABORTPROCESSING>\r\n\
+        </USERMESSAGE>\r\n\
+        <USERMESSAGE>\r\n\
+            <VERSIONS>\r\n\
+                <VERSION></VERSION>\r\n\
+            </VERSIONS>\r\n\
+            <TYPE>Warning</TYPE>\r\n\
+            <TEXT>This configuration file is not compatible with your Harmony Remote.</TEXT>\r\n\
+        </USERMESSAGE>\r\n\
+        <USERMESSAGE>\r\n\
+            <VERSIONS>\r\n\
+                <VERSION></VERSION>\r\n\
+            </VERSIONS>\r\n\
+            <TYPE>Abort</TYPE>\r\n\
+        </USERMESSAGE>\r\n\
+    </USERMESSAGES>\r\n\
+    <INTENDEDVERSION>\r\n\
+        <PROTOCOL>%i</PROTOCOL>\r\n\
+        <SKIN>%i</SKIN>\r\n\
+        <FLASH>0x%02X:0x%02X</FLASH>\r\n\
+        <BOARD>%i.%i.0</BOARD>\r\n\
+        <SOFTWARETYPE>%i</SOFTWARETYPE>\r\n\
+    </INTENDEDVERSION>\r\n\
+    <TRANSFERTYPE>Winsock</TRANSFERTYPE>\r\n\
+    <CONFIGURATION>\r\n\
+        <CONFIGOPTION>\r\n\
+            <KEY>InstructionNoHarmony</KEY>\r\n\
+            <TITLE>No Harmony Detected</TITLE>\r\n\
+            <IMAGE>0</IMAGE>\r\n\
+            <VALUE>Plug the USB cable into your Harmony, or press any button on your Harmony to wake it up.</VALUE>\r\n\
+        </CONFIGOPTION>\r\n\
+    </CONFIGURATION>\r\n"
 
-"	<POSTOPTIONS>\r\n\
-		<SERVER>members.harmonyremote.com</SERVER>\r\n\
-		<PATH>EasyZapper/New/ProcUpdate/Receive_Zaps.asp</PATH>\r\n\
-		<TIMEOUT>60000</TIMEOUT>\r\n\
-		<HEADERS>\r\n\
-			<HEADER>\r\n\
-				<KEY>Cookie</KEY>\r\n\
-				<VALUE>Monster</VALUE>\r\n\
-			</HEADER>\r\n\
-		</HEADERS>\r\n\
-		<PARAMETERS>\r\n\
-			<PARAMETER>\r\n\
-				<KEY>UserId</KEY>\r\n\
-				<VALUE>0</VALUE>\r\n\
-			</PARAMETER>\r\n\
-		</PARAMETERS>\r\n\
-	</POSTOPTIONS>\r\n"
+"    <POSTOPTIONS>\r\n\
+        <SERVER>members.harmonyremote.com</SERVER>\r\n\
+        <PATH>EasyZapper/New/ProcUpdate/Receive_Zaps.asp</PATH>\r\n\
+        <TIMEOUT>60000</TIMEOUT>\r\n\
+        <HEADERS>\r\n\
+            <HEADER>\r\n\
+                <KEY>Cookie</KEY>\r\n\
+                <VALUE>Monster</VALUE>\r\n\
+            </HEADER>\r\n\
+        </HEADERS>\r\n\
+        <PARAMETERS>\r\n\
+            <PARAMETER>\r\n\
+                <KEY>UserId</KEY>\r\n\
+                <VALUE>0</VALUE>\r\n\
+            </PARAMETER>\r\n\
+        </PARAMETERS>\r\n\
+    </POSTOPTIONS>\r\n"
 
-"	<TIPPOSTOPTIONS>\r\n\
-		<SERVER>members.harmonyremote.com</SERVER>\r\n\
-		<TIMEOUT>60000</TIMEOUT>\r\n\
-		<HEADERS>\r\n\
-			<HEADER>\r\n\
-				<KEY>Cookie</KEY>\r\n\
-				<VALUE>Monster</VALUE>\r\n\
-			</HEADER>\r\n\
-		</HEADERS>\r\n\
-	</TIPPOSTOPTIONS>\r\n"
-	
-	
-"	<TIMEPOSTOPTIONS>\r\n\
-		<SERVER>members.harmonyremote.com</SERVER>\r\n\
-		<PATH>EasyZapper/GetTime.asp</PATH>\r\n\
-		<TIMEOUT>60000</TIMEOUT>\r\n\
-	</TIMEPOSTOPTIONS>\r\n"
+"    <TIPPOSTOPTIONS>\r\n\
+        <SERVER>members.harmonyremote.com</SERVER>\r\n\
+        <TIMEOUT>60000</TIMEOUT>\r\n\
+        <HEADERS>\r\n\
+            <HEADER>\r\n\
+                <KEY>Cookie</KEY>\r\n\
+                <VALUE>Monster</VALUE>\r\n\
+            </HEADER>\r\n\
+        </HEADERS>\r\n\
+    </TIPPOSTOPTIONS>\r\n"
+    
+    
+"    <TIMEPOSTOPTIONS>\r\n\
+        <SERVER>members.harmonyremote.com</SERVER>\r\n\
+        <PATH>EasyZapper/GetTime.asp</PATH>\r\n\
+        <TIMEOUT>60000</TIMEOUT>\r\n\
+    </TIMEPOSTOPTIONS>\r\n"
 
-"	<COMPLETEPOSTOPTIONS>\r\n\
-		<SERVER>members.harmonyremote.com</SERVER>\r\n\
-		<PATH>EasyZapper/New/ProcUpdate/Receive_Complete.asp</PATH>\r\n\
-		<TIMEOUT>60000</TIMEOUT>\r\n\
-		<HEADERS>\r\n\
-			<HEADER>\r\n\
-				<KEY>Cookie</KEY>\r\n\
-				<VALUE>Monster</VALUE>\r\n\
-			</HEADER>\r\n\
-		</HEADERS>\r\n\
-		<PARAMETERS>\r\n\
-			<PARAMETER>\r\n\
-				<KEY>UserId</KEY>\r\n\
-				<VALUE>0</VALUE>\r\n\
-			</PARAMETER>\r\n\
-		</PARAMETERS>\r\n\
-	</COMPLETEPOSTOPTIONS>\r\n"
+"    <COMPLETEPOSTOPTIONS>\r\n\
+        <SERVER>members.harmonyremote.com</SERVER>\r\n\
+        <PATH>EasyZapper/New/ProcUpdate/Receive_Complete.asp</PATH>\r\n\
+        <TIMEOUT>60000</TIMEOUT>\r\n\
+        <HEADERS>\r\n\
+            <HEADER>\r\n\
+                <KEY>Cookie</KEY>\r\n\
+                <VALUE>Monster</VALUE>\r\n\
+            </HEADER>\r\n\
+        </HEADERS>\r\n\
+        <PARAMETERS>\r\n\
+            <PARAMETER>\r\n\
+                <KEY>UserId</KEY>\r\n\
+                <VALUE>0</VALUE>\r\n\
+            </PARAMETER>\r\n\
+        </PARAMETERS>\r\n\
+    </COMPLETEPOSTOPTIONS>\r\n"
 
 
-"	<BINARYDATASIZE>%i</BINARYDATASIZE>\r\n\
-	<CHECKSUM>%i</CHECKSUM>\r\n\
+"    <BINARYDATASIZE>%i</BINARYDATASIZE>\r\n\
+    <CHECKSUM>%i</CHECKSUM>\r\n\
 </INFORMATION>\r\n";
 
 

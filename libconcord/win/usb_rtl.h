@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,9 +113,9 @@ typedef BOOLEAN __stdcall THidD_SetFeature(IN HANDLE  HidDeviceObject, IN PVOID 
 typedef WINBASEAPI BOOL WINAPI TCancelIo(IN HANDLE hFile);
 #endif
 
-extern TSetupDiDestroyDeviceInfoList* rtlSetupDiDestroyDeviceInfoList;		// 2x
-extern TSetupDiEnumDeviceInterfaces* rtlSetupDiEnumDeviceInterfaces;		// 1x
-extern TSetupDiGetClassDevsA* rtlSetupDiGetClassDevs;						// (A) 1x
+extern TSetupDiDestroyDeviceInfoList* rtlSetupDiDestroyDeviceInfoList;        // 2x
+extern TSetupDiEnumDeviceInterfaces* rtlSetupDiEnumDeviceInterfaces;        // 1x
+extern TSetupDiGetClassDevsA* rtlSetupDiGetClassDevs;                        // (A) 1x
 extern TSetupDiGetDeviceInterfaceDetailA* rtlSetupDiGetDeviceInterfaceDetail; // (A) 2x
 
 extern THidD_GetHidGuid* HidD_GetHidGuid;

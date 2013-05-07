@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,72 +27,72 @@
  */
 void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
 {
-	AV *args = (AV*)arg;
-	SV *cb;
-	SV *cbdata;
-	int i;
+    AV *args = (AV*)arg;
+    SV *cb;
+    SV *cbdata;
+    int i;
 
-	/* get a copy of the stack pointer into SP */
-	dSP;
+    /* get a copy of the stack pointer into SP */
+    dSP;
 
-	/* Create boundry for all mortal and temp variables */
-	ENTER;
-	SAVETMPS;
+    /* Create boundry for all mortal and temp variables */
+    ENTER;
+    SAVETMPS;
 
-	/*
-	 * Tell Perl to make a note of the current stack pointer, so it
-	 * can count how many things we add and knows how big to make
-	 * @_.
-	 */
-	PUSHMARK(SP);
+    /*
+     * Tell Perl to make a note of the current stack pointer, so it
+     * can count how many things we add and knows how big to make
+     * @_.
+     */
+    PUSHMARK(SP);
 
-	/*
-	 * Push the first three variables into the stack and mortalize
-	 * them so that perl will clean them up after the call to cb.
-	 */
-	XPUSHs(sv_2mortal(newSViv(count)));
-	XPUSHs(sv_2mortal(newSViv(curr)));
-	XPUSHs(sv_2mortal(newSViv(total)));
+    /*
+     * Push the first three variables into the stack and mortalize
+     * them so that perl will clean them up after the call to cb.
+     */
+    XPUSHs(sv_2mortal(newSViv(count)));
+    XPUSHs(sv_2mortal(newSViv(curr)));
+    XPUSHs(sv_2mortal(newSViv(total)));
 
-	/*
-	 * Next up, we recurse through the array in void *arg and pull
-	 * the perl function and it's arguments out.
-	 */
+    /*
+     * Next up, we recurse through the array in void *arg and pull
+     * the perl function and it's arguments out.
+     */
 
-	/* not really length - highest index */
-	if (av_len(args) < 1) {
-		SWIG_croak("Less than 2 args passed to lc_cb_wrapper");
-	}
+    /* not really length - highest index */
+    if (av_len(args) < 1) {
+        SWIG_croak("Less than 2 args passed to lc_cb_wrapper");
+    }
 
-	cb = *av_fetch(args, 0, 0);
+    cb = *av_fetch(args, 0, 0);
 
-	for (i = 1; i <= av_len(args); i++) {
-		XPUSHs(*av_fetch(args, i, 0));
-	}
+    for (i = 1; i <= av_len(args); i++) {
+        XPUSHs(*av_fetch(args, i, 0));
+    }
 
-	/*
-	 * Tell it we're done pushing things onto the stack, so it should
-	 * now know how big @_ is.
-	 */ 
-	PUTBACK;
+    /*
+     * Tell it we're done pushing things onto the stack, so it should
+     * now know how big @_ is.
+     */ 
+    PUTBACK;
 
-	/* Actually call our function */
-	call_sv(cb, G_VOID);
+    /* Actually call our function */
+    call_sv(cb, G_VOID);
 
-	/* Refresh our copy of the stack pointer after the call */
-	SPAGAIN;
+    /* Refresh our copy of the stack pointer after the call */
+    SPAGAIN;
 
-	/*
-	 * Close the boundry for temp/mortal variables so the GC
-	 * can clean them up.
-	 */
-	FREETMPS;
-	LEAVE;
+    /*
+     * Close the boundry for temp/mortal variables so the GC
+     * can clean them up.
+     */
+    FREETMPS;
+    LEAVE;
 
-	return;
+    return;
 
    fail:
-	SWIG_croak_null();
+    SWIG_croak_null();
 
 }
 
@@ -108,56 +106,56 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * our wrapper function which is a lc_callback
  */
 %typemap(in) lc_callback %{
-	AV* args;
-	SV *tmp;
+    AV* args;
+    SV *tmp;
 
-	/*
-	 * create a new array, store our perl callback in it. We also
-	 * need to increase the refcount when we do this.
-	 */
-	args = newAV();
-	SvREFCNT_inc($input);
-	av_store(args, 0, $input);
+    /*
+     * create a new array, store our perl callback in it. We also
+     * need to increase the refcount when we do this.
+     */
+    args = newAV();
+    SvREFCNT_inc($input);
+    av_store(args, 0, $input);
 
-	/*
-	 * FIXME:
-	 * 	We SHOULD allow ulimited arguments to our callback
-	 * 	and push them onto the array, something like this:
-	 *
-	 *	for (count = items; count > 0; count--) {
-	 *		tmp = POPs;
-	 *		SvREFCNT_inc(tmp);
-	 *		av_store(args, count - 1, tmp);
-	 *	}
-	 *
-	 *	but, this code will add any function arguments prior
-	 * 	to the callback also to the array and you end up trying
-	 * 	to call some integer as your call back function, or
-	 *	some other similar problem.
-	 */
+    /*
+     * FIXME:
+     *     We SHOULD allow ulimited arguments to our callback
+     *     and push them onto the array, something like this:
+     *
+     *    for (count = items; count > 0; count--) {
+     *        tmp = POPs;
+     *        SvREFCNT_inc(tmp);
+     *        av_store(args, count - 1, tmp);
+     *    }
+     *
+     *    but, this code will add any function arguments prior
+     *     to the callback also to the array and you end up trying
+     *     to call some integer as your call back function, or
+     *    some other similar problem.
+     */
 
-	/* Pass our C callback wrapper as the callback */
-	$1 = lc_cb_wrapper;
+    /* Pass our C callback wrapper as the callback */
+    $1 = lc_cb_wrapper;
 %}
 
 /*
  * Tell perl how to handle void* - i.e., the cb_arg
  */
 %typemap(in) void *cb_arg {
-	/*
-	 * add the arg to our array. See the typemap for lc_callback
-	 * for more details
-	 */
-	av_store(args, 1, $input);
-	/* The array is our callback's argument */
-	$1 = (void *)args;
+    /*
+     * add the arg to our array. See the typemap for lc_callback
+     * for more details
+     */
+    av_store(args, 1, $input);
+    /* The array is our callback's argument */
+    $1 = (void *)args;
 }
 
 /*
  * We need to undef the array when we're done with it...
  */
 %typemap(argout) lc_callback %{
-	av_undef(args);
+    av_undef(args);
 %}
 
 /*
@@ -168,7 +166,7 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * to them as a scalar in the return list on the stack.
  */
 %typemap(in, numinputs=0) uint8_t** (uint8_t *blob) {
-	$1 = &blob;
+    $1 = &blob;
 }
 
 /*
@@ -177,14 +175,14 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * as a scalar in the return list.
  */
 %typemap(in, numinputs=0) uint32_t* (uint32_t num) {
-	$1 = &num;
+    $1 = &num;
 }
 
 /*
  * Special case for ir_signal - this is an array of ints.
  */
 %typemap(in) uint32_t *ir_signal {
-	$1 = (uint32_t*)SvUV($input);
+    $1 = (uint32_t*)SvUV($input);
 }
 
 /*
@@ -192,14 +190,14 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * unsigned value and cast it.
  */
 %typemap(in) uint8_t* {
-	$1 = (uint8_t*)SvUV($input);
+    $1 = (uint8_t*)SvUV($input);
 }
 
 /*
  * When passing in a uint32_t, just grab the number and cast it
  */
 %typemap(in) uint32_t {
-	$1 = (uint32_t)SvUV($input);
+    $1 = (uint32_t)SvUV($input);
 }
 
 /*
@@ -208,15 +206,15 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * a pointer we make.
  */
 %typemap(in, numinputs=0) char*** (char **key_names) {
-	$1 = &key_names;
+    $1 = &key_names;
 }
 
 %typemap(in, numinputs=0) char** (char *encoded_signal) {
-	$1 = &encoded_signal;
+    $1 = &encoded_signal;
 }
 
 %typemap(in, numinputs=0) uint32_t** (uint32_t *num) {
-	$1 = &num;
+    $1 = &num;
 }
 
 /*
@@ -225,12 +223,12 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * list.
  */
 %typemap(argout) uint8_t** {
-	if (argvi >= items) {
-		EXTEND(sp,1);
-	}
-	$result = sv_newmortal();
-	sv_setuv($result, (UV) *($1));
-	argvi++;
+    if (argvi >= items) {
+        EXTEND(sp,1);
+    }
+    $result = sv_newmortal();
+    sv_setuv($result, (UV) *($1));
+    argvi++;
 }
 
 /*
@@ -238,17 +236,17 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * outputs, we have to list these individually... ignore only works in input.
  */
 %typemap(argout) uint32_t *size,
-		 uint32_t *binary_size,
-		 uint32_t *key_names_length,
-		 uint32_t *ir_signal_length,
-		 uint32_t *carrier_clock
+         uint32_t *binary_size,
+         uint32_t *key_names_length,
+         uint32_t *ir_signal_length,
+         uint32_t *carrier_clock
 {
-	if (argvi >= items) {
-		EXTEND(sp,1);
-	}
-	$result = sv_newmortal();
-	sv_setuv($result, (UV) (*$1));
-	argvi++;
+    if (argvi >= items) {
+        EXTEND(sp,1);
+    }
+    $result = sv_newmortal();
+    sv_setuv($result, (UV) (*$1));
+    argvi++;
 }
 
 /*
@@ -258,24 +256,24 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * so we keep it separate.
  */
 %typemap(argout) uint32_t** {
-	if (argvi >= items) {
-		EXTEND(sp,1);
-	}
-	$result = sv_newmortal();
-	sv_setuv($result, (UV) (*$1));
-	argvi++;
+    if (argvi >= items) {
+        EXTEND(sp,1);
+    }
+    $result = sv_newmortal();
+    sv_setuv($result, (UV) (*$1));
+    argvi++;
 }
 
 /*
  * Return string
  */
 %typemap(argout) char** {
-	if (argvi >= items) {
-		EXTEND(sp,1);
-	}
-	$result = sv_newmortal();
-	sv_setpv((SV*)$result, *$1);
-	argvi++;
+    if (argvi >= items) {
+        EXTEND(sp,1);
+    }
+    $result = sv_newmortal();
+    sv_setpv((SV*)$result, *$1);
+    argvi++;
 }
 
 /*
@@ -283,45 +281,45 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * we call delete_key_names().
  */
 %typemap(argout) char ***key_names {
-	if (argvi >= items) {
-		EXTEND(sp,1);
-	}
+    if (argvi >= items) {
+        EXTEND(sp,1);
+    }
 
-	/*
-	 * Code copied from
-	 * http://www.swig.org/Doc1.3/Perl5.html#Perl5_nn32
-	 *
-	 * I don't like this method of a C-array of perl SVs... I'd rather
-	 * create a perl AV and fill it as necessary with SVs, and I tried that
-	 * using the code here:
-         *    http://docstore.mik.ua/orelly/perl/advprog/ch20_05.htm#ch20-40642
-         * but it would render $VAR1 => [ $VAR1 ]; in perl instead of
-         * $VAR1 => [ 'key1' ]; and I never figured out why.
-	 */
-	AV *myav;
-	SV **svs;
-	int i = 0;
-	/* Figure out how many elements we have */
-	int len = sizeof(*$1) / sizeof(char*);
+    /*
+     * Code copied from
+     * http://www.swig.org/Doc1.3/Perl5.html#Perl5_nn32
+     *
+     * I don't like this method of a C-array of perl SVs... I'd rather
+     * create a perl AV and fill it as necessary with SVs, and I tried that
+     * using the code here:
+     *    http://docstore.mik.ua/orelly/perl/advprog/ch20_05.htm#ch20-40642
+     * but it would render $VAR1 => [ $VAR1 ]; in perl instead of
+     * $VAR1 => [ 'key1' ]; and I never figured out why.
+     */
+    AV *myav;
+    SV **svs;
+    int i = 0;
+    /* Figure out how many elements we have */
+    int len = sizeof(*$1) / sizeof(char*);
 
-	/* Create a C-array of perl-scalar ptrs. */
-	svs = (SV **) malloc(len*sizeof(SV *));
-	for (i = 0; i < len ; i++) {
-		svs[i] = sv_newmortal();
-		sv_setpv((SV*)svs[i],(*$1)[i]);
-	}
+    /* Create a C-array of perl-scalar ptrs. */
+    svs = (SV **) malloc(len*sizeof(SV *));
+    for (i = 0; i < len ; i++) {
+        svs[i] = sv_newmortal();
+        sv_setpv((SV*)svs[i],(*$1)[i]);
+    }
 
-	/* Create a perl array */
-	myav = av_make(len,svs);
-	free(svs);
+    /* Create a perl array */
+    myav = av_make(len,svs);
+    free(svs);
 
-	/* Cleanup the char** - keynames is never pa*/
-	delete_key_names(*$1, len);
+    /* Cleanup the char** - keynames is never pa*/
+    delete_key_names(*$1, len);
 
-	/* Return a ptr to it. */
-	$result = newRV((SV*)myav);
-	sv_2mortal($result);
-	argvi++;
+    /* Return a ptr to it. */
+    $result = newRV((SV*)myav);
+    sv_2mortal($result);
+    argvi++;
 }
 
 /*

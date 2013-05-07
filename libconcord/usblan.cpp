@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,176 +57,176 @@ Host: 169.254.1.2\r\n\
 
 int InitializeUsbLan(void)
 {
-	return 0;
+    return 0;
 }
 
 int ShutdownUsbLan(void)
 {
-	int err=0;
+    int err=0;
 
-	// Close the socket
-	if (sock != SOCKET_ERROR) {
-		if ((err = closesocket(sock))) {
-			report_net_error("closesocket()");
-			return LC_ERROR_OS_NET;
-		}
-	}
+    // Close the socket
+    if (sock != SOCKET_ERROR) {
+        if ((err = closesocket(sock))) {
+            report_net_error("closesocket()");
+            return LC_ERROR_OS_NET;
+        }
+    }
 
-	return 0;
+    return 0;
 }
 
 int FindUsbLanRemote(void)
 {
-	int err;
+    int err;
 
-	hostent* addr = gethostbyname(remote_ip_address);
+    hostent* addr = gethostbyname(remote_ip_address);
 
-	if (!addr) {
-		report_net_error("gethostbyname()");
-		return LC_ERROR_OS_NET;
-	}
+    if (!addr) {
+        report_net_error("gethostbyname()");
+        return LC_ERROR_OS_NET;
+    }
 
-	sockaddr_in sa;
-	memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
-	sa.sin_family = AF_INET;		// TCP/IP
-	sa.sin_port = htons(remote_port);	// Port 3074
+    sockaddr_in sa;
+    memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
+    sa.sin_family = AF_INET;        // TCP/IP
+    sa.sin_port = htons(remote_port);    // Port 3074
 
-	sock = socket(sa.sin_family, SOCK_STREAM, 0);	// TCP
-	//sock = socket(sa.sin_family, SOCK_DGRAM, 0);	// UDP
+    sock = socket(sa.sin_family, SOCK_STREAM, 0);    // TCP
+    //sock = socket(sa.sin_family, SOCK_DGRAM, 0);    // UDP
 
-	// Make the socket non-blocking so it doesn't hang on systems that 
-	// don't have a usbnet remote.
-	int flags = 0;
-	fd_set wset;
-	FD_ZERO(&wset);
-	FD_SET(sock, &wset);
-	struct timeval tv;
-	tv.tv_sec = connect_timeout;
-	tv.tv_usec = 0;
-	if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
-		report_net_error("fcntl()");
-		return LC_ERROR_OS_NET;
-	}
-	if(fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
-		report_net_error("fcntl()");
-		return LC_ERROR_OS_NET;
-	}
+    // Make the socket non-blocking so it doesn't hang on systems that 
+    // don't have a usbnet remote.
+    int flags = 0;
+    fd_set wset;
+    FD_ZERO(&wset);
+    FD_SET(sock, &wset);
+    struct timeval tv;
+    tv.tv_sec = connect_timeout;
+    tv.tv_usec = 0;
+    if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
+        report_net_error("fcntl()");
+        return LC_ERROR_OS_NET;
+    }
+    if(fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
+        report_net_error("fcntl()");
+        return LC_ERROR_OS_NET;
+    }
 
-	if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
-		if (errno != EINPROGRESS) {
-			report_net_error("connect()");
-			return LC_ERROR_OS_NET;
-		}
-	}
+    if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+        if (errno != EINPROGRESS) {
+            report_net_error("connect()");
+            return LC_ERROR_OS_NET;
+        }
+    }
 
-	if ((err = select(sock+1, NULL, &wset, NULL, &tv)) <= 0) {
-		report_net_error("select()");
-		return LC_ERROR_OS_NET;
-	}
+    if ((err = select(sock+1, NULL, &wset, NULL, &tv)) <= 0) {
+        report_net_error("select()");
+        return LC_ERROR_OS_NET;
+    }
 
-	// Change the socket back to blocking which should be fine now that we
-	// connected.
-	if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
-		report_net_error("fcntl()");
-		return LC_ERROR_OS_NET;
-	}
-	if(fcntl(sock, F_SETFL, flags & ~O_NONBLOCK) < 0) {
-		report_net_error("fcntl()");
-		return LC_ERROR_OS_NET;
-	}
+    // Change the socket back to blocking which should be fine now that we
+    // connected.
+    if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
+        report_net_error("fcntl()");
+        return LC_ERROR_OS_NET;
+    }
+    if(fcntl(sock, F_SETFL, flags & ~O_NONBLOCK) < 0) {
+        report_net_error("fcntl()");
+        return LC_ERROR_OS_NET;
+    }
 
-	debug("Connected to USB LAN driver!");
+    debug("Connected to USB LAN driver!");
 
-	return 0;
+    return 0;
 }
 
 int UsbLan_Write(unsigned int len, uint8_t *data)
 {
-	int err = send(sock, reinterpret_cast<char*>(data), len, 0);
+    int err = send(sock, reinterpret_cast<char*>(data), len, 0);
 
-	if (err == SOCKET_ERROR) {
-		report_net_error("send()");
-		return LC_ERROR_OS_NET;
-	}
+    if (err == SOCKET_ERROR) {
+        report_net_error("send()");
+        return LC_ERROR_OS_NET;
+    }
 
-	debug("%i bytes sent", err);
+    debug("%i bytes sent", err);
 
-	return 0;
+    return 0;
 }
 
 
 int UsbLan_Read(unsigned int &len, uint8_t *data)
 {
-	int err = recv(sock, reinterpret_cast<char*>(data), len, 0);
+    int err = recv(sock, reinterpret_cast<char*>(data), len, 0);
 
-	if (err == SOCKET_ERROR) {
-		report_net_error("recv()");
-		len = 0;
-		return LC_ERROR_OS_NET;
-	} 
+    if (err == SOCKET_ERROR) {
+        report_net_error("recv()");
+        len = 0;
+        return LC_ERROR_OS_NET;
+    } 
 
-	len = static_cast<unsigned int>(err);
-	debug("%i bytes received", len);
+    len = static_cast<unsigned int>(err);
+    debug("%i bytes received", len);
 
-	return 0;
+    return 0;
 }
 
 int GetXMLUserRFSetting(char **data)
 {
-	int err;
-	int web_sock;
-	char buf[4096];
+    int err;
+    int web_sock;
+    char buf[4096];
 
-	hostent* addr = gethostbyname(remote_ip_address);
+    hostent* addr = gethostbyname(remote_ip_address);
 
-	if (!addr) {
-		report_net_error("gethostbyname()");
-		return LC_ERROR_OS_NET;
-	}
+    if (!addr) {
+        report_net_error("gethostbyname()");
+        return LC_ERROR_OS_NET;
+    }
 
-	sockaddr_in sa;
-	memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
-	sa.sin_family = AF_INET;		// TCP/IP
-	sa.sin_port = htons(80);                // Web Server port
+    sockaddr_in sa;
+    memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
+    sa.sin_family = AF_INET;        // TCP/IP
+    sa.sin_port = htons(80);                // Web Server port
 
-	web_sock = socket(sa.sin_family, SOCK_STREAM, 0);	// TCP
+    web_sock = socket(sa.sin_family, SOCK_STREAM, 0);    // TCP
 
-	if ((err = connect(web_sock,(struct sockaddr*)&sa,sizeof(sa)))) {
-		report_net_error("connect()");
-		return LC_ERROR_OS_NET;
-	}
-	debug("Connected to USB LAN web server!");
+    if ((err = connect(web_sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+        report_net_error("connect()");
+        return LC_ERROR_OS_NET;
+    }
+    debug("Connected to USB LAN web server!");
 
-	err = send(web_sock, http_get_cmd, strlen(http_get_cmd), 0);
-	if (err == SOCKET_ERROR) {
-		report_net_error("send()");
-		return LC_ERROR_OS_NET;
-	}
-	debug("%i bytes sent", err);
+    err = send(web_sock, http_get_cmd, strlen(http_get_cmd), 0);
+    if (err == SOCKET_ERROR) {
+        report_net_error("send()");
+        return LC_ERROR_OS_NET;
+    }
+    debug("%i bytes sent", err);
 
-	unsigned int len = 0;
-	char* buf_ptr = buf;
-	do {
-		err = recv(web_sock, buf_ptr, sizeof(buf)-len, 0);
-		if (err == SOCKET_ERROR) {
-			report_net_error("recv()");
-			len = 0;
-			return LC_ERROR_OS_NET;
-		}
-		len += err;
-		buf_ptr += err;
-		debug("%i bytes received", err);
-	} while (err > 0); // recv will return 0 when the message is done.
-	buf[len] = '\0';
+    unsigned int len = 0;
+    char* buf_ptr = buf;
+    do {
+        err = recv(web_sock, buf_ptr, sizeof(buf)-len, 0);
+        if (err == SOCKET_ERROR) {
+            report_net_error("recv()");
+            len = 0;
+            return LC_ERROR_OS_NET;
+        }
+        len += err;
+        buf_ptr += err;
+        debug("%i bytes received", err);
+    } while (err > 0); // recv will return 0 when the message is done.
+    buf[len] = '\0';
 
-	buf_ptr = strstr(buf, "\r\n\r\n"); // search for end of the http header
-	if (buf_ptr == NULL) {
-		report_net_error("strstr()");
-		return LC_ERROR_OS_NET;
-	}
-	buf_ptr += 4;
-	*data = new char[strlen(buf_ptr)+1];
-	strncpy(*data, buf_ptr, strlen(buf_ptr)+1);
+    buf_ptr = strstr(buf, "\r\n\r\n"); // search for end of the http header
+    if (buf_ptr == NULL) {
+        report_net_error("strstr()");
+        return LC_ERROR_OS_NET;
+    }
+    buf_ptr += 4;
+    *data = new char[strlen(buf_ptr)+1];
+    strncpy(*data, buf_ptr, strlen(buf_ptr)+1);
 
-	return 0;
+    return 0;
 }

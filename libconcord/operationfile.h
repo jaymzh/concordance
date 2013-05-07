@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,23 +25,23 @@
 
 class OperationFile {
 private:
-	uint8_t *data;
-	uint32_t data_size;
-	bool data_alloc;
-	uint8_t *xml;
-	uint32_t xml_size;
-	int ReadPlainFile(char *file_name);
-	int ReadZipFile(char *file_name);
-	int _ExtractFirmwareBinary();
+    uint8_t *data;
+    uint32_t data_size;
+    bool data_alloc;
+    uint8_t *xml;
+    uint32_t xml_size;
+    int ReadPlainFile(char *file_name);
+    int ReadZipFile(char *file_name);
+    int _ExtractFirmwareBinary();
 
 public:
-	OperationFile();
-	~OperationFile();
-	uint32_t GetDataSize() {return data_size;}
-	uint32_t GetXmlSize() {return xml_size;}
-	uint8_t* GetData() {return data;}
-	uint8_t* GetXml() {return xml;}
-	int ReadAndParseOpFile(char *file_name, int *type);
+    OperationFile();
+    ~OperationFile();
+    uint32_t GetDataSize() {return data_size;}
+    uint32_t GetXmlSize() {return xml_size;}
+    uint8_t* GetData() {return data;}
+    uint8_t* GetXml() {return xml;}
+    int ReadAndParseOpFile(char *file_name, int *type);
 };
 
 #endif /* OPERATIONFILE_H */

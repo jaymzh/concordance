@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,17 +23,16 @@
 
 #include "remote.h"
 
-int GetTag(const char *find, uint8_t* data, uint32_t data_size,
-	uint8_t *&found, string *s = NULL, bool find_attributes = false);
+int GetTag(const char *find, uint8_t* data, uint32_t data_size, uint8_t *&found,
+           string *s = NULL, bool find_attributes = false);
 
 int GetAttribute(const char *find, string data, string *result);
 
-int encode_ir_signal(uint32_t carrier_clock, 
-	uint32_t *ir_signal, uint32_t ir_signal_length,
-	string *learn_seq);
+int encode_ir_signal(uint32_t carrier_clock, uint32_t *ir_signal,
+                     uint32_t ir_signal_length, string *learn_seq);
 
 int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
-	bool has_userid, bool add_cookiekeyval = false, bool z_post = false,
-	string *learn_seq=NULL, string *learn_key=NULL);
+         bool has_userid, bool add_cookiekeyval = false, bool z_post = false,
+         string *learn_seq=NULL, string *learn_key=NULL);
 
 #endif

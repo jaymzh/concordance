@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -119,7 +117,7 @@ extern "C" {
  *                            LC_CB_STAGE_NUM_STAGES is the callback stage.
  */
 typedef void (*lc_callback)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t,
-	void*, const uint32_t*);
+    void*, const uint32_t*);
 
 /*
  * REMOTE INFORMATION ACCESSORS
@@ -305,8 +303,8 @@ int update_configuration(lc_callback cb, void *cb_arg, int noreset);
  * allocate a char array and point your pointer at it. Use delete_blob to
  * reclaim this memory.
  */
-int read_config_from_remote(uint8_t **out, uint32_t *size,
-	lc_callback cb, void *cb_arg);
+int read_config_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
+                            void *cb_arg);
 /*
  * Given a config block in the byte array *in that is size big, write
  * it to the remote. This should be *just* the binary blob (see
@@ -320,7 +318,7 @@ int write_config_to_remote(lc_callback cb, void *cb_arg);
  * as well.
  */
 int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
-	int binary);
+                         int binary);
 /*
  * After doing a write_config_to_remote(), this should be called to verify
  * that config. The data will be compared to what's in *in.
@@ -364,7 +362,7 @@ int erase_safemode(lc_callback cb, void *cb_arg);
  * reclaim this memory.
  */
 int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
-	void *cb_arg);
+                              void *cb_arg);
 /*
  * NOTE: You CAN NOT WRITE SAFEMODE FIRMWARE OVER USB!
  */
@@ -417,7 +415,7 @@ int erase_firmware(int direct, lc_callback cb, void *cb_arg);
  * reclaim this memory.
  */
 int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
-	void *cb_arg);
+                              void *cb_arg);
 /*
  * Same as write_config_to_remote(), but with the firmware instead.
  */
@@ -429,7 +427,7 @@ int write_firmware_to_remote(int direct, lc_callback cb, void *cb_arg);
  * the members.harmonyremote.com website delivers it.
  */
 int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
-	int binary);
+                           int binary);
 
 /*
  * IR-stuff
@@ -478,9 +476,8 @@ void delete_key_names(char **key_names, uint32_t key_names_length);
  * Memory allocated for ir_signal must be freed by the caller
  * via delete_ir_signal() when not needed any longer.
  */
-int learn_from_remote(uint32_t *carrier_clock,
-	uint32_t **ir_signal, uint32_t *ir_signal_length,
-	lc_callback cb, void *cb_arg);
+int learn_from_remote(uint32_t *carrier_clock, uint32_t **ir_signal,
+                      uint32_t *ir_signal_length, lc_callback cb, void *cb_arg);
 
 void delete_ir_signal(uint32_t *ir_signal);
 
@@ -493,9 +490,8 @@ void delete_ir_signal(uint32_t *ir_signal);
  * Memory allocated for the string must be freed by the caller
  * via delete_post_string() when not needed any longer.
  */
-int encode_for_posting(uint32_t carrier_clock,
-	uint32_t *ir_signal, uint32_t ir_signal_length,
-	char **encoded_signal);
+int encode_for_posting(uint32_t carrier_clock, uint32_t *ir_signal,
+                       uint32_t ir_signal_length, char **encoded_signal);
 
 void delete_encoded_signal(char *encoded_signal);
 
@@ -510,7 +506,7 @@ void delete_encoded_signal(char *encoded_signal);
  * Returns 0 for success, error code for failure.
  */
 int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
-	void *cb_arg);
+                  void *cb_arg);
 
 #ifdef __cplusplus
 }

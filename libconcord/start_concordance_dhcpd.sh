@@ -1,12 +1,14 @@
 #!/bin/bash
 
+# vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
+
 LOG=/dev/null
 PID_FILE=/var/run/dnsmasq_concordance.pid
 NM_WAIT_COUNT=3
-LOCAL_IP="169.254.1.1"
-REMOTE_IP="169.254.1.2"
-NETMASK="255.255.0.0"
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+LOCAL_IP='169.254.1.1'
+REMOTE_IP='169.254.1.2'
+NETMASK='255.255.0.0'
+export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 IPTABLES_RULE="INPUT -p udp -i $INTERFACE --dport 67 -j ACCEPT"
 NMCLI=$(which nmcli)
 

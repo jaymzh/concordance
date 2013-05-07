@@ -1,7 +1,5 @@
 /*
- * vi: formatoptions+=tc textwidth=80 tabstop=8 shiftwidth=8 noexpandtab:
- *
- * $Id$
+ * vim:tw=80:ai:tabstop=4:softtabstop=4:shiftwidth=4:expandtab
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,69 +38,69 @@
 
 binaryfile::binaryfile()
 {
-	m_f = NULL;
+    m_f = NULL;
 }
 
 binaryfile::~binaryfile()
 {
-	close();
+    close();
 }
 
 int binaryfile::close(void)
 {
-	if (m_f) {
-		const int i = fclose(m_f);
-		m_f = NULL;
-		return i;
-	} else
-		return 0;
+    if (m_f) {
+        const int i = fclose(m_f);
+        m_f = NULL;
+        return i;
+    } else
+        return 0;
 }
 
 binaryoutfile::binaryoutfile()
 {
-	::binaryfile();
+    ::binaryfile();
 }
 
 int binaryoutfile::open(const char *path)
 {
-	m_f = fopen(path, "wb");
-	return m_f ? 0 : 1;
+    m_f = fopen(path, "wb");
+    return m_f ? 0 : 1;
 }
 
 size_t binaryoutfile::write(const uint8_t *b, uint32_t len)
 {
-	return fwrite(b, len, 1, m_f);
+    return fwrite(b, len, 1, m_f);
 }
 
 size_t binaryoutfile::write(const char *c)
 {
-	return fwrite(c,strlen(c), 1, m_f);
+    return fwrite(c,strlen(c), 1, m_f);
 }
 
 
 binaryinfile::binaryinfile()
 {
-	::binaryfile();
+    ::binaryfile();
 }
 
 int binaryinfile::open(const char *path)
 {
-	m_f = fopen(path, "rb");
-	return m_f ? 0 : 1;
+    m_f = fopen(path, "rb");
+    return m_f ? 0 : 1;
 }
 
 unsigned int binaryinfile::getlength(void)
 {
 #ifdef WIN32
-	return filelength(fileno(m_f));
+    return filelength(fileno(m_f));
 #else
-	struct stat fs;
-	fstat(fileno(m_f), &fs);
-	return fs.st_size;
+    struct stat fs;
+    fstat(fileno(m_f), &fs);
+    return fs.st_size;
 #endif
 }
 
 size_t binaryinfile::read(uint8_t *b, uint32_t len)
 {
-	return fread(b, len, 1, m_f);
+    return fread(b, len, 1, m_f);
 }
