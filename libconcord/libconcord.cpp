@@ -797,18 +797,21 @@ int get_identity(lc_callback cb, void *cb_arg)
 int reset_remote(lc_callback cb, void *cb_arg)
 {
     int err;
-    if (cb)
-        cb(LC_CB_STAGE_RESET, 0, 0, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+    int secs = 0;
+    const int max_secs = MAX_WAIT_FOR_BOOT * WAIT_FOR_BOOT_SLEEP;
 
     if ((err = rmt->Reset(COMMAND_RESET_DEVICE)))
         return err;
 
-    if (cb)
-        cb(LC_CB_STAGE_RESET, 1, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
-
     deinit_concord();
     for (int i = 0; i < MAX_WAIT_FOR_BOOT; i++) {
-        sleep(WAIT_FOR_BOOT_SLEEP);
+        for (int j = 0; j < WAIT_FOR_BOOT_SLEEP; j++) {
+            if (cb)
+                cb(LC_CB_STAGE_RESET, secs, secs, max_secs,
+                    LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+            sleep(1);
+            secs++;
+	}
         err = init_concord();
         if (err == 0) {
             err = _get_identity(NULL, NULL, 0);
@@ -831,7 +834,8 @@ int reset_remote(lc_callback cb, void *cb_arg)
         return err;
 
     if (cb)
-        cb(LC_CB_STAGE_RESET, 2, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+        cb(LC_CB_STAGE_RESET, max_secs, max_secs, max_secs,
+            LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
     return 0;
 }
