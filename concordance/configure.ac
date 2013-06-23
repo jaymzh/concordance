@@ -1,5 +1,6 @@
 AC_INIT([concordance], [1.0], [bug-automake@gnu.org])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_PROG_CC_C_O
 AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_LIBTOOL
 AC_PROG_CXX
