@@ -2,28 +2,25 @@
 
 0. INSTALL REQUIRED SOFTWARE
 
-You need one these Development Platforms:
+You need to install Microsoft Visual C++ 2010 - Express Edition.  Other
+versions have not been tested.
 
-a) Microsoft Visual C++ 6.0 with Service Pack 6 (SP6)
-b) Micosoft Visual Studio 2005 (8.0)
-c) Micosoft Visual Studio 2008 (9.0) - Express Edition
+You will also need to download the source for zlib and zziplib.
 
-And you will also need to install the platform SDK.
+Download zlib from http://www.zlib.net/.  Uncompress it into the concordance
+root directory and rename the subdirectory 'zlib'.
+
+Download zziplib from http://zziplib.sourceforge.net/download.html.  Uncompress
+it into the concordance root directory and rename the subdirectory 'zziplib'.
 
 1. BUILD THE SOFTWARE
 
-Open the Project tree in your Development-System, by (letters here correspond
-to development environment above - pick one):
-
-a) Open the Workspace-File for Visual C++ 6.0 '.\win\concordance.dsw'
-b) Open the Solution file for Visual Studio 2005 '.\win\concordance.sln'.
-c) Open the Solution file for Visual Studio 2008 '.\win\concordance.sln'
-   (the 2005 sln-file format will be converted to the new (2008) format
-    automatically the first time you open the project tree.)
+Open the Solution file '.\win\concordance.sln'
 
 Now you should see four Projects in your Workspace/Solution-Tree
 
-- libconcord_libusb: a dynamic link library using the libusb package (see note 1)
+- libconcord_libusb: a dynamic link library using the libusb package (see note
+  1)
 - libconcord_winhid: a dynamic link library using native win-usb support
 
 - concordance: a cli that utilizes the library

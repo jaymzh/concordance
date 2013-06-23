@@ -103,6 +103,13 @@ int FindUsbLanRemote(void)
     struct timeval tv;
     tv.tv_sec = connect_timeout;
     tv.tv_usec = 0;
+    #ifdef WIN32
+    u_long non_blocking = 1;
+    if(ioctlsocket(sock, FIONBIO, &non_blocking) != 0) {
+        report_net_error("ioctlsocket()");
+        return LC_ERROR_OS_NET;
+    }
+    #else
     if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
@@ -111,6 +118,7 @@ int FindUsbLanRemote(void)
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
     }
+    #endif
 
     if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
         if (errno != EINPROGRESS) {
@@ -126,6 +134,12 @@ int FindUsbLanRemote(void)
 
     // Change the socket back to blocking which should be fine now that we
     // connected.
+    #ifdef WIN32
+    if(ioctlsocket(sock, FIONBIO, 0) != 0) {
+        report_net_error("ioctlsocket()");
+        return LC_ERROR_OS_NET;
+    }
+    #else
     if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
@@ -134,6 +148,7 @@ int FindUsbLanRemote(void)
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
     }
+    #endif
 
     debug("Connected to USB LAN driver!");
 

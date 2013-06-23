@@ -309,10 +309,12 @@ int HID_WriteReport(const uint8_t *data)
 int HID_ReadReport(uint8_t *data, unsigned int timeout)
 {
     DWORD err, dw;
+    uint8_t *windata = new uint8_t[caps.InputReportByteLength];
 
-    if (!ReadFile(h_hid, data, caps.InputReportByteLength, &dw, &ol)) {
+    if (!ReadFile(h_hid, windata, caps.InputReportByteLength, &dw, &ol)) {
         err = GetLastError();
         if(err != ERROR_IO_PENDING) {
+            delete[] windata;
             debug("ReadFile() failed with error %i", err);
             return err;
         }
@@ -332,7 +334,8 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
     }
 
     // Remove the initial 0-byte the Windows USB stack adds
-    memmove(data, data + 1, caps.InputReportByteLength - 1);
+    memcpy(data, windata + 1, caps.InputReportByteLength - 1);
+    delete[] windata;
 
     return err;
 }

@@ -31,7 +31,9 @@
 #include <errno.h>
 #include <zzip/lib.h>
 #include <list>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <vector>
 #include "libconcord.h"
 #include "lc_internal.h"
@@ -789,7 +791,7 @@ int _get_identity(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 int get_identity(lc_callback cb, void *cb_arg)
 {
     _report_stages(cb, cb_arg, 1, NULL);
-    _get_identity(cb, cb_arg, LC_CB_STAGE_GET_IDENTITY);
+    return _get_identity(cb, cb_arg, LC_CB_STAGE_GET_IDENTITY);
 }
 
 int reset_remote(lc_callback cb, void *cb_arg)
@@ -847,7 +849,7 @@ int _invalidate_flash(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 
 int invalidate_flash(lc_callback cb, void *cb_arg)
 {
-    _invalidate_flash(cb, cb_arg, LC_CB_STAGE_INVALIDATE_FLASH);
+    return _invalidate_flash(cb, cb_arg, LC_CB_STAGE_INVALIDATE_FLASH);
 }
 
 int post_preconfig(lc_callback cb, void *cb_arg)
@@ -1098,7 +1100,7 @@ int _verify_remote_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
 
 int verify_remote_config(lc_callback cb, void *cb_arg)
 {
-    _verify_remote_config(cb, cb_arg, LC_CB_STAGE_VERIFY_CONFIG);
+    return _verify_remote_config(cb, cb_arg, LC_CB_STAGE_VERIFY_CONFIG);
 }
 
 int _prep_config(lc_callback cb, void *cb_arg, uint32_t cb_stage)
@@ -1347,7 +1349,7 @@ int _erase_firmware(int direct, lc_callback cb, void *cb_arg, uint32_t cb_stage)
 
 int erase_firmware(int direct, lc_callback cb, void *cb_arg)
 {
-    _erase_firmware(direct, cb, cb_arg, LC_CB_STAGE_ERASE_FLASH);
+    return _erase_firmware(direct, cb, cb_arg, LC_CB_STAGE_ERASE_FLASH);
 }
 
 int read_firmware_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,

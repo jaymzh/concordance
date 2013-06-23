@@ -290,7 +290,7 @@ int encode_ir_signal(uint32_t carrier_clock, uint32_t *ir_signal,
     return 0;
 }
 
-int add_usbnet_headers(char *post_data, TRemoteInfo &ri)
+void add_usbnet_headers(char *post_data, TRemoteInfo &ri)
 {
     sprintf(post_data+strlen(post_data), post_xml_usbnet1, ri.home_id, 
             ri.node_id, ri.tid);

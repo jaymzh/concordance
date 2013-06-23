@@ -35,7 +35,6 @@
 /* Don't include stdlib.h for non-GNU C libraries because some of them
    contain conflicting prototypes for getopt.  */
 # include <stdlib.h>
-# include <unistd.h>
 #endif	/* GNU C library.  */
 
 #include <string.h>

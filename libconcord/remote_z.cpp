@@ -20,8 +20,6 @@
  */
 
 #include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"
@@ -384,9 +382,6 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
 {
     int err = 0;
     int cb_count = 0;
-    uint8_t rsp[60];
-    unsigned int rlen;
-    uint8_t status;
 
     cb(LC_CB_STAGE_INITIALIZE_UPDATE, cb_count++, 0, 2,
        LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
@@ -938,7 +933,6 @@ int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
     uint8_t rsp[60];
     unsigned int rlen;
     uint8_t status;
-    CRemoteZ_Base::TParamList pl;
 
     /* Start a TCP transfer */
     if ((err = Write(TYPE_REQUEST, COMMAND_INITIATE_UPDATE_TCP_CHANNEL))) {

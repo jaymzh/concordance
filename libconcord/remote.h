@@ -241,7 +241,7 @@ public:
     virtual int UpdateConfig(const uint32_t len,
         const uint8_t *wr, lc_callback cb, void *cb_arg,
         uint32_t cb_stage=0, uint32_t xml_size=0,
-        uint8_t *xml=NULL) {};
+        uint8_t *xml=NULL) {return 0;};
 
     int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
     int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
@@ -412,9 +412,6 @@ public:
         void *cb_arg=NULL, uint32_t cb_stage=0);
     int FinishConfig(const TRemoteInfo &ri, lc_callback cb=NULL,
         void *cb_arg=NULL, uint32_t cb_stage=0);
-    virtual int UpdateConfig(const uint32_t len,
-        const uint8_t *wr, lc_callback cb, void *cb_arg,
-        uint32_t cb_stage=0) {};
     virtual int UpdateConfig(const uint32_t len, const uint8_t *wr,
         lc_callback cb,    void *cb_arg, uint32_t cb_stage=0,
         uint32_t xml_size=0, uint8_t *xml=NULL);

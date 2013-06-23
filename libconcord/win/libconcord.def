@@ -13,6 +13,7 @@ get_fw_ver_min
 get_fw_type
 get_hw_ver_maj
 get_hw_ver_min
+get_hw_ver_mic
 get_flash_size
 get_flash_mfg
 get_flash_id
@@ -31,6 +32,13 @@ get_serial
 get_config_bytes_used
 get_config_bytes_total
 
+; SUPPORT HELPERS
+;
+is_config_dump_supported
+is_config_update_supported
+is_fw_dump_supported
+is_fw_update_supported
+
 ; TIME ACCESSORS
 ;
 get_time_second
@@ -46,9 +54,10 @@ get_time_timezone
 ; HELPER FUNCTIONS
 ;
 lc_strerror
+lc_cb_stage_str
 delete_blob
-read_file
-identify_file
+read_and_parse_file
+delete_opfile_obj
 
 ; GENERAL REMOTE INTERACTIONS
 ;
@@ -66,6 +75,7 @@ invalidate_flash
 
 ; CONFIGURATION INTERACTIONS
 ;
+update_configuration
 read_config_from_remote
 write_config_to_remote
 write_config_to_file
@@ -73,7 +83,6 @@ verify_remote_config
 prep_config
 finish_config
 erase_config
-find_config_binary
 
 ; SAFEMODE FIRMWARE INTERACTIONS
 ;
@@ -83,7 +92,7 @@ write_safemode_to_file
 
 ; FIRMWARE INTERACTIONS
 ;
-is_fw_update_supported
+update_firmware
 is_config_safe_after_fw
 prep_firmware
 finish_firmware
@@ -91,7 +100,6 @@ erase_firmware
 read_firmware_from_remote
 write_firmware_to_remote
 write_firmware_to_file
-extract_firmware_binary
 
 ; IR-stuff
 get_key_names
