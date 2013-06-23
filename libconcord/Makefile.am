@@ -54,3 +54,25 @@ install_consolekit: consolekit install_udev_common
 	$(install_sh_DATA) libconcord.perms \
 		$(DESTDIR)$(datarootdir)/hal/fdi/policy/10osvendor/99-libconcord.perms
 
+# MIME stuff
+
+newmimedir = $(datadir)/mime/packages
+newmime_DATA = libconcord.xml
+
+EXTRA_DIST =                           \
+	$(mime_DATA)                    \
+	$(newmime_DATA)
+
+install-data-hook:
+if HAVE_NEW_MIME
+	if test -z "$(DESTDIR)"; then \
+		$(UPDATE_MIME_DATABASE) "$(datadir)/mime"; \
+	fi
+endif
+
+uninstall-hook:
+if HAVE_NEW_MIME
+	if test -z "$(DESTDIR)"; then \
+		$(UPDATE_MIME_DATABASE) "$(datadir)/mime"; \
+	fi
+endif
