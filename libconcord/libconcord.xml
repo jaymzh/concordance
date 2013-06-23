@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+   <mime-type type="application/x-easyzapper-hex">
+     <comment>Logitech Harmony remote control update file (EZHex)</comment>
+     <glob pattern="*.EZHex"/>
+   </mime-type>
+   <mime-type type="application/x-easyzapper-upgrade">
+     <comment>Logitech Harmony remote control update file (EZUp)</comment>
+     <glob pattern="*.EZUp"/>
+   </mime-type>
+   <mime-type type="application/x-easyzapper-tutor">
+     <comment>Logitech Harmony remote control update file (EZTut)</comment>
+     <glob pattern="*.EZTut"/>
+   </mime-type>
+</mime-info>
