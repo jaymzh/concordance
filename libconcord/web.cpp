@@ -357,11 +357,7 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
                     ri.fw_type, serial, ri.hw_ver_major, ri.hw_ver_minor,
                     ri.hw_ver_micro, ri.flash_mfg, ri.flash_id, ri.protocol,
                     ri.architecture, ri.skin);
-            if (is_usbnet_remote()) {
-                add_usbnet_headers(post_data, ri);
-            } else {
-                sprintf(post_data+strlen(post_data), "%s", post_xml_trailer);
-            }
+            sprintf(post_data+strlen(post_data), "%s", post_xml_trailer);
         }
 
         debug("post data: %s",post_data);
