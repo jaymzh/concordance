@@ -55,8 +55,8 @@ void setup_ri_pointers(TRemoteInfo &ri)
 void make_guid(const uint8_t * const in, char*&out)
 {
     char x[48];
-    // usbnet remotes seem to use a more normal byte ordering for serial #'s
-    if (is_usbnet_remote() || is_mh_remote()) {
+    // Non-HID remotes seem to use a more normal byte ordering for serial #'s
+    if (is_z_remote() || is_mh_remote()) {
         sprintf(x, GUID_STR, in[0], in[1], in[2], in[3], in[4], in[5], in[6],
                 in[7], in[8], in[9], in[10], in[11], in[12], in[13], in[14],
                 in[15]);

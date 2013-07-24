@@ -125,9 +125,12 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
         status = pkt[4];
     }
     len = pkt[0] - 4;
-    //if(!len) return 0;
-    //memcpy(data, pkt + 6, len);
-    memcpy(data, pkt + 1, len + 3);
+    /*
+     * pkt[0] is the index of the last byte, which means it is equal to the
+     * length of the packet minus one byte.  We want to copy everything but the
+     * first byte, so we copy pkt[0] bytes.
+     */
+    memcpy(data, pkt + 1, pkt[0]);
     return 0;
 }
 
