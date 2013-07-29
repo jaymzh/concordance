@@ -579,6 +579,13 @@ int CRemoteZ_USBNET::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
     return 0;
 }
 
+int CRemoteZ_USBNET::LearnIR(uint32_t *freq, uint32_t **ir_signal,
+                             uint32_t *ir_signal_length, lc_callback cb,
+                             void *cb_arg, uint32_t cb_stage)
+{
+    return LC_ERROR_UNSUPP;
+}
+
 int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
                                 lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
@@ -1483,9 +1490,9 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
     return 0;
 }
 
-int CRemoteZ_Base::LearnIR(uint32_t *freq, uint32_t **ir_signal,
-                           uint32_t *ir_signal_length, lc_callback cb,
-                           void *cb_arg, uint32_t cb_stage)
+int CRemoteZ_HID::LearnIR(uint32_t *freq, uint32_t **ir_signal,
+                          uint32_t *ir_signal_length, lc_callback cb,
+                          void *cb_arg, uint32_t cb_stage)
 {
-    return 0;
+    return LC_ERROR_UNSUPP;
 }

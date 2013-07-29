@@ -304,9 +304,6 @@ public:
     int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
         lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
 
-    int LearnIR(uint32_t *freq, uint32_t **ir_signal,
-        uint32_t *ir_signal_length, lc_callback cb=NULL,
-        void *cb_arg=NULL, uint32_t cb_stage=0);
     int IsZRemote() {return true;}
     int IsMHRemote() {return false;}
 };
@@ -340,6 +337,9 @@ public:
     int UpdateConfig(const uint32_t len, const uint8_t *wr,
         lc_callback cb, void *cb_arg, uint32_t cb_stage,
         uint32_t xml_size=0, uint8_t *xml=NULL);
+    int LearnIR(uint32_t *freq, uint32_t **ir_signal,
+        uint32_t *ir_signal_length, lc_callback cb=NULL,
+        void *cb_arg=NULL, uint32_t cb_stage=0);
     int IsUSBNet() {return false;}
     virtual int ReadRegion(uint8_t region, uint32_t &len, uint8_t *rd,
         lc_callback cb, void *cb_arg, uint32_t cb_stage);
@@ -370,6 +370,9 @@ public:
     int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
     int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
         lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
+    int LearnIR(uint32_t *freq, uint32_t **ir_signal,
+        uint32_t *ir_signal_length, lc_callback cb=NULL,
+        void *cb_arg=NULL, uint32_t cb_stage=0);
     int IsUSBNet() {return true;}
 };
 
