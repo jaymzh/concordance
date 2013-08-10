@@ -19,17 +19,16 @@
  * (C) Copyright Phil Dibowitz 2007
  */
 
-#include "../lc_internal.h"
-#include "../libconcord.h"
+#include "lc_internal.h"
+#include "libconcord.h"
 
-#ifdef LIBUSB
+#ifdef WANT_LIBUSB
 
-#include "../hid.h"
-#ifdef WIN32
-#include "win/usb.h"
-#else
+#ifndef LC_LIBUSB
+#define LC_LIBUSB
+
+#include "hid.h"
 #include <usb.h>
-#endif
 #include <errno.h>
 #include <string.h>
 
@@ -245,4 +244,5 @@ int HID_ReadReport(uint8_t *data, unsigned int timeout)
     return 0;
 }
 
+#endif
 #endif

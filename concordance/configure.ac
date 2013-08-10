@@ -4,6 +4,16 @@ AM_PROG_CC_C_O
 AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_LIBTOOL
 AC_PROG_CXX
+AC_CANONICAL_HOST
+case $host_os in
+  darwin*)
+    LIBCONCORD_LDFLAGS="-lconcord.3"
+    ;;
+  *)
+    LIBCONCORD_LDFLAGS="-l:libconcord.so.3"
+    ;;
+esac
+AC_SUBST([LIBCONCORD_LDFLAGS], [$LIBCONCORD_LDFLAGS])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
  Makefile

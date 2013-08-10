@@ -34,8 +34,6 @@
 
 #else /* END WINDOWS SECTION, BEGIN NON-WINDOWS SECTION */
 
-#define LIBUSB
-
 #define stricmp strcasecmp
 #define strnicmp strncasecmp
 

@@ -10,6 +10,21 @@ source, see the instructions below.
 You *MUST* install libusb and libzzip. These libraries are in most
 distributions, so apt-get/yum/up2date/urpmi/etc. it.
 
+You also need hidapi which can be found at: https://github.com/signal11/hidapi
+It is important that you use git, as the last release (0.7.0) doesn't work.
+You'll want to build it as a shared library, which is basically just
+"./bootstrap && ./configure --prefix=/usr && make && sudo make install",
+tweaked to your taste.
+
+NOTE ON HIDAPI TO DISTRIBUTORS: If your distro doesn't distribute hidapi, for
+the next few releases we are still supporting building directly on libusb with
+the --enable-force-libusb-on-linux option to configure. However, the libusb
+developers are strongly encouraging libusb who talk to HID devices to move to
+hidapi, so it's probably a good time to package hidapi. Finally, if that
+doesn't work for you, you can drop in the appropriate hid.c file from the
+hidapi source into the libconcord, and tweak the Makefile.am to build it as
+part of libconcord.
+
 Also, if you are using 900/1000/1100 remotes, then dnsmasq is a requirement,
 as well as installing the udev support files for libconcord (see below).
 
@@ -20,7 +35,7 @@ depending on your distribution.
 1. BUILD LIBCONCORD
 
    As a normal user...
-     A. ***IF**** You are building from CVS, run:
+     A. ***IF**** You are building from git, run:
         mkdir m4; autoreconf --install
      B. Run "./configure"
      C. Run "make"
@@ -119,13 +134,6 @@ may potentially conflict with files installed by your distribution. The later
 will leave everything in /usr/local except for the udev/policykit/consolekit
 files.
 
-
-==== EXTRA INSTALL NOTES ====
-
-By default this library installs in /usr/local/lib. You can override the PREFIX
-(/usr/local) by passing a PREFIX variable to make:
-
-  make PREFIX=/usr/
 
 ==== ADDITIONAL NOTES ====
 

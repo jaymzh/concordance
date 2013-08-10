@@ -30,6 +30,14 @@ that first. It is also straight forward:
    make
    sudo make install
 
+You must install hidapi (there's a few similarly named projects, you want:
+https://github.com/signal11/hidapi). Grab the source from git (NOT a release),
+and do:
+   ./bootstrap
+   ./configure --prefix=/usr
+   make
+   sudo make install
+
 Finally, you will need to install libzzip, which again is straight forward:
    ./configure --prefix=/usr
    make
@@ -49,32 +57,6 @@ help you choose where software gets installed and how it is built.
 2. INSTALL THE SOFTWARE
 
 As root, simply run "make install"
-
-3. SETUP THE KEXT
-
-(In future versions this will be done for you by step 2 above)
-
-You need to install the kext. To do this:
-   cd mac
-   sudo cp -R libusbshieldlibconcord.kext /System/Library/Extensions
-   sudo chown -R root:wheel /System/Library/Extensions/libusbshieldlibconcord.kext
-
-You will now need to reboot for this to take effect (kextload'ing the extension
-does not appear to work).
-
-
-==== EXTRA INSTALL NOTES ====
-By default this library installs in /usr/local/lib. You can override the PREFIX
-(/usr/local) by passing a PREFIX variable to make:
-
-  make PREFIX=/usr
-
-
-==== RUNNING THE SOFTWARE IN MAC ====
-
-Unlike other libusb platforms, libusb on Mac does not require root access. As
-such, software utilizing libusb (and hence software utilizing libconcord) do
-not need to have root access to use libusb.
 
 
 vim:textwidth=78:

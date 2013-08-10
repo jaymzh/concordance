@@ -1,7 +1,7 @@
+ACLOCAL_AMFLAGS = -I m4
 bin_PROGRAMS = concordance
 concordance_SOURCES = concordance.c
-concordance_LDFLAGS = -l:libconcord.so.3
-ACLOCAL_AMFLAGS= -I m4
+concordance_LDFLAGS = $(LIBCONCORD_LDFLAGS)
 # -Wall just makes good sense
 # -ansi and -pednatic errors are needed to ensure we're compatible with
 # crappy Microsoft compilers - phil
