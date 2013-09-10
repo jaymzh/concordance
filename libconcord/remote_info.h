@@ -499,6 +499,24 @@ static const TArchInfo ArchList[]={
 		0,				// ram_size
 		0,				// eeprom_size
 		"",				// usb
+	},
+	/* arch 17: Link */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0x4D505347,			// cookie
+		0,				// cookie_size
+		0,				// end_vector
+		"",				// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"",				// usb
 	}
 };
 

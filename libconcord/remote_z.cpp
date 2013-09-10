@@ -1496,3 +1496,16 @@ int CRemoteZ_HID::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 {
     return LC_ERROR_UNSUPP;
 }
+
+int CRemoteZ_Base::ReadFile(const char *filename, uint8_t *rd,
+                            const uint32_t rdlen, int *data_read,
+                            uint8_t start_seq)
+{
+    return LC_ERROR_UNSUPP;
+}
+
+int CRemoteZ_Base::WriteFile(const char *filename, uint8_t *wr,
+                             const uint32_t wrlen)
+{
+    return LC_ERROR_UNSUPP;
+}

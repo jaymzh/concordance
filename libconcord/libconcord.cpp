@@ -230,6 +230,7 @@ int is_mh_pid(unsigned int pid)
     switch (pid) {
         case 0xC124: /* Harmony 300 */
         case 0xC125: /* Harmony 200 */
+        case 0xC126: /* Harmony Link */
             return 1;
         default:
             return 0;
@@ -1693,6 +1694,156 @@ int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
            NULL);
 
     return 0;
+}
+
+/*
+ * Special structures and methods for the Harmony Link
+ */
+/*
+ * Given a buffer holding key-value pairs of the form
+ *
+ * key1,val1
+ * key2,val2
+ *
+ * Will find the key passed in and copy the value on the other side of the
+ * comma into dest.
+ */
+void mh_get_value(char *buffer, const char *key, char *dest)
+{
+    char *start = NULL;
+    char *end = NULL;
+    int len;
+    std::string key_str(key);
+    key_str += ",";
+    start = strstr(buffer, key_str.c_str());
+    if (start) {
+        start += key_str.length();
+        end = strstr(start, "\n");
+        if (end) {
+            len = end - start;
+            if (len >= MH_STRING_LENGTH)
+                start = NULL;
+        }
+    }
+    if (start && end)
+        strncpy(dest, start, len);
+}
+
+int mh_get_cfg_properties(struct mh_cfg_properties *properties)
+{
+    if (!is_mh_remote())
+        return LC_ERROR;
+
+    int err;
+    int buflen = 5000;
+    char buffer[buflen];
+    int data_read;
+    if (err = rmt->ReadFile("/cfg/properties", (uint8_t*)buffer, buflen,
+                            &data_read))
+        return err;
+
+    mh_get_value(buffer, "host_name", properties->host_name);
+    mh_get_value(buffer, "account_email", properties->email);
+    mh_get_value(buffer, "discovery_service_link", properties->service_link);
+
+    return 0;
+}
+
+int mh_set_cfg_properties(const struct mh_cfg_properties *properties)
+{
+    if (!is_mh_remote())
+        return LC_ERROR;
+
+    int err;
+    std::string str_buffer;
+    str_buffer += "host_name,";
+    str_buffer += properties->host_name;
+    str_buffer += "\n";
+    str_buffer += "account_email,";
+    str_buffer += properties->email;
+    str_buffer += "\n";
+    str_buffer += "discovery_service_link,";
+    str_buffer += properties->service_link;
+    str_buffer += "\n";
+
+    err = rmt->WriteFile("/cfg/properties", (uint8_t*)str_buffer.c_str(),
+                         strlen(str_buffer.c_str()));
+    return err;
+}
+
+int mh_get_wifi_networks(struct mh_wifi_networks *networks)
+{
+    if (!is_mh_remote())
+        return LC_ERROR;
+
+    int err;
+    int buflen = 5000;
+    char buffer[buflen];
+    int data_read;
+    if (err = rmt->ReadFile("/sys/wifi/networks", (uint8_t*)buffer, buflen,
+                            &data_read))
+        return err;
+
+    char *buf_ptr = buffer;
+    int i = 0;
+    while (strstr(buf_ptr, "item,") && (i < MH_MAX_WIFI_NETWORKS)) {
+        mh_get_value(buf_ptr, "ssid", networks->network[i].ssid);
+        mh_get_value(buf_ptr, "signal_strength",
+                     networks->network[i].signal_strength);
+        mh_get_value(buf_ptr, "channel", networks->network[i].channel);
+        mh_get_value(buf_ptr, "encryption", networks->network[i].encryption);
+        buf_ptr = strstr(buf_ptr, "encryption,");
+        if (buf_ptr)
+            buf_ptr = strstr(buf_ptr, "\n");
+        i++;
+    }
+
+    return 0;
+}
+
+int mh_get_wifi_config(struct mh_wifi_config *config)
+{
+    if (!is_mh_remote())
+        return LC_ERROR;
+
+    int err;
+    int buflen = 5000;
+    char buffer[buflen];
+    int data_read;
+    if (err = rmt->ReadFile("/sys/wifi/connect", (uint8_t*)buffer, buflen,
+                            &data_read))
+        return err;
+
+    mh_get_value(buffer, "ssid", config->ssid);
+    mh_get_value(buffer, "encryption", config->encryption);
+    mh_get_value(buffer, "password", config->password);
+    mh_get_value(buffer, "connect_status", config->connect_status);
+    mh_get_value(buffer, "error_code", config->error_code);
+
+    return 0;
+}
+
+int mh_set_wifi_config(const struct mh_wifi_config *config)
+{
+    if (!is_mh_remote())
+        return LC_ERROR;
+
+    int err;
+    std::string str_buffer;
+    str_buffer += "ssid,";
+    str_buffer += config->ssid;
+    str_buffer += "\n";
+    str_buffer += "encryption,";
+    str_buffer += config->encryption;
+    str_buffer += "\n";
+    str_buffer += "user,\n"; /* not sure what this is - appears unused */
+    str_buffer += "password,";
+    str_buffer += config->password;
+    str_buffer += "\n";
+
+    err = rmt->WriteFile("/sys/wifi/connect", (uint8_t*)str_buffer.c_str(),
+                         strlen(str_buffer.c_str()));
+    return err;
 }
 
 /*

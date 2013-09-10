@@ -510,6 +510,38 @@ void delete_encoded_signal(char *encoded_signal);
 int post_new_code(char *key_name, char *encoded_signal, lc_callback cb,
                   void *cb_arg);
 
+/*
+ * Special structures and methods for the Harmony Link
+ */
+#define MH_STRING_LENGTH 255 /* arbitrary */
+#define MH_MAX_WIFI_NETWORKS 30 /* arbitrary */
+struct mh_cfg_properties {
+    char host_name[MH_STRING_LENGTH];
+    char email[MH_STRING_LENGTH];
+    char service_link[MH_STRING_LENGTH];
+};
+struct mh_wifi_config {
+    char ssid[MH_STRING_LENGTH];
+    char encryption[MH_STRING_LENGTH];
+    char password[MH_STRING_LENGTH];
+    char connect_status[MH_STRING_LENGTH];
+    char error_code[MH_STRING_LENGTH];
+};
+struct mh_wifi_network {
+    char ssid[MH_STRING_LENGTH];
+    char signal_strength[MH_STRING_LENGTH];
+    char channel[MH_STRING_LENGTH];
+    char encryption[MH_STRING_LENGTH];
+};
+struct mh_wifi_networks {
+    struct mh_wifi_network network[MH_MAX_WIFI_NETWORKS];
+};
+int mh_get_cfg_properties(struct mh_cfg_properties *properties);
+int mh_set_cfg_properties(const struct mh_cfg_properties *properties);
+int mh_get_wifi_networks(struct mh_wifi_networks *networks);
+int mh_get_wifi_config(struct mh_wifi_config *config);
+int mh_set_wifi_config(const struct mh_wifi_config *config);
+
 #ifdef __cplusplus
 }
 #endif

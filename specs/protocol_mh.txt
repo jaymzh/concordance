@@ -21,6 +21,10 @@ Command message 0x01 - Read/Write a file.
 		  Identity file is /sys/sysinfo
 		  Config file is /cfg/usercfg
 		  IR learn is /ir/ir_cap
+                  Harmony Link Configuration is /cfg/properties
+                          (room location, email, discovery service link)
+                  Harmony Link Wifi Network Scan List is /sys/wifi/networks
+                  Harmony Link Wifi Configuration is /sys/wifi/connect
 	Parameter 2: String; 'W' for write, 'R' for read.
 	Parameter 3: 4 bytes; length of data to write (only use for writes)
 Response (to a read command):

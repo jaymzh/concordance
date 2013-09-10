@@ -197,6 +197,12 @@ public:
     virtual int IsZRemote()=0;
     virtual int IsUSBNet()=0;
     virtual int IsMHRemote()=0;
+
+    virtual int ReadFile(const char *filename, uint8_t *rd,
+                         const uint32_t rdlen, int *data_read,
+                         uint8_t start_seq=0)=0;
+    virtual int WriteFile(const char *filename, uint8_t *wr,
+                          const uint32_t wrlen)=0;
 };
 
 class CRemote : public CRemoteBase    // All non-Z-Wave remotes
@@ -253,6 +259,10 @@ public:
     int IsZRemote() {return false;}
     int IsUSBNet() {return false;}
     int IsMHRemote() {return false;}
+
+    int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
+        int *data_read, uint8_t start_seq=0);
+    int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
 
 // Base class for all Z-Wave remotes
@@ -306,6 +316,10 @@ public:
 
     int IsZRemote() {return true;}
     int IsMHRemote() {return false;}
+
+    int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
+        int *data_read, uint8_t start_seq=0);
+    int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
 
 // 890, 890Pro, AVL-300, RF Extender
@@ -429,6 +443,10 @@ public:
     int IsZRemote() {return false;}
     int IsUSBNet() {return false;}
     int IsMHRemote() {return true;}
+
+    int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
+        int *data_read, uint8_t start_seq=0);
+    int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
 
 #endif //REMOTE_H

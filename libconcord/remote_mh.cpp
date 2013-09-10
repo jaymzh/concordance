@@ -35,6 +35,12 @@
 
 /* Timeout to wait for a response, in ms. */
 #define MH_TIMEOUT 5000
+/*
+ * This value is used in places where the timeout needs to be extended in
+ * order to support the Harmony Link.  It takes a long time to respond to some
+ * commands.
+*/
+#define LINK_TIMEOUT 20000
 #define MH_MAX_PACKET_SIZE 64
 /* In data mode, two bytes are used for the header. */
 #define MH_MAX_DATA_SIZE 62
@@ -154,6 +160,256 @@ uint8_t get_seq(uint8_t &seq)
     return tmp;
 }
 
+int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
+                        int *data_read, uint8_t start_seq)
+{
+    int err = 0;
+    uint8_t seq = start_seq;
+
+    if (strlen(filename) > (MH_MAX_PACKET_SIZE - 9)) {
+        debug("Filename too long");
+        return LC_ERROR;
+    }
+    uint8_t msg_idx = 0;
+    uint8_t msg_read_file[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x01, get_seq(seq), 0x02, 0x80 };
+    msg_idx += 5;
+    memcpy(&msg_read_file[msg_idx], filename, strlen(filename));
+    msg_idx += strlen(filename);
+    msg_read_file[msg_idx++] = 0x00;
+    msg_read_file[msg_idx++] = 0x80;
+    msg_read_file[msg_idx++] = 'R';
+    msg_read_file[msg_idx++] = 0x00;
+
+    uint8_t msg_ack[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x04, get_seq(seq), 0x02, 0x01, 0x00, 0x01, 0x00 };
+    uint8_t rsp[MH_MAX_PACKET_SIZE];
+
+    if ((err = HID_WriteReport(msg_read_file))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+
+    if ((err = HID_ReadReport(rsp, MH_TIMEOUT))) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("msg_read_file");
+    debug_print_packet(rsp);
+
+    /*
+     * First parameter in the read file "ack" message is reused in subsequent
+     * messages to the remote.  Save it.
+     */
+    const uint8_t param = rsp[5];
+    msg_ack[5] = param;
+
+    /*
+     * Second parameter in the read file "ack" message is the data length.  Use
+     * this to determine the number of packets we should expect.
+     */
+    uint32_t data_len = (rsp[7] << 24) + (rsp[8] << 16) + (rsp[9] << 8) +
+        rsp[10];
+    int pkts_to_read = data_len / MH_MAX_DATA_SIZE;
+    if ((data_len % MH_MAX_DATA_SIZE) != 0)
+        pkts_to_read++;
+    pkts_to_read++; // count is always one more than the actual count
+    if (pkts_to_read > 50)
+        msg_ack[7] = 0x33;
+    else
+        msg_ack[7] = pkts_to_read;
+
+    if ((err = HID_WriteReport(msg_ack))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+
+    if ((err = HID_ReadReport(rsp))) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("msg_ack");
+    debug_print_packet(rsp);
+
+    int pkt_count = 0;
+    *data_read = 0;
+    uint8_t *rd_ptr = rd;
+    while(!(err = HID_ReadReport(rsp, MH_TIMEOUT))) {
+        debug_print_packet(rsp);
+        // Ignore 1st two bits on 2nd byte for length.
+        int len = rsp[1] & 0x3F;
+        // Skip 1st two bytes, read up to packet length.  "len"
+        // represents the payload length (not including the two size
+        // bytes), so we read a full "len" bytes from 2 to len+2.
+        if (rd) {
+            if ((*data_read + len) > rdlen) {
+                debug("ERROR: buffer length exceeded!");
+                return LC_ERROR;
+            }
+            memcpy(rd_ptr, &rsp[2], len);
+            rd_ptr += len;
+        }
+        *data_read += len;
+        pkt_count++;
+        pkts_to_read--;
+        if (pkts_to_read == 1) {
+            break;
+        }
+        if (pkt_count == 50) {
+            msg_ack[2] = get_seq(seq);
+            if (pkts_to_read > 50)
+                msg_ack[7] = 0x33;
+            else
+                msg_ack[7] = pkts_to_read;
+            debug_print_packet(msg_ack);
+            if ((err = HID_WriteReport(msg_ack))) {
+                debug("Failed to write to remote");
+                return LC_ERROR_WRITE;
+            }
+
+            if ((err = HID_ReadReport(rsp))) {
+                debug("Failed to read from remote");
+                return LC_ERROR_READ;
+            }
+            debug("ack");
+            debug_print_packet(rsp);
+            pkt_count = 0;
+        }
+    }
+    debug("data_read=%d", *data_read);
+
+    /* send reset sequence message */
+    const uint8_t msg_reset_seq[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x07, get_seq(seq), 0x01, 0x01, param };
+    if ((err = HID_WriteReport(msg_reset_seq))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+    if ((err = HID_ReadReport(rsp))) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("msg_reset_seq");
+    debug_print_packet(rsp);
+
+    return 0;
+}
+
+int CRemoteMH::WriteFile(const char *filename, uint8_t *wr,
+                         const uint32_t wrlen)
+{
+    int err = 0;
+    uint8_t seq = 0;
+    uint8_t rsp[MH_MAX_PACKET_SIZE];
+
+    if (strlen(filename) > (MH_MAX_PACKET_SIZE - 14)) {
+        debug("Filename too long");
+        return LC_ERROR;
+    }
+
+    uint8_t msg_idx = 0;
+    uint8_t msg_write_file[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x01, get_seq(seq), 0x03, 0x80 };
+    msg_idx += 5;
+    memcpy(&msg_write_file[msg_idx], filename, strlen(filename));
+    msg_idx += strlen(filename);
+    msg_write_file[msg_idx++] = 0x00;
+    msg_write_file[msg_idx++] = 0x80;
+    msg_write_file[msg_idx++] = 'W';
+    msg_write_file[msg_idx++] = 0x00;
+    msg_write_file[msg_idx++] = 0x04;
+    msg_write_file[msg_idx++] = (wrlen & 0xFF000000) >> 24;
+    msg_write_file[msg_idx++] = (wrlen & 0x00FF0000) >> 16;
+    msg_write_file[msg_idx++] = (wrlen & 0x0000FF00) >> 8;
+    msg_write_file[msg_idx++] = wrlen & 0x000000FF;
+
+    if ((err = HID_WriteReport(msg_write_file))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+
+    if ((err = HID_ReadReport(rsp, MH_TIMEOUT))) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("msg_write_file");
+    debug_print_packet(rsp);
+
+    /*
+     * First parameter in the read file "ack" message is reused in subsequent
+     * messages to the remote.  Save it.
+     */
+    const uint8_t param = rsp[5];
+
+    uint8_t pkts_to_send = wrlen / MH_MAX_DATA_SIZE;
+    if ((wrlen % MH_MAX_DATA_SIZE) != 0)
+        pkts_to_send++;
+    pkts_to_send++; // count is always one more than the actual count
+
+    uint8_t msg_ack[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x03, get_seq(seq), 0x02, 0x01, param, 0x01, pkts_to_send };
+
+    if ((err = HID_WriteReport(msg_ack))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+    debug("msg_ack");
+    /* No response expected - proceed to send data. */
+
+    uint8_t *wr_ptr = const_cast<uint8_t*>(wr);
+    uint32_t tlen = wrlen;
+    uint8_t pkt_len;
+    uint8_t tmp_pkt[MH_MAX_PACKET_SIZE];
+    while (tlen) {
+        pkt_len = MH_MAX_DATA_SIZE;
+        if (tlen < pkt_len) {
+            pkt_len = tlen;
+            for (int i = pkt_len; i < MH_MAX_PACKET_SIZE; i++)
+                tmp_pkt[i] = 0x00;
+        }
+        tlen -= pkt_len;
+
+        tmp_pkt[0] = get_seq(seq);
+        tmp_pkt[1] = pkt_len;
+        memcpy(&tmp_pkt[2], wr_ptr, pkt_len);
+
+        debug("DATA sending %d bytes, %d bytes left", pkt_len, tlen);
+
+        if (err = HID_WriteReport(tmp_pkt)) {
+            return err;
+        }
+        wr_ptr += pkt_len;
+    }
+
+    /*
+     * Wait for remote to send us a response.  We extend the timeout here
+     * because the Harmony Link can take 7+ seconds to respond to this
+     * particular message.
+     */
+    if ((err = HID_ReadReport(rsp, LINK_TIMEOUT))) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("after writing file");
+    debug_print_packet(rsp);
+
+    /* send reset sequence message */
+    const uint8_t msg_reset_seq[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x07, get_seq(seq), 0x01, 0x01, param };
+    if ((err = HID_WriteReport(msg_reset_seq))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+    if ((err = HID_ReadReport(rsp))) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("msg_reset_seq");
+    debug_print_packet(rsp);
+
+    return 0;
+}
+
 /*
  * Send the GET_VERSION command to the remote, and read the response.
  *
@@ -171,13 +427,6 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         { 0xFF, 0xFF, 0x01, 0x01, 0x01, 0x66 };
     const uint8_t msg_three[MH_MAX_PACKET_SIZE] =
         { 0xFF, 0x00, 0x02 };
-    const uint8_t msg_four[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x01, 0x03, 0x02, 0x80, '/', 's', 'y', 's', '/',
-          's', 'y', 's', 'i', 'n', 'f', 'o', 0x00, 0x80, 'R', 0x00 };
-    const uint8_t msg_five[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x04, 0x04, 0x02, 0x01, 0x06, 0x01, 0x06 };
-    const uint8_t msg_six[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x07, 0x05, 0x01, 0x01, 0x06 };
     uint8_t rsp[MH_MAX_PACKET_SIZE];
 
     /* 
@@ -215,41 +464,13 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
     debug("msg_three");
     debug_print_packet(rsp);
 
-    if ((err = HID_WriteReport(msg_four))) {
-        debug("Failed to write to remote");
-        return LC_ERROR_WRITE;
-    }
-
-    if ((err = HID_ReadReport(rsp))) {
-        debug("Failed to read from remote");
-        return LC_ERROR_READ;
-    }
-    debug("msg_four");
-    debug_print_packet(rsp);
-
-    if ((err = HID_WriteReport(msg_five))) {
-        debug("Failed to write to remote");
-        return LC_ERROR_WRITE;
-    }
-
-    if ((err = HID_ReadReport(rsp))) {
-        debug("Failed to read from remote");
-        return LC_ERROR_READ;
-    }
-    debug("msg_five");
-    debug_print_packet(rsp);
-
-    string identity = "";
-    while(!(err = HID_ReadReport(rsp))) {
-        // Ignore 1st two bits on 2nd byte for length.
-        int len = rsp[1] & 0x3F; 
-        // Skip 1st two bytes, read up to packet length.  "len"
-        // represents the payload length (not including the two size
-        // bytes), so we read a full "len" bytes from 2 to len+2.
-        for (int i = 2; i < len + 2; i++) {
-            identity += rsp[i];
-        }
-    }
+    int buflen = 1000;
+    char buffer[buflen];
+    int data_read;
+    if (err = ReadFile("/sys/sysinfo", (uint8_t*)buffer, buflen, &data_read,
+                       0x03))
+        return err;
+    string identity(buffer);
     debug("%s", identity.c_str());
 
     ri.fw_ver_major = strtol(find_value(identity, "fw_ver").c_str(), NULL, 10);
@@ -293,19 +514,6 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         }
         make_serial(guid, ri);
     }
-
-    /* reset the sequence number to 0 */
-    if ((err = HID_WriteReport(msg_six))) {
-        debug("Failed to write to remote");
-        return LC_ERROR_WRITE;
-    }
-
-    if ((err = HID_ReadReport(rsp))) {
-        debug("Failed to read from remote");
-        return LC_ERROR_READ;
-    }
-    debug("msg_six");
-    debug_print_packet(rsp);
 
     return 0;
 }

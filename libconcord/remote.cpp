@@ -1053,3 +1053,14 @@ int CRemote::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 
     return err;
 }
+
+int CRemote::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
+                      int *data_read, uint8_t start_seq)
+{
+    return LC_ERROR_UNSUPP;
+}
+
+int CRemote::WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen)
+{
+    return LC_ERROR_UNSUPP;
+}

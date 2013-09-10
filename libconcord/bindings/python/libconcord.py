@@ -891,3 +891,85 @@ post_new_code = _create_func(
     _in('cb_arg', py_object)
 )
 
+#define MH_STRING_LENGTH 255 /* arbitrary */
+MH_STRING_LENGTH = 255
+
+#define MH_MAX_WIFI_NETWORKS 30 /* arbitrary */
+MH_MAX_WIFI_NETWORKS = 30
+
+#struct mh_cfg_properties {
+#    char host_name[MH_STRING_LENGTH];
+#    char email[MH_STRING_LENGTH];
+#    char service_link[MH_STRING_LENGTH];
+#};
+class mh_cfg_properties(Structure):
+    _fields_ = [("host_name", c_char * MH_STRING_LENGTH),
+                ("email", c_char * MH_STRING_LENGTH),
+                ("service_link", c_char * MH_STRING_LENGTH)]
+
+#struct mh_wifi_config {
+#    char ssid[MH_STRING_LENGTH];
+#    char encryption[MH_STRING_LENGTH];
+#    char password[MH_STRING_LENGTH];
+#    char connect_status[MH_STRING_LENGTH];
+#    char error_code[MH_STRING_LENGTH];
+#};
+class mh_wifi_config(Structure):
+    _fields_ = [("ssid", c_char * MH_STRING_LENGTH),
+                ("encryption", c_char * MH_STRING_LENGTH),
+                ("password", c_char * MH_STRING_LENGTH),
+                ("connect_status", c_char * MH_STRING_LENGTH),
+                ("error_code", c_char * MH_STRING_LENGTH)]
+
+#struct mh_wifi_network {
+#    char ssid[MH_STRING_LENGTH];
+#    char signal_strength[MH_STRING_LENGTH];
+#    char channel[MH_STRING_LENGTH];
+#    char encryption[MH_STRING_LENGTH];
+#};
+class mh_wifi_network(Structure):
+    _fields_ = [("ssid", c_char * MH_STRING_LENGTH),
+                ("signal_strength", c_char * MH_STRING_LENGTH),
+                ("channel", c_char * MH_STRING_LENGTH),
+                ("encryption", c_char * MH_STRING_LENGTH)]
+
+#struct mh_wifi_networks {
+#    struct mh_wifi_network network[MH_MAX_WIFI_NETWORKS];
+#};
+class mh_wifi_networks(Structure):
+    _fields_ = [("network", mh_wifi_network * MH_MAX_WIFI_NETWORKS)]
+
+#int mh_get_cfg_properties(struct mh_cfg_properties *properties);
+mh_get_cfg_properties = _create_func(
+    'mh_get_cfg_properties',
+    _ret_lc_concord(),
+    _in('properties', POINTER(mh_cfg_properties))
+)
+
+#int mh_set_cfg_properties(const struct mh_cfg_properties *properties);
+mh_set_cfg_properties = _create_func(
+    'mh_set_cfg_properties',
+    _ret_lc_concord(),
+    _in('properties', POINTER(mh_cfg_properties))
+)
+
+#int mh_get_wifi_networks(struct mh_wifi_networks *networks);
+mh_get_wifi_networks = _create_func(
+    'mh_get_wifi_networks',
+    _ret_lc_concord(),
+    _in('networks', POINTER(mh_wifi_networks))
+)
+
+#int mh_get_wifi_config(struct mh_wifi_config *config);
+mh_get_wifi_config = _create_func(
+    'mh_get_wifi_config',
+    _ret_lc_concord(),
+    _in('config', POINTER(mh_wifi_config))
+)
+
+#int mh_set_wifi_config(const struct mh_wifi_config *config);
+mh_set_wifi_config = _create_func(
+    'mh_set_wifi_config',
+    _ret_lc_concord(),
+    _in('config', POINTER(mh_wifi_config))
+)
