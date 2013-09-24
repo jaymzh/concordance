@@ -38,7 +38,7 @@ and do:
    make
    sudo make install
 
-Finally, you will need to install libzzip, which again is straight forward:
+Finally, you will need to install libzip, which again is straight forward:
    ./configure --prefix=/usr
    make
    sudo make install

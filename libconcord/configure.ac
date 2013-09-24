@@ -67,11 +67,11 @@ then
   fi
   AC_MSG_ERROR([$errorstr])
 fi
-AC_CHECK_HEADER(zzip/lib.h, [], [a=0])
-AC_CHECK_LIB(zzip, zzip_dir_open, [], [a=0])
+AC_CHECK_HEADER(zip.h, [], [a=0])
+AC_CHECK_LIB(zip, zip_open, [], [a=0])
 if test $a == 0
 then
-    AC_MSG_ERROR([Error, libzzip is missing!])
+    AC_MSG_ERROR([Error, libzip is missing!])
 fi
 AC_CONFIG_FILES([
     Makefile

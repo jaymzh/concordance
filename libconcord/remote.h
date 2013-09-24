@@ -35,6 +35,7 @@
    which is 1 (num params) + 3 (3 parameter size bytes) + 1 (param 1)
    + 1024 (param 2) + 4 (param 3) = 1033. */
 #define USBNET_MAX_PACKET_SIZE 1033
+const uint8_t MH_EOF_BYTES[] = { 0x50, 0x54, 0x59, 0x59 };
 
 /*
  * limits for IR signal learning, stop when any is reached:
@@ -151,6 +152,7 @@ void setup_ri_pointers(TRemoteInfo &ri);
 void make_serial(uint8_t *ser, TRemoteInfo &ri);
 int LearnIRInnerLoop(uint32_t *freq, uint32_t **ir_signal,
     uint32_t *ir_signal_length, uint8_t seq);
+uint16_t mh_get_checksum(uint8_t* rd, const uint32_t len);
 
 class CRemoteBase            // Base class for all remotes
 {

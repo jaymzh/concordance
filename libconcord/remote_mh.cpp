@@ -160,6 +160,27 @@ uint8_t get_seq(uint8_t &seq)
     return tmp;
 }
 
+// Sends the reset sequence message
+int reset_sequence(uint8_t seq, uint8_t param)
+{
+    const uint8_t msg_reset_seq[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x07, seq, 0x01, 0x01, param };
+    uint8_t rsp[MH_MAX_PACKET_SIZE];
+
+    if (HID_WriteReport(msg_reset_seq)) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+    if (HID_ReadReport(rsp, MH_TIMEOUT)) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("msg_reset_seq");
+    debug_print_packet(rsp);
+
+    return 0;
+}
+
 int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
                         int *data_read, uint8_t start_seq)
 {
@@ -278,19 +299,8 @@ int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
     }
     debug("data_read=%d", *data_read);
 
-    /* send reset sequence message */
-    const uint8_t msg_reset_seq[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x07, get_seq(seq), 0x01, 0x01, param };
-    if ((err = HID_WriteReport(msg_reset_seq))) {
-        debug("Failed to write to remote");
-        return LC_ERROR_WRITE;
-    }
-    if ((err = HID_ReadReport(rsp))) {
-        debug("Failed to read from remote");
-        return LC_ERROR_READ;
-    }
-    debug("msg_reset_seq");
-    debug_print_packet(rsp);
+    if (err = reset_sequence(get_seq(seq), param))
+        return err;
 
     return 0;
 }
@@ -393,19 +403,8 @@ int CRemoteMH::WriteFile(const char *filename, uint8_t *wr,
     debug("after writing file");
     debug_print_packet(rsp);
 
-    /* send reset sequence message */
-    const uint8_t msg_reset_seq[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x07, get_seq(seq), 0x01, 0x01, param };
-    if ((err = HID_WriteReport(msg_reset_seq))) {
-        debug("Failed to write to remote");
-        return LC_ERROR_WRITE;
-    }
-    if ((err = HID_ReadReport(rsp))) {
-        debug("Failed to read from remote");
-        return LC_ERROR_READ;
-    }
-    debug("msg_reset_seq");
-    debug_print_packet(rsp);
+    if (err = reset_sequence(get_seq(seq), param))
+        return err;
 
     return 0;
 }
@@ -492,8 +491,28 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         cb(cb_stage, cb_count++, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
     }
 
-    ri.config_bytes_used = 0;
-    ri.max_config_size = 1;
+    // Send the read config message to find the config bytes used.
+    const uint8_t msg_read_config[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x01, 0x00, 0x03, 0x80, '/', 'c', 'f', 'g', '/',
+          'u', 's', 'e', 'r', 'c', 'f', 'g', 0x00, 0x80, 'R', 0x00 };
+    if ((err = HID_WriteReport(msg_read_config))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+
+    if ((err = HID_ReadReport(rsp))) {
+        debug("Failed to read from remote");
+        return LC_ERROR_READ;
+    }
+    debug("msg_read_config");
+    debug_print_packet(rsp);
+
+    // In ReadFlash() we add an extra four bytes to the end of the config file
+    // buffer, so we include space for those bytes here.
+    ri.config_bytes_used = (rsp[7] << 24) + (rsp[8] << 16) + (rsp[9] << 8)
+        + rsp[10] + 4;
+    debug("ri.config_bytes_used = %d", ri.config_bytes_used);
+    ri.max_config_size = (ri.flash->size << 10);
     ri.valid_config = 1;
 
     if (cb) {
@@ -515,14 +534,52 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         make_serial(guid, ri);
     }
 
+    if (err = reset_sequence(0x01, 0x06))
+        return err;
+
     return 0;
+}
+
+// Calculates the XOR checksum for a config read from the remote.
+uint16_t mh_get_checksum(uint8_t* rd, const uint32_t len)
+{
+    // This is the "SEED" that all the configs from the website use.
+    uint16_t cksum = 0x4321;
+    // The part of the config that gets checksummed is consistently 6 bytes
+    // less than the length of the config.  Since we are checksumming two
+    // bytes at a time, we stop when i == len - 7, which is the same as
+    // i + 1 == len - 6.  In the case of odd lengths, we skip the last byte.
+    for (int i = 0; i < (len - 7); i += 2) {
+        uint16_t j = (rd[i+1] << 8) + rd[i];
+        cksum ^= j;
+    }
+    debug("CHECKSUM=0x%04x", cksum);
+    return cksum;
 }
 
 int CRemoteMH::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
                          unsigned int protocol, bool verify, lc_callback cb,
                          void *cb_arg, uint32_t cb_stage)
 {
-    return LC_ERROR_UNSUPP;
+    int err = 0;
+    int data_read;
+
+    if (err = ReadFile("/cfg/usercfg", rd, len, &data_read, 0x00))
+        return err;
+
+    /*
+     * When returning configs, some remotes (200) return the config + EOF bytes
+     * + extra padding, while other remotes (300) return just the config (with
+     * no EOF bytes or padding).  Here, to handle the latter case, we add the
+     * EOF bytes to the end of the buffer.  That way, when we check the length
+     * of the config in _mh_get_config_len() by searching for the first instance
+     * of the EOF bytes, we will find the correct length of the config in both
+     * cases.
+     */
+    if (rd)
+        memcpy(rd + len - 4, MH_EOF_BYTES, 4);
+
+    return 0;
 }
 
 int CRemoteMH::InvalidateFlash(lc_callback cb, void *cb_arg, uint32_t lc_stage)
@@ -674,19 +731,8 @@ int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,
     debug("msg_stop");
     debug_print_packet(rsp);
 
-    /* send reset sequence message */
-    const uint8_t msg_reset_seq[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x07, 0x03, 0x01, 0x01, 0x0C };
-    if (HID_WriteReport(msg_reset_seq) != 0) {
-        debug("Failed to write to remote");
-        err = LC_ERROR_WRITE;
-    }
-    if (HID_ReadReport(rsp) != 0) {
-        debug("Failed to read from remote");
-        err = LC_ERROR_READ;
-    }
-    debug("msg_reset_seq");
-    debug_print_packet(rsp);
+    if (err = reset_sequence(0x03, 0x0C))
+        return err;
 
     if (cb && !err) {
         cb(cb_stage, 1, 1, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
@@ -882,19 +928,8 @@ int CRemoteMH::UpdateConfig(const uint32_t len, const uint8_t *wr,
     cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 3, 4,
        LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
-    /* write msg 7 */
-    const uint8_t msg_7[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x07, get_seq(seq), 0x01, 0x01, 0x05 };
-    if ((err = HID_WriteReport(msg_7))) {
-        debug("Failed to write to remote");
-        return LC_ERROR_WRITE;
-    }
-    if ((err = HID_ReadReport(rsp, MH_TIMEOUT))) {
-        debug("Failed to read from remote");
-        return LC_ERROR_READ;
-    }
-    debug("msg_7");
-    debug_print_packet(rsp);
+    if (err = reset_sequence(get_seq(seq), 0x05))
+        return err;
 
     cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 4, 4,
        LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);

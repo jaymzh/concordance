@@ -29,7 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <zzip/lib.h>
+#include <zip.h>
 #include <list>
 #ifndef WIN32
 #include <unistd.h>
@@ -1043,6 +1043,86 @@ int _write_config_to_remote(lc_callback cb, void *cb_arg, uint32_t cb_stage)
     return 0;
 }
 
+/*
+ * When MH configs are read from the remote, sometimes the remote returns extra
+ * data after the end of the config file proper.  This function searches for
+ * the sequence of bytes that indicates the end of the config and returns the
+ * real length of the config that should be written out to disk.  Note that in
+ * some cases (Harmony 300), the remote does not return the EOF bytes, so we
+ * manually add them ourselves (see ReadFlash() in remote_mh.cpp).
+ */
+uint32_t _mh_get_config_len(uint8_t *in, uint32_t size)
+{
+    for (int i = 0; (i + 3) < size; i++) {
+        if (!memcmp(&in[i], MH_EOF_BYTES, 4)) {
+            return i + 4;
+        }
+    }
+    debug("Failed to find MH config EOF sequence");
+    return 0;
+}
+
+int _mh_write_config_to_file(uint8_t *in, uint32_t size, char *file_name)
+{
+    int zip_err;
+    struct zip *zip = zip_open(file_name, ZIP_CREATE | ZIP_EXCL, &zip_err);
+    if (!zip) {
+        if (zip_err == ZIP_ER_EXISTS) {
+            printf("Error: file %s already exists\n", file_name);
+        } else {
+            char error_str[100];
+            zip_error_to_str(error_str, 100, zip_err, errno);
+            debug("Failed to create zip file %s (%s)", file_name, error_str);
+        }
+        return LC_ERROR_OS_FILE;
+    }
+    int index;
+
+    // Write XML
+    extern const char *mh_config_header;
+    // 100 is arbitrary - it should be plenty to hold the snprintf data below
+    int xml_buffer_len = strlen(mh_config_header) + 100;
+    char xml_buffer[xml_buffer_len];
+    uint16_t checksum = mh_get_checksum(in, size);
+    int xml_len = snprintf(xml_buffer, xml_buffer_len, mh_config_header,
+        size, size - 6, checksum, ri.skin);
+    if (xml_len >= xml_buffer_len) {
+        debug("Error, XML buffer length exceeded");
+        return LC_ERROR;
+    }
+    struct zip_source *xml = zip_source_buffer(zip, xml_buffer, xml_len, 0);
+    if (!xml) {
+        debug("Failed to create zip_source_buffer for XML file");
+        return LC_ERROR_OS_FILE;
+    }
+    index = zip_add(zip, "Description.xml", xml);
+    if (index == -1) {
+        debug("Error writing XML to zip file");
+        zip_source_free(xml);
+        return LC_ERROR_OS_FILE;
+    }
+
+    // Write EzHex file
+    struct zip_source *ezhex = zip_source_buffer(zip, in, size, 0);
+    if (!ezhex) {
+        debug("Failed to create zip_source_buffer for EzHex file");
+        return LC_ERROR_OS_FILE;
+    }
+    index = zip_add(zip, "Result.EzHex", ezhex);
+    if (index == -1) {
+        debug("Error writing EzHex to zip file");
+        zip_source_free(ezhex);
+        return LC_ERROR_OS_FILE;
+    }
+
+    if (zip_close(zip) != 0) {
+        debug("Error closing zip file");
+        return LC_ERROR_OS_FILE;
+    }
+
+    return 0;
+}
+
 int write_config_to_remote(lc_callback cb, void *cb_arg)
 {
     return _write_config_to_remote(cb, cb_arg, LC_CB_STAGE_WRITE_CONFIG);
@@ -1051,6 +1131,17 @@ int write_config_to_remote(lc_callback cb, void *cb_arg)
 int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
     int binary)
 {
+    // If this is an MH remote, need to find the real end of the binary
+    if (is_mh_remote()) {
+        size = _mh_get_config_len(in, size);
+        ri.config_bytes_used = size;
+    }
+
+    // If this is an MH remote, need to write out zip file with XML/binary
+    if (!binary && is_mh_remote()) {
+        return _mh_write_config_to_file(in, size, file_name);
+    }
+
     binaryoutfile of;
 
     if (of.open(file_name) != 0) {

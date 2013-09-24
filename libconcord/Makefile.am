@@ -6,7 +6,7 @@ libconcord_la_SOURCES = remote.cpp remote_z.cpp libconcord.cpp binaryfile.cpp \
 	remote_info.h web.h protocol.h remote.h usblan.h xml_headers.h \
 	operationfile.cpp remote_mh.cpp libusbhid.cpp libhidapi.cpp
 include_HEADERS = libconcord.h
-libconcord_la_LDFLAGS = -version-info 3:0:0 -l$(USBLIB) -lzzip
+libconcord_la_LDFLAGS = -version-info 3:0:0 -l$(USBLIB) -lzip
 UDEVROOT ?= /
 UDEVLIBDIR ?= $(UDEVROOT)/lib
 

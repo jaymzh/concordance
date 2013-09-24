@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <zzip/lib.h>
+#include <zip.h>
 #include <string>
 
 #include "libconcord.h"
@@ -87,40 +87,35 @@ int find_config_binary(uint8_t *config, uint32_t config_size,
 
 int OperationFile::ReadZipFile(char *file_name)
 {
-    /* TODO: error checking */
-    zzip_error_t zip_err;
-    ZZIP_DIR *dir = zzip_dir_open(file_name, &zip_err);
-    if (dir) {
-        ZZIP_DIRENT dirent;
-        while (zzip_dir_read(dir, &dirent)) {
-            ZZIP_FILE *fh = zzip_file_open(dir, dirent.d_name, 0);
-            if ((strcmp(dirent.d_name, "Data.xml") == 0) || 
-                (strcmp(dirent.d_name, "Description.xml") == 0)) {
-                debug("Internal file is %s", dirent.d_name);
-                debug("Size is %d", dirent.st_size);
-                xml_size = dirent.st_size;
-                xml = new uint8_t[xml_size];
-                zzip_size_t len = zzip_file_read(fh, xml,
-                    xml_size);
-                debug("ERR IS: %s, len was %d",
-                    zzip_strerror_of(dir), len);
-                debug("xml is %d and xmlsize is %d", xml,
-                    xml_size);
-                //debug("%s%s%s%s", xml[0], xml[1], xml[2],
-                //    xml[3]);
-            } else {
-                data_size = dirent.st_size;
-                data = new uint8_t[data_size];
-                data_alloc = true;
-                zzip_size_t len = zzip_file_read(fh, data,
-                    data_size);
-            }
-            zzip_file_close(fh);
-        }
-    } else {
+    struct zip *zip = zip_open(file_name, 0, NULL);
+    if (!zip) {
         return LC_ERROR;
     }
-    zzip_dir_close(dir);
+
+    struct zip_stat stat;
+    zip_uint64_t num_entries = zip_get_num_entries(zip, 0);
+    for (zip_uint64_t i = 0; i < num_entries; i++) {
+        zip_stat_index(zip, i, 0, &stat);
+        struct zip_file *file = zip_fopen(zip, stat.name, 0);
+        if ((strcmp(stat.name, "Data.xml") == 0) ||
+            (strcmp(stat.name, "Description.xml") == 0)) {
+            debug("Internal file is %s", stat.name);
+            debug("Size is %d", stat.size);
+            xml_size = stat.size;
+            xml = new uint8_t[xml_size];
+            int len = zip_fread(file, xml, xml_size);
+            debug("len is %d, xml is %p, and xmlsize is %d", len, xml,
+                  xml_size);
+        } else {
+            data_size = stat.size;
+            data = new uint8_t[data_size];
+            data_alloc = true;
+            int len = zip_fread(file, data, data_size);
+            debug("len is %d, data_size is %d", len, data_size);
+        }
+        zip_fclose(file);
+    }
+    zip_close(zip);
     return 0;
 }
 
