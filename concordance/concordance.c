@@ -21,33 +21,16 @@
 
 /* Platform-agnostic includes */
 #define _SVID_SOURCE
+#include <getopt.h>
 #include <libconcord.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 /* Windows includes*/
-#include "win/getopt/getopt.h"
 #include <conio.h>
 #include <winsock.h>
-
-#define strcasecmp stricmp
-#define strncasecmp strnicmp
-#define sleep(x) Sleep((x) * 1000)
-#define strdup _strdup
-
-/*
- * Windows, in it's infinite awesomeness doesn't include POSIX things
- * like basename. This little hack will work for non-unicode filenames.
- * Thanks to Marco Bleich.
- */
-char* basename(char* file_name)
-{
-    char* _basename = strrchr(file_name, '\\');
-    
-    return _basename ? _basename+1 : file_name;
-}
 
 HANDLE con;
 
@@ -67,7 +50,6 @@ int set_canon(int flag)
 #else
 /* NON-Windows */
 
-#include <getopt.h>
 #include <strings.h>
 #include <libgen.h>
 #include <unistd.h>
@@ -171,7 +153,7 @@ void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
     const uint32_t *stages)
 {
 
-#ifdef WIN32
+#ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO sbi;
 #endif
 
@@ -183,7 +165,7 @@ void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
     }
 
     if (count != 0) {
-#ifdef WIN32
+#ifdef _WIN32
         GetConsoleScreenBufferInfo(con, &sbi);
         sbi.dwCursorPosition.X -= 14;
         if (sbi.dwCursorPosition.X < 0) {
@@ -955,7 +937,7 @@ int main(int argc, char *argv[])
     char *file_name;
     int mode, file_mode, err;
 
-#ifdef WIN32
+#ifdef _WIN32
     con=GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(con,FOREGROUND_BLUE|FOREGROUND_INTENSITY);
 #endif
@@ -964,7 +946,7 @@ int main(int argc, char *argv[])
     printf("Copyright 2007 Kevin Timmerman and Phil Dibowitz\n");
     printf("This software is distributed under the GPLv3.\n\n");
 
-#ifdef WIN32
+#ifdef _WIN32
     SetConsoleTextAttribute(con,
                             FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN);
 #endif
@@ -1192,7 +1174,7 @@ cleanup:
         printf("Success!\n");
     }
         
-#ifdef WIN32
+#ifdef _WIN32
     /* Shutdown WinSock */
     WSACleanup();
 #endif

@@ -1,4 +1,27 @@
-See INSTALL.windows in the top-level directory. There are project files
-there that encompass all of our projects.
+==== BASIC INSTALLATION ====
+
+0. INSTALL REQUIRED SOFTWARE
+
+Compiling libconcord with MinGW is now the officially supported method.  Other
+methods may work, but are not officially supported at this time.  Libconcord
+has been compiled on Fedora using MinGW - other distributions may work as well.
+
+In order to build libconcord, you will need to install libzip and hidapi.  For
+libzip, the Fedora mingw32-libzip package can be used.  As hidapi is not yet
+packaged for MinGW, you will have to download and build it separately.  Get it
+from https://github.com/signal11/hidapi.  Grab the source from git (NOT a
+release).  Once you unpackage it, you can build it which is fairly straight
+forward:
+   ./bootstrap
+   mingw32-configure
+   mingw32-make
+
+1. BUILD THE SOFTWARE
+
+Building libconcord with MinGW is also fairly straight forward (you will need
+to specify the include and library paths for hidapi as below if you did not
+install it to the MinGW sysroot):
+   mingw32-configure CPPFLAGS="-I/path/to/hidapi" LDFLAGS="-L/path/to/hidapi/libs"
+   mingw32-make
 
 vim:textwidth=78:

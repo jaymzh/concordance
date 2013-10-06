@@ -8,3 +8,5 @@ concordance_LDFLAGS = $(LIBCONCORD_LDFLAGS)
 concordance_CFLAGS = -Wall -ansi -pedantic-errors
 man1_MANS = concordance.1
 
+win32-installer:
+	makensis win/concordance.nsi

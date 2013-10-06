@@ -423,7 +423,6 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
     debug("UPDATE_DATA");
     uint32_t pkt_len;
     int tlen = len;
-    int bytes_written = 0;
     uint8_t *wr_ptr = const_cast<uint8_t*>(wr);
     uint8_t tmp_pkt[1033];
     tmp_pkt[0] = 0x03; // 3 parameters
@@ -777,8 +776,8 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
 
     if (IsUSBNet()) {
         // Get the User Config Region to find the config bytes used.
-        if (err = ReadRegion(REGION_USER_CONFIG, ri.config_bytes_used, NULL,
-                             NULL, NULL, 0)) {
+        if ((err = ReadRegion(REGION_USER_CONFIG, ri.config_bytes_used, NULL,
+                              NULL, NULL, 0))) {
             return err;
         }
     } else {
@@ -894,7 +893,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
 
     // Get the "XMLUserRFSetting" - the usbnet remote appears to have a web
     // server running where the Windows driver grabs this data.
-    if (err = GetXMLUserRFSetting(&ri.xml_user_rf_setting)) {
+    if ((err = GetXMLUserRFSetting(&ri.xml_user_rf_setting))) {
         debug("Failed to read XML User RF Settings");
         return LC_ERROR;
     }
@@ -1335,7 +1334,6 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
     debug("UPDATE_DATA");
     int pkt_len;
     int tlen = len;
-    int bytes_written = 0;
     uint8_t *wr_ptr = const_cast<uint8_t*>(wr);
     while (tlen) {
         pkt_len = 58;

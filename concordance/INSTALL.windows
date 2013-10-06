@@ -1,5 +1,26 @@
-See INSTALL.windows in the top-level directory. There are project files
-there that encompass all of our projects.
+==== BASIC INSTALLATION ====
 
+0. INSTALL REQUIRED SOFTWARE
+
+Compiling Concordance with MinGW is now the officially supported method.  Other
+methods may work, but are not officially supported at this time.  Concordance
+has been compiled on Fedora using MinGW - other distributions may work as well.
+
+1. BUILD THE SOFTWARE
+
+Building concordance with MinGW is fairly straight forward (you will need to
+specify the include and library paths for libconcord as below if you did not
+install it to the MinGW sysroot):
+   mingw32-configure CPPFLAGS="-I../libconcord" LDFLAGS="-L../libconcord/.libs"
+   mingw32-make
+
+To build a Win32 installer, you will need to have NSIS installed.
+Additionally, you will need to set some environment variables.
+   export MINGW_SYSROOT_BIN="/usr/i686-w64-mingw32/sys-root/mingw/bin"
+          (the path where the MinGW DLL files can be found)
+   export HIDAPI_LIB_PATH="/path/to/hidapi/lib"
+
+To build the installer:
+   mingw32-make win32-installer
 
 vim:textwidth=78:

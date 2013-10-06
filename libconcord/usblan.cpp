@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock.h>
 #else
 #include <sys/socket.h>
@@ -96,20 +96,20 @@ int FindUsbLanRemote(void)
 
     // Make the socket non-blocking so it doesn't hang on systems that 
     // don't have a usbnet remote.
-    int flags = 0;
     fd_set wset;
     FD_ZERO(&wset);
     FD_SET(sock, &wset);
     struct timeval tv;
     tv.tv_sec = connect_timeout;
     tv.tv_usec = 0;
-    #ifdef WIN32
+#ifdef _WIN32
     u_long non_blocking = 1;
     if(ioctlsocket(sock, FIONBIO, &non_blocking) != 0) {
         report_net_error("ioctlsocket()");
         return LC_ERROR_OS_NET;
     }
-    #else
+#else
+    int flags = 0;
     if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
@@ -118,7 +118,7 @@ int FindUsbLanRemote(void)
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
     }
-    #endif
+#endif
 
     if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
         if (errno != EINPROGRESS) {
@@ -134,12 +134,12 @@ int FindUsbLanRemote(void)
 
     // Change the socket back to blocking which should be fine now that we
     // connected.
-    #ifdef WIN32
+#ifdef _WIN32
     if(ioctlsocket(sock, FIONBIO, 0) != 0) {
         report_net_error("ioctlsocket()");
         return LC_ERROR_OS_NET;
     }
-    #else
+#else
     if((flags = fcntl(sock, F_GETFL, 0)) < 0) {
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
@@ -148,7 +148,7 @@ int FindUsbLanRemote(void)
         report_net_error("fcntl()");
         return LC_ERROR_OS_NET;
     }
-    #endif
+#endif
 
     debug("Connected to USB LAN driver!");
 

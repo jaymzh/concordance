@@ -41,13 +41,20 @@ case $host_os in
       USBLIB="hidapi-libusb"
       AC_DEFINE([WANT_HIDAPI], [1], [Want hidapi])
     fi
+    LIBCONCORD_LDFLAGS="-l$USBLIB"
     ;;
   darwin*)
     USBLIB="hidapi"
     AC_DEFINE([WANT_HIDAPI], [1], [Want hidapi])
+    LIBCONCORD_LDFLAGS="-l$USBLIB"
+    ;;
+  mingw*)
+    USBLIB="hidapi"
+    AC_DEFINE([WANT_HIDAPI], [1], [Want hidapi])
+    LIBCONCORD_LDFLAGS="-l$USBLIB -lwsock32 -no-undefined"
     ;;
 esac
-AC_SUBST([USBLIB],[$USBLIB])
+AC_SUBST([LIBCONCORD_LDFLAGS], [$LIBCONCORD_LDFLAGS])
 a=1
 if test "$USBLIB" = "usb"; then
   AC_CHECK_HEADER(usb.h, [], [a=0])

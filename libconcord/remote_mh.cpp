@@ -78,11 +78,11 @@ int CRemoteMH::Reset(uint8_t kind)
 string find_value(string str, string key)
 {
     string value = "";
-    int pos = str.find(key);
+    size_t pos = str.find(key);
     if (pos != string::npos) {
-        int value_start = str.find(" ", pos) + 1;
-        int value_end = str.find(0x0A, pos);
-        int len = value_end - value_start;
+        size_t value_start = str.find(" ", pos) + 1;
+        size_t value_end = str.find(0x0A, pos);
+        size_t len = value_end - value_start;
         if ((value_start != string::npos) && (value_end != string::npos))
             value = str.substr(value_start, len);
     }
@@ -299,7 +299,7 @@ int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
     }
     debug("data_read=%d", *data_read);
 
-    if (err = reset_sequence(get_seq(seq), param))
+    if ((err = reset_sequence(get_seq(seq), param)))
         return err;
 
     return 0;
@@ -385,7 +385,7 @@ int CRemoteMH::WriteFile(const char *filename, uint8_t *wr,
 
         debug("DATA sending %d bytes, %d bytes left", pkt_len, tlen);
 
-        if (err = HID_WriteReport(tmp_pkt)) {
+        if ((err = HID_WriteReport(tmp_pkt))) {
             return err;
         }
         wr_ptr += pkt_len;
@@ -403,7 +403,7 @@ int CRemoteMH::WriteFile(const char *filename, uint8_t *wr,
     debug("after writing file");
     debug_print_packet(rsp);
 
-    if (err = reset_sequence(get_seq(seq), param))
+    if ((err = reset_sequence(get_seq(seq), param)))
         return err;
 
     return 0;
@@ -466,8 +466,8 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
     int buflen = 1000;
     char buffer[buflen];
     int data_read;
-    if (err = ReadFile("/sys/sysinfo", (uint8_t*)buffer, buflen, &data_read,
-                       0x03))
+    if ((err = ReadFile("/sys/sysinfo", (uint8_t*)buffer, buflen, &data_read,
+                        0x03)))
         return err;
     string identity(buffer);
     debug("%s", identity.c_str());
@@ -534,7 +534,7 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         make_serial(guid, ri);
     }
 
-    if (err = reset_sequence(0x01, 0x06))
+    if ((err = reset_sequence(0x01, 0x06)))
         return err;
 
     return 0;
@@ -564,7 +564,7 @@ int CRemoteMH::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
     int err = 0;
     int data_read;
 
-    if (err = ReadFile("/cfg/usercfg", rd, len, &data_read, 0x00))
+    if ((err = ReadFile("/cfg/usercfg", rd, len, &data_read, 0x00)))
         return err;
 
     /*
@@ -680,7 +680,6 @@ int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,
                        uint32_t cb_stage)
 {
     int err = 0;
-    uint32_t cb_count = 0;
 
     const uint8_t msg_one[MH_MAX_PACKET_SIZE] =
         { 0xFF, 0x01, 0x00, 0x02, 0x80, '/', 'i', 'r', '/', 'i', 'r',
@@ -731,7 +730,7 @@ int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,
     debug("msg_stop");
     debug_print_packet(rsp);
 
-    if (err = reset_sequence(0x03, 0x0C))
+    if ((err = reset_sequence(0x03, 0x0C)))
         return err;
 
     if (cb && !err) {
@@ -831,7 +830,7 @@ int CRemoteMH::UpdateConfig(const uint32_t len, const uint8_t *wr,
         debug("DATA %d, sending %d bytes, %d bytes left", cb_count,
             pkt_len, tlen);
 
-        if (err = HID_WriteReport(tmp_pkt)) {
+        if ((err = HID_WriteReport(tmp_pkt))) {
             return err;
         }
         wr_ptr += pkt_len;
@@ -887,7 +886,7 @@ int CRemoteMH::UpdateConfig(const uint32_t len, const uint8_t *wr,
 
     /* write finish config message */
     mh_config_attributes mca;
-    if (err = get_mh_config_attributes(xml, xml_size, &mca)) {
+    if ((err = get_mh_config_attributes(xml, xml_size, &mca))) {
         debug("Failed to parse config attributes");
         return LC_ERROR;
     }
@@ -928,7 +927,7 @@ int CRemoteMH::UpdateConfig(const uint32_t len, const uint8_t *wr,
     cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 3, 4,
        LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
 
-    if (err = reset_sequence(get_seq(seq), 0x05))
+    if ((err = reset_sequence(get_seq(seq), 0x05)))
         return err;
 
     cb(LC_CB_STAGE_FINALIZE_UPDATE, cb_count++, 4, 4,

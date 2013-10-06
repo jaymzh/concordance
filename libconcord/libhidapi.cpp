@@ -87,9 +87,9 @@ int FindRemote(THIDINFO &hid_info)
     devs = hid_enumerate(0x0, 0x0);
     cur_dev = devs;
     while (cur_dev) {
-        debug("Testing: %d, %d", cur_dev->vendor_id, cur_dev->product_id);
+        debug("Testing: %04X, %04X", cur_dev->vendor_id, cur_dev->product_id);
         if (is_harmony(cur_dev)) {
-            debug(" -- YES!");
+            debug("Found a Harmony!");
             hid_info.vid = cur_dev->vendor_id;
             hid_info.pid = cur_dev->product_id;
             hid_info.ver = cur_dev->release_number;

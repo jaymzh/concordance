@@ -22,15 +22,9 @@
 #ifndef LC_INTERNAL_H
 #define LC_INTERNAL_H
 
-#ifdef WIN32 /* BEGIN WINDOWS SECTION */
+#ifdef _WIN32 /* BEGIN WINDOWS SECTION */
 
 #include <windows.h>
-/*
- * FIXME: We need to fix the code that is generating these warnings!!
- */
-#if _MSC_VER >= 1400
-#pragma warning( disable : 4996 )
-#endif
 
 #else /* END WINDOWS SECTION, BEGIN NON-WINDOWS SECTION */
 

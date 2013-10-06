@@ -26,12 +26,7 @@
 
 #include <stdio.h>
 #include <string.h>
-
-#ifdef WIN32
-#include <io.h>
-#else
 #include <sys/stat.h>
-#endif
 
 #include "libconcord.h"
 #include "lc_internal.h"
@@ -91,13 +86,9 @@ int binaryinfile::open(const char *path)
 
 unsigned int binaryinfile::getlength(void)
 {
-#ifdef WIN32
-    return filelength(fileno(m_f));
-#else
     struct stat fs;
     fstat(fileno(m_f), &fs);
     return fs.st_size;
-#endif
 }
 
 size_t binaryinfile::read(uint8_t *b, uint32_t len)

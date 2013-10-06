@@ -31,9 +31,7 @@
 #include <errno.h>
 #include <zip.h>
 #include <list>
-#ifndef WIN32
 #include <unistd.h>
-#endif
 #include <vector>
 #include "libconcord.h"
 #include "lc_internal.h"
@@ -703,7 +701,7 @@ int init_concord()
     int err;
     rmt = NULL;
 
-#ifdef WIN32
+#ifdef _WIN32
     // Initialize WinSock
     WSADATA wsainfo;
     int error = WSAStartup(1*256 + 1, &wsainfo);
@@ -1002,9 +1000,9 @@ int read_config_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
     // For zwave-hid remotes, need to read the config once to get the size
     // For usbnet we do this in GetIdentity, but for hid it takes too long
     if (is_z_remote() && !is_usbnet_remote()) {
-        if (err = ((CRemoteZ_HID*)rmt)->ReadRegion(
+        if ((err = ((CRemoteZ_HID*)rmt)->ReadRegion(
                       REGION_USER_CONFIG, ri.config_bytes_used, NULL, cb,
-                      cb_arg, LC_CB_STAGE_READ_CONFIG)) {
+                      cb_arg, LC_CB_STAGE_READ_CONFIG))) {
             return err;
         }
     }
@@ -1053,7 +1051,7 @@ int _write_config_to_remote(lc_callback cb, void *cb_arg, uint32_t cb_stage)
  */
 uint32_t _mh_get_config_len(uint8_t *in, uint32_t size)
 {
-    for (int i = 0; (i + 3) < size; i++) {
+    for (uint32_t i = 0; (i + 3) < size; i++) {
         if (!memcmp(&in[i], MH_EOF_BYTES, 4)) {
             return i + 4;
         }
@@ -1272,7 +1270,6 @@ int _update_configuration_mh(lc_callback cb, void *cb_arg)
 
 int _update_configuration_hid(lc_callback cb, void *cb_arg) {
     int err;
-    int cb_count = 0;
 
     if ((err = prep_config(cb, cb_arg))) {
         return err;
@@ -1829,8 +1826,8 @@ int mh_get_cfg_properties(struct mh_cfg_properties *properties)
     int buflen = 5000;
     char buffer[buflen];
     int data_read;
-    if (err = rmt->ReadFile("/cfg/properties", (uint8_t*)buffer, buflen,
-                            &data_read))
+    if ((err = rmt->ReadFile("/cfg/properties", (uint8_t*)buffer, buflen,
+                             &data_read)))
         return err;
 
     mh_get_value(buffer, "host_name", properties->host_name);
@@ -1871,8 +1868,8 @@ int mh_get_wifi_networks(struct mh_wifi_networks *networks)
     int buflen = 5000;
     char buffer[buflen];
     int data_read;
-    if (err = rmt->ReadFile("/sys/wifi/networks", (uint8_t*)buffer, buflen,
-                            &data_read))
+    if ((err = rmt->ReadFile("/sys/wifi/networks", (uint8_t*)buffer, buflen,
+                             &data_read)))
         return err;
 
     char *buf_ptr = buffer;
@@ -1901,8 +1898,8 @@ int mh_get_wifi_config(struct mh_wifi_config *config)
     int buflen = 5000;
     char buffer[buflen];
     int data_read;
-    if (err = rmt->ReadFile("/sys/wifi/connect", (uint8_t*)buffer, buflen,
-                            &data_read))
+    if ((err = rmt->ReadFile("/sys/wifi/connect", (uint8_t*)buffer, buflen,
+                             &data_read)))
         return err;
 
     mh_get_value(buffer, "ssid", config->ssid);
@@ -1945,10 +1942,8 @@ int mh_set_wifi_config(const struct mh_wifi_config *config)
 
 void report_net_error(const char *msg)
 {
-    int err;
-#ifdef WIN32
-    err = WSAGetLastError();
-    debug("Net error: %s failed with error %i", msg, err);
+#ifdef _WIN32
+    debug("Net error: %s failed with error %i", msg, WSAGetLastError());
 #else
     debug("Net error: %s failed with error %s", msg, strerror(errno));
 #endif

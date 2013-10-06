@@ -23,21 +23,7 @@
 #define LIBCONCORD_H
 
 #include <stdio.h>
-
-#ifdef WIN32
-typedef unsigned char uint8_t;
-typedef signed short int16_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned __int64 uint64_t;
-#define sleep(x) Sleep((x) * 1000)
-#define snprintf _snprintf
-
-#else
-
 #include <stdint.h>
-
-#endif /* end if win32/else */
 
 #define LC_ERROR 1
 #define LC_ERROR_INVALID_DATA_FROM_REMOTE 2

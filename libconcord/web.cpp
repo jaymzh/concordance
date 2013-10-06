@@ -26,9 +26,9 @@
 #include "remote.h"
 #include "xml_headers.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock.h>
-#else /* non WIN32 */
+#else /* non _WIN32 */
 #include <strings.h>
 #include <sys/socket.h>
 #include <netdb.h>

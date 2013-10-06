@@ -103,15 +103,14 @@ int OperationFile::ReadZipFile(char *file_name)
             debug("Size is %d", stat.size);
             xml_size = stat.size;
             xml = new uint8_t[xml_size];
-            int len = zip_fread(file, xml, xml_size);
-            debug("len is %d, xml is %p, and xmlsize is %d", len, xml,
-                  xml_size);
+            zip_fread(file, xml, xml_size);
+            debug("xml is %p, and xmlsize is %d", xml, xml_size);
         } else {
             data_size = stat.size;
             data = new uint8_t[data_size];
             data_alloc = true;
-            int len = zip_fread(file, data, data_size);
-            debug("len is %d, data_size is %d", len, data_size);
+            zip_fread(file, data, data_size);
+            debug("data_size is %d", data_size);
         }
         zip_fclose(file);
     }
