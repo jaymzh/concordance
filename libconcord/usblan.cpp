@@ -121,7 +121,11 @@ int FindUsbLanRemote(void)
 #endif
 
     if ((err = connect(sock,(struct sockaddr*)&sa,sizeof(sa)))) {
+#ifdef _WIN32
+        if (WSAGetLastError() != WSAEWOULDBLOCK) {
+#else
         if (errno != EINPROGRESS) {
+#endif
             report_net_error("connect()");
             return LC_ERROR_OS_NET;
         }
@@ -135,7 +139,8 @@ int FindUsbLanRemote(void)
     // Change the socket back to blocking which should be fine now that we
     // connected.
 #ifdef _WIN32
-    if(ioctlsocket(sock, FIONBIO, 0) != 0) {
+    non_blocking = 0;
+    if(ioctlsocket(sock, FIONBIO, &non_blocking) != 0) {
         report_net_error("ioctlsocket()");
         return LC_ERROR_OS_NET;
     }
