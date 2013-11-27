@@ -31,6 +31,9 @@
 #include "web.h"
 #include "remote.h"
 
+static const char *FW_URL =
+    "EasyZapper/New/ProcUpgradeFirmware/Upgrade_Receive_Complete.asp";
+
 int find_config_binary(uint8_t *config, uint32_t config_size,
     uint8_t **binary_ptr, uint32_t *binary_size)
 {
@@ -309,10 +312,17 @@ int OperationFile::ReadAndParseOpFile(char *file_name, int *type)
         string tag_s;
         err = GetTag("TYPE", tmp_data, tmp_size, tag_ptr, &tag_s);
         if (err == -1) {
-            debug("not a firmware file");
-            break;
+            err = GetTag("PATH", tmp_data, tmp_size, tag_ptr, &tag_s);
+            if (err == -1) {
+                debug("not a firmware file");
+                break;
+            }
         }
         if (!stricmp(tag_s.c_str(), "Firmware_Main")) {
+            debug("IS a firmware file");
+            found_firmware = true;
+            break;
+        } else if (!stricmp(tag_s.c_str(), FW_URL)) {
             debug("IS a firmware file");
             found_firmware = true;
             break;
