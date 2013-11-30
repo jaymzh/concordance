@@ -201,10 +201,10 @@ public:
     virtual int IsMHRemote()=0;
 
     virtual int ReadFile(const char *filename, uint8_t *rd,
-                         const uint32_t rdlen, int *data_read,
-                         uint8_t start_seq=0)=0;
+        const uint32_t rdlen, int *data_read, uint8_t start_seq,
+        lc_callback cb, void *cb_arg, uint32_t cb_stage)=0;
     virtual int WriteFile(const char *filename, uint8_t *wr,
-                          const uint32_t wrlen)=0;
+        const uint32_t wrlen)=0;
 };
 
 class CRemote : public CRemoteBase    // All non-Z-Wave remotes
@@ -263,7 +263,8 @@ public:
     int IsMHRemote() {return false;}
 
     int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-        int *data_read, uint8_t start_seq=0);
+        int *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage);
     int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
 
@@ -320,7 +321,8 @@ public:
     int IsMHRemote() {return false;}
 
     int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-        int *data_read, uint8_t start_seq=0);
+        int *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage);
     int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
 
@@ -447,7 +449,8 @@ public:
     int IsMHRemote() {return true;}
 
     int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-        int *data_read, uint8_t start_seq=0);
+        int *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
+        uint32_t cb_stage);
     int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
 

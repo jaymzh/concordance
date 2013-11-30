@@ -182,9 +182,11 @@ int reset_sequence(uint8_t seq, uint8_t param)
 }
 
 int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-                        int *data_read, uint8_t start_seq)
+                        int *data_read, uint8_t start_seq, lc_callback cb,
+                        void *cb_arg, uint32_t cb_stage)
 {
     int err = 0;
+    uint32_t cb_count = 0;
     uint8_t seq = start_seq;
 
     if (strlen(filename) > (MH_MAX_PACKET_SIZE - 9)) {
@@ -273,6 +275,10 @@ int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
         *data_read += len;
         pkt_count++;
         pkts_to_read--;
+        if (cb) {
+            cb(cb_stage, cb_count++, *data_read, data_len,
+	       LC_CB_COUNTER_TYPE_BYTES, cb_arg, NULL);
+        }
         if (pkts_to_read == 1) {
             break;
         }
@@ -467,7 +473,7 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
     char buffer[buflen];
     int data_read;
     if ((err = ReadFile("/sys/sysinfo", (uint8_t*)buffer, buflen, &data_read,
-                        0x03)))
+                        0x03, NULL, NULL, 0)))
         return err;
     string identity(buffer);
     debug("%s", identity.c_str());
@@ -564,7 +570,8 @@ int CRemoteMH::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
     int err = 0;
     int data_read;
 
-    if ((err = ReadFile("/cfg/usercfg", rd, len, &data_read, 0x00)))
+    if ((err = ReadFile("/cfg/usercfg", rd, len, &data_read, 0x00, cb, cb_arg,
+                        cb_stage)))
         return err;
 
     /*
