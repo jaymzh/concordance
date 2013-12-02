@@ -51,6 +51,12 @@ hid_device *h_dev;
 int InitUSB()
 {
     hid_init();
+    /*
+     * Note we do NOT call hid_exit() in ShutdownUSB, because you can
+     * never reinitialize libhidapi - and on a reset, we need
+     * to come back and do more stuff. So we set it up as an atexit()
+     */
+    atexit((void(*)())hid_exit);
     return 0;
 }
 
@@ -59,7 +65,6 @@ void ShutdownUSB()
     if (h_dev) {
         hid_close(h_dev);
     }
-    hid_exit();
 }
 
 bool is_harmony(struct hid_device_info *dev)

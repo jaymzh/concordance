@@ -4,18 +4,31 @@
 
 You'll need the Xcode tools installed before you can do anything.
 
-You'll need to install pkgconfig. I used the Mac package here:
+From there, there's two different ways to get the requirements: (1) homebrew
+or (2) a combination of macpkg + compiling software yourself. Using homebrew
+is highly recommended.
+
+OPTION 1: HOMEBREW
+
+Install Homebrew from: http://brew.sh/
+
+Tell Homebrew to install all the requirements:
+
+  brew install libusb libusb-compat pkgconfig autoconf automake libtool libzip
+
+OPTION 2: MANUAL PACKAGE INSTALLATION
+
+First, install pkgconfig. The Mac package here is pre-built and tested:
 
 http://macpkg.sourceforge.net/
 
 You will then need to set the following in your environment for everything
 else to go smoothly:
-
   export PATH=$PATH:/opt/pkgconfig/bin
   export PKG_CONFIG=/opt/pkgconfig/bin/pkg-config
   export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/X11/lib/pkgconfig
 
-You must install libusb-1.0. It's fairly straight forward to install, it should
+Next, install libusb-1.0. It's fairly straight forward to install, it should
 be:
    ./configure --prefix=/usr
    make
@@ -24,16 +37,8 @@ be:
 If you get errors about -System while building libusb, upgrade your version of
 Xcode.
 
-You must install libusb-0.1-compat as well. It requires libusb-1.0, so install
-that first. It is also straight forward:
-   ./configure --prefix=/usr
-   make
-   sudo make install
-
-You must install hidapi (there's a few similarly named projects, you want:
-https://github.com/signal11/hidapi). Grab the source from git (NOT a release),
-and do:
-   ./bootstrap
+You must install libusb-0.1-compat as well. This requires libusb-1.0 (it's not
+an alternative). It is also straight forward:
    ./configure --prefix=/usr
    make
    sudo make install
@@ -42,21 +47,47 @@ Finally, you will need to install libzip, which again is straight forward:
    ./configure --prefix=/usr
    make
    sudo make install
- 
 
-1. BUILD THE LIBRARY
+1. INSTALL HIDAPI (an additional pre-req)
+
+This has to be installed manually, so even if you are using homebrew, you
+still have to do this one from scratch (since you need fixes from 'git' that
+are not yet in a release). There's a few similarly named projects, you want:
+   https://github.com/signal11/hidapi
+
+Grab the source from git (NOT a release), and do:
+   ./bootstrap
+   ./configure --prefix=/usr
+   make
+   sudo make install
+
+2. BUILD LIBCONCORD
 
    As a normal user...
-     A. ***IF**** You are building from CVS, run "autoreconf --install"
+     A. ****IF**** You are building from git run "autoreconf --install"
+        Note that if you compiled the depenencies by hand, you proably
+        need to do this instead:
+          aclocal -I /opt/pkgconfig/share/aclocal
+          autoheader
+          automake
+          autoconf
      B. Run "./configure"
      C. Run "make"
 
 Various options, such as '--prefix' are available to the configure script to
 help you choose where software gets installed and how it is built.
 
-2. INSTALL THE SOFTWARE
+3. INSTALL THE SOFTWARE
 
 As root, simply run "make install"
 
+
+==== UNINSTALLATION ====
+
+Due to a bug in libtool on OSX, 'make uninstall' won't actually remove
+everything from your system. You will need to do:
+    sudo rm -f /usr/lib/libconcord*
+
+Assuming you installed with a prefix of /usr
 
 vim:textwidth=78:
