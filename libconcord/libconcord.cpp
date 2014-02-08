@@ -1825,7 +1825,7 @@ int mh_get_cfg_properties(struct mh_cfg_properties *properties)
     int err;
     int buflen = 5000;
     char buffer[buflen];
-    int data_read;
+    uint32_t data_read;
     if ((err = rmt->ReadFile("/cfg/properties", (uint8_t*)buffer, buflen,
                              &data_read, 0x00, NULL, NULL, 0)))
         return err;
@@ -1867,7 +1867,7 @@ int mh_get_wifi_networks(struct mh_wifi_networks *networks)
     int err;
     int buflen = 5000;
     char buffer[buflen];
-    int data_read;
+    uint32_t data_read;
     if ((err = rmt->ReadFile("/sys/wifi/networks", (uint8_t*)buffer, buflen,
                              &data_read, 0x00, NULL, NULL, 0)))
         return err;
@@ -1897,7 +1897,7 @@ int mh_get_wifi_config(struct mh_wifi_config *config)
     int err;
     int buflen = 5000;
     char buffer[buflen];
-    int data_read;
+    uint32_t data_read;
     if ((err = rmt->ReadFile("/sys/wifi/connect", (uint8_t*)buffer, buflen,
                              &data_read, 0x00, NULL, NULL, 0)))
         return err;

@@ -285,7 +285,7 @@ int CRemoteZ_USBNET::Write(uint8_t typ, uint8_t cmd, uint32_t len,
     const uint8_t status = STATUS_OK;
 
     uint8_t pkt[USBNET_MAX_PACKET_SIZE+3]; /* add standard 3-byte header */
-    pkt[0] = service_type << 4 | (cmd >> 8) & 0x0F;
+    pkt[0] = (service_type << 4) | ((cmd >> 8) & 0x0F);
     pkt[1] = cmd & 0xFF;
     pkt[2] = request ? 0x80 : (status & 0x7F);
 
@@ -422,7 +422,7 @@ int CRemoteZ_USBNET::UpdateConfig(const uint32_t len, const uint8_t *wr,
     /* write data */
     debug("UPDATE_DATA");
     uint32_t pkt_len;
-    int tlen = len;
+    uint32_t tlen = len;
     uint8_t *wr_ptr = const_cast<uint8_t*>(wr);
     uint8_t tmp_pkt[1033];
     tmp_pkt[0] = 0x03; // 3 parameters
@@ -554,13 +554,14 @@ int CRemoteZ_USBNET::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 
     uint8_t tsv[32] = {
         0x0C, // 12 parameters
-        0x02, ht.year >> 8, ht.year, // 2 bytes
-        0x01, ht.month,
-        0x01, ht.day,
-        0x01, ht.hour,
-        0x01, ht.minute,
-        0x01, ht.second,
-        0x01, ht.dow,
+        0x02, static_cast<uint8_t>(ht.year >> 8),
+        static_cast<uint8_t>(ht.year), // 2 bytes
+        0x01, static_cast<uint8_t>(ht.month),
+        0x01, static_cast<uint8_t>(ht.day),
+        0x01, static_cast<uint8_t>(ht.hour),
+        0x01, static_cast<uint8_t>(ht.minute),
+        0x01, static_cast<uint8_t>(ht.second),
+        0x01, static_cast<uint8_t>(ht.dow),
         // utcOffset
         0x02, 0, 0, // 2 bytes - 900 doesn't seem to accept this
         // 0s
@@ -1174,15 +1175,15 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
 {
     int err = 0;
 
-    uint8_t tsv[16] = { ht.year, 0, // 2 bytes
-        ht.month,
-        ht.day,
-        ht.hour,
-        ht.minute,
-        ht.second,
-        ht.dow,
+    uint8_t tsv[16] = { static_cast<uint8_t>(ht.year), 0, // 2 bytes
+        static_cast<uint8_t>(ht.month),
+        static_cast<uint8_t>(ht.day),
+        static_cast<uint8_t>(ht.hour),
+        static_cast<uint8_t>(ht.minute),
+        static_cast<uint8_t>(ht.second),
+        static_cast<uint8_t>(ht.dow),
         // utcOffset
-        ht.utc_offset, 0, // 2 bytes
+        static_cast<uint8_t>(ht.utc_offset), 0, // 2 bytes
         // 0s
         0, 0, // 2 bytes
         0, 0, // 2 bytes
@@ -1496,7 +1497,7 @@ int CRemoteZ_HID::LearnIR(uint32_t *freq, uint32_t **ir_signal,
 }
 
 int CRemoteZ_Base::ReadFile(const char *filename, uint8_t *rd,
-                            const uint32_t rdlen, int *data_read,
+                            const uint32_t rdlen, uint32_t *data_read,
                             uint8_t start_seq, lc_callback cb, void *cb_arg,
                             uint32_t cb_stage)
 {

@@ -131,8 +131,6 @@ const char *config_header="\
 
 const char *mh_config_header = "<DATA><FILES><FILE NAME=\"Result.EzHex\" SIZE=\"%i\" PATH=\"/cfg/usercfg\" VERSION=\"1\" FW_VERSION=\"9.5\" OPERATIONTYPE=\"userconfiguration\"><CHECKSUM SEED=\"0x4321\" OFFSET=\"0x0\" LENGTH=\"0x%04x\" EXPECTEDVALUE=\"0x%04x\" TYPE=\"XOR\"/></FILE></FILES><INTENDED><SKIN>%i</SKIN></INTENDED><ORDER><ORDER_ELEMENT NAME=\"Result.EzHex\" RESET=\"true\"/></ORDER></DATA>";
 
-//User-Agent: HarmonyBrowser/7.7.0 (Build 0; UpdatedFrom 7.3.0.15; Skin logitech; Windows Vista 6.1; x86; en; rv: 1.8.0.2) Gecko/20060125\r\n\
-
 const char *post_header="\
 POST /%s HTTP/1.1\r\n\
 User-Agent: HarmonyBrowser/7.3.0 (Build 15; UpdatedFrom 7.3.0.15; Skin logitech; Windows XP 5.1; x86; en; rv: 1.8.0.2) Gecko/20060125\r\n\

@@ -201,7 +201,7 @@ public:
     virtual int IsMHRemote()=0;
 
     virtual int ReadFile(const char *filename, uint8_t *rd,
-        const uint32_t rdlen, int *data_read, uint8_t start_seq,
+        const uint32_t rdlen, uint32_t *data_read, uint8_t start_seq,
         lc_callback cb, void *cb_arg, uint32_t cb_stage)=0;
     virtual int WriteFile(const char *filename, uint8_t *wr,
         const uint32_t wrlen)=0;
@@ -263,7 +263,7 @@ public:
     int IsMHRemote() {return false;}
 
     int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-        int *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
+        uint32_t *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
         uint32_t cb_stage);
     int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
@@ -321,7 +321,7 @@ public:
     int IsMHRemote() {return false;}
 
     int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-        int *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
+        uint32_t *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
         uint32_t cb_stage);
     int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };
@@ -449,7 +449,7 @@ public:
     int IsMHRemote() {return true;}
 
     int ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-        int *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
+        uint32_t *data_read, uint8_t start_seq, lc_callback cb, void *cb_arg,
         uint32_t cb_stage);
     int WriteFile(const char *filename, uint8_t *wr, const uint32_t wrlen);
 };

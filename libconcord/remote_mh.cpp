@@ -182,7 +182,7 @@ int reset_sequence(uint8_t seq, uint8_t param)
 }
 
 int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
-                        int *data_read, uint8_t start_seq, lc_callback cb,
+                        uint32_t *data_read, uint8_t start_seq, lc_callback cb,
                         void *cb_arg, uint32_t cb_stage)
 {
     int err = 0;
@@ -260,7 +260,7 @@ int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
     while(!(err = HID_ReadReport(rsp, MH_TIMEOUT))) {
         debug_print_packet(rsp);
         // Ignore 1st two bits on 2nd byte for length.
-        int len = rsp[1] & 0x3F;
+        uint8_t len = rsp[1] & 0x3F;
         // Skip 1st two bytes, read up to packet length.  "len"
         // represents the payload length (not including the two size
         // bytes), so we read a full "len" bytes from 2 to len+2.
@@ -471,7 +471,7 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
 
     int buflen = 1000;
     char buffer[buflen];
-    int data_read;
+    uint32_t data_read;
     if ((err = ReadFile("/sys/sysinfo", (uint8_t*)buffer, buflen, &data_read,
                         0x03, NULL, NULL, 0)))
         return err;
@@ -555,7 +555,7 @@ uint16_t mh_get_checksum(uint8_t* rd, const uint32_t len)
     // less than the length of the config.  Since we are checksumming two
     // bytes at a time, we stop when i == len - 7, which is the same as
     // i + 1 == len - 6.  In the case of odd lengths, we skip the last byte.
-    for (int i = 0; i < (len - 7); i += 2) {
+    for (uint32_t i = 0; i < (len - 7); i += 2) {
         uint16_t j = (rd[i+1] << 8) + rd[i];
         cksum ^= j;
     }
@@ -568,7 +568,7 @@ int CRemoteMH::ReadFlash(uint32_t addr, const uint32_t len, uint8_t *rd,
                          void *cb_arg, uint32_t cb_stage)
 {
     int err = 0;
-    int data_read;
+    uint32_t data_read;
 
     if ((err = ReadFile("/cfg/usercfg", rd, len, &data_read, 0x00, cb, cb_arg,
                         cb_stage)))
@@ -759,8 +759,9 @@ int CRemoteMH::UpdateConfig(const uint32_t len, const uint8_t *wr,
     const uint8_t msg_two[MH_MAX_PACKET_SIZE] =
         { 0xFF, 0x01, 0x01, 0x03, 0x80, '/', 'c', 'f', 'g', '/',
           'u', 's', 'e', 'r', 'c', 'f', 'g', 0x00, 0x80, 'W', 0x00,
-          0x04, (len & 0xFF000000) >> 24, (len & 0x00FF0000) >> 16,
-          (len & 0x0000FF00) >> 8, len & 0x000000FF };
+          0x04, static_cast<uint8_t>(len >> 24),
+          static_cast<uint8_t>(len >> 16), static_cast<uint8_t>(len >> 8),
+          static_cast<uint8_t>(len) };
     const uint8_t msg_three[MH_MAX_PACKET_SIZE] =
         { 0xFF, 0x03, 0x03, 0x02, 0x01, 0x05, 0x01, 0x33 };
     uint8_t rsp[MH_MAX_PACKET_SIZE];
