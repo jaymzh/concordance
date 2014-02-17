@@ -24,8 +24,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include <iostream>
-
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"

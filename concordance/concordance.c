@@ -32,8 +32,6 @@
 #include <conio.h>
 #include <winsock.h>
 
-HANDLE con;
-
 /*
  * (see below) Windows does not need this, since _getch already
  * does what we need - just make set_canon do nothing 
@@ -152,11 +150,6 @@ void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
     uint32_t total, uint32_t counter_type, void *arg,
     const uint32_t *stages)
 {
-
-#ifdef _WIN32
-    CONSOLE_SCREEN_BUFFER_INFO sbi;
-#endif
-
     if (stage_id == LC_CB_STAGE_NUM_STAGES) {
 #if _DEBUG
         printf("Num stages: %d\n", count);
@@ -165,16 +158,7 @@ void cb_print_percent_status(uint32_t stage_id, uint32_t count, uint32_t curr,
     }
 
     if (count != 0) {
-#ifdef _WIN32
-        GetConsoleScreenBufferInfo(con, &sbi);
-        sbi.dwCursorPosition.X -= 14;
-        if (sbi.dwCursorPosition.X < 0) {
-            sbi.dwCursorPosition.X = 0;
-        }
-        SetConsoleCursorPosition(con, sbi.dwCursorPosition);
-#else
         printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
-#endif
     } else {
         print_stage_name(stage_id);
     }
@@ -937,19 +921,9 @@ int main(int argc, char *argv[])
     char *file_name;
     int mode, file_mode, err;
 
-#ifdef _WIN32
-    con=GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(con,FOREGROUND_BLUE|FOREGROUND_INTENSITY);
-#endif
-
     printf("Concordance %s\n", VERSION);
     printf("Copyright 2007 Kevin Timmerman and Phil Dibowitz\n");
     printf("This software is distributed under the GPLv3.\n\n");
-
-#ifdef _WIN32
-    SetConsoleTextAttribute(con,
-                            FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN);
-#endif
 
     file_name = NULL;
     mode = MODE_UNSET;

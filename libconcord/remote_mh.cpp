@@ -23,7 +23,6 @@
 #include "remote.h"
 
 #include <string.h>
-#include <iostream>
 #include <stdlib.h>
 
 #include "libconcord.h"
@@ -254,11 +253,19 @@ int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
     debug("msg_ack");
     debug_print_packet(rsp);
 
+    uint8_t exp_seq = rsp[2] & 0x3F;
     int pkt_count = 0;
     *data_read = 0;
     uint8_t *rd_ptr = rd;
     while(!(err = HID_ReadReport(rsp, MH_TIMEOUT))) {
         debug_print_packet(rsp);
+        get_seq(exp_seq);
+        uint8_t rcv_seq = rsp[0] & 0x3F;
+        if (exp_seq != rcv_seq) {
+            debug("ERROR: unexpected sequence # - packet lost! %02x %02x",
+                  exp_seq, rcv_seq);
+            return LC_ERROR_READ;
+        }
         // Ignore 1st two bits on 2nd byte for length.
         uint8_t len = rsp[1] & 0x3F;
         // Skip 1st two bytes, read up to packet length.  "len"
@@ -298,12 +305,15 @@ int CRemoteMH::ReadFile(const char *filename, uint8_t *rd, const uint32_t rdlen,
                 debug("Failed to read from remote");
                 return LC_ERROR_READ;
             }
+            exp_seq = rsp[2] & 0x3F;
             debug("ack");
             debug_print_packet(rsp);
             pkt_count = 0;
         }
     }
     debug("data_read=%d", *data_read);
+    if (err)
+        return err;
 
     if ((err = reset_sequence(get_seq(seq), param)))
         return err;
