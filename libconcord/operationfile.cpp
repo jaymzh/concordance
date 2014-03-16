@@ -229,7 +229,7 @@ int OperationFile::_ExtractFirmwareBinary()
     return 0;
 }
 
-int OperationFile::ReadAndParseOpFile(char *file_name, int *type)
+int OperationFile::ReadAndParseOpFile(char *file_name, uint32_t *type)
 {
     debug("In RAPOF");
     int err;

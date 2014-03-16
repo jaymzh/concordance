@@ -35,12 +35,12 @@ use Getopt::Long qw(:config bundling);
 use concord;
 
 use constant FW_FILE => '/tmp/perl_fw';
-use constant CONFIG_FILE => '/tmp/perl_fw';
+use constant CONFIG_FILE => '/tmp/perl_cf';
 use constant IR_FILE => '/tmp/LearnIr.EZTut';
 
 sub cb
 {
-    my ($count, $curr, $total, $data) = @_;
+    my ($stage_id, $count, $curr, $total, $type, $data, $stages) = @_;
 
     print '*';
     #print "CALLBACK: count: $count, curr: $curr, total $total, data:"
@@ -72,7 +72,6 @@ sub dump_config
 
 sub dump_firmware
 {
-
     my ($blob, $size);
 
     my $err;
@@ -95,144 +94,61 @@ sub dump_firmware
 
 sub upload_config
 {
-    my ($blob, $size, $binblob, $binsize);
+    my ($err, $type);
 
-    my $err;
     print "Reading config ";
-    ($err, $blob, $size) = concord::read_file(CONFIG_FILE);
+    ($err, $type) = concord::read_and_parse_file(CONFIG_FILE);
     if ($err) {
         print "Failed to read config from file\n";
         exit(1);
     }
     print "done\n";
-    print "Finding binary ";
-    ($err, $binblob, $binsize) = concord::find_config_binary($blob, $size);
-    if ($err) {
-        print "Failed to find bin\n";
-        exit(1);
-    }
-    print "done\n";
-    print "Preparing for config update ";
-    concord::prep_config();
-    if ($err) {
-        print "Failed to prepare for config update";
-        exit(1);
-    }
-    print "done\n";
-    print "Invalidating flash ";
-    concord::invalidate_flash();
-    if ($err) {
-        print "Failed to invalidate flash";
-        exit(1);
-    }
-    print "done\n";
-    print "Erasing flash ";
-    concord::erase_config($binsize, \&cb, 1);
-    if ($err) {
-        print "Failed to erase flash";
-        exit(1);
-    }
-    print "done\n";
     print "Writing config ";
-    concord::write_config_to_remote($binblob, $binsize, \&cb, 1);
+    concord::update_configuration(\&cb, 1, 0);
     if ($err) {
         print "Failed to write config to remote";
         exit(1);
     }
     print "done\n";
-    print "Verifying config ";
-    concord::verify_remote_config($binblob, $binsize, \&cb, 1);
-    if ($err) {
-        print "Failed to write config to remote";
-        exit(1);
-    }
-    print "Finalizing config update ";
-    concord::finish_config();
-    if ($err) {
-        print "Failed to finalize config update";
-        exit(1);
-    }
-    print "done\n";
-
-    concord::delete_blob($blob);
-    print "done\n";
-
 }
 
 sub upload_firmware
 {
-    my ($err, $blob, $size, $binblob, $binsize);
+    my ($err, $type);
 
     $err = concord::is_fw_update_supported(0);
     if ($err) {
         print "Sorry, firmware is not supported on your device\n";
         exit(1);
     }
-    print "Reading fw\n";
-    ($err, $blob, $size) = concord::read_file(FW_FILE);
+    print "Reading config ";
+    ($err, $type) = concord::read_and_parse_file(FW_FILE);
     if ($err) {
         print "Failed to read config from file\n";
         exit(1);
     }
-    print "extracting fw ";
     print "done\n";
-    ($err, $binblob, $binsize) = concord::extract_firmware_binary($blob, $size);
-    if ($err) {
-        print "Failed extract fw\n";
-        exit(1);
-    }
-    print "done\n";
-    print "preping fw ";
-    $err = concord::prep_firmware();
-    if ($err) {
-        print "Failed prep fw\n";
-        exit(1);
-    }
-    print "done\n";
-    print "invalidating flash ";
-    $err = concord::invalidate_flash();
+    print "writing fw ";
+    $err = concord::update_firmware(\&cb, 0, 0, 0);
     if ($err) {
         print "Failed invalidate flash\n";
         exit(1);
     }
     print "done\n";
-    print "erasing flash ";
-    $err = concord::erase_firmware(0, \&cb, 0);
-    if ($err) {
-        print "Failed invalidate flash\n";
-        exit(1);
-    }
-    print "done\n";
-    print "erasing fw ";
-    $err = concord::write_firmware_to_remote($binblob, $binsize, 0, \&cb, 0);
-    if ($err) {
-        print "Failed invalidate flash\n";
-        exit(1);
-    }
-    print "done\n";
-    print "finishing fw ";
-    $err = concord::finish_firmware();
-    if ($err) {
-        print "Failed finish fw\n";
-        exit(1);
-    }
-    print "done\n";
-    concord::delete_blob($blob);
-    concord::delete_blob($binblob);
 }
 
 sub learn_ir_commands
 {
-    my ($err, $blob, $size, $binblob, $binsize);
+    my ($err, $type);
 
     print "Reading IR file ";
-    ($err, $blob, $size) = concord::read_file(IR_FILE);
+    my $type;
+    ($err, $type) = concord::read_and_parse_file(IR_FILE);
     print "done\n";
 
     print "Getting key names ";
     my $key_names;
-    ($err, $key_names) =
-        concord::get_key_names($blob, $size);
+    ($err, $key_names) = concord::get_key_names();
     print "done\n";
 
     my ($carrier_clock, $ir_signal, $ir_length); 
@@ -258,8 +174,7 @@ sub learn_ir_commands
 
         concord::delete_ir_signal($ir_signal);
 
-        $err = concord::post_new_code($blob, $size, $key_names->[$i],
-                $str);
+        $err = concord::post_new_code($key_names->[$i], $str, \&cb, 0);
 
         if ($err) {
             print "Failed to post\n";
@@ -278,26 +193,14 @@ sub learn_ir_commands
 select STDOUT;
 $| = 1;
 
-my $bar = 'val';
-
-my $ret = concord::init_concord();
-if ($ret != 0) {
-    print "Failed to init concord\n";
-    exit;
-}
-print "Get identity ";
-concord::get_identity(\&cb, $bar);
-print " done\n";
-
-print 'mfg: ' . concord::get_mfg() . "\n";
-print 'mfg: ' . concord::get_model() . "\n";
-
 my $opts = {};
 GetOptions($opts,
+    'get-identity|i',
     'dump-config|c',
     'upload-config|C',
     'dump-firmware|f',
     'upload-firmware|F',
+    'reset-remote|r',
     'learn-ir|l',
     ) || die();
 
@@ -306,19 +209,31 @@ if (keys(%$opts) != 1) {
     exit(1);
 }
 
-if (exists($opts->{'dump-config'})) {
+my $ret = concord::init_concord();
+if ($ret != 0) {
+    print "Failed to init concord\n";
+    exit;
+}
+print "Get identity ";
+concord::get_identity(\&cb, 0);
+print " done\n";
+
+print 'mfg: ' . concord::get_mfg() . "\n";
+print 'mfg: ' . concord::get_model() . "\n";
+
+
+if (exists($opts->{'get-identity'})) {
+    exit(0);
+} elsif (exists($opts->{'dump-config'})) {
     dump_config();
 } elsif (exists($opts->{'upload-config'})) {
     upload_config();
-    print "resetting...\n";
-    concord::reset_remote();
 } elsif (exists($opts->{'dump-firmware'})) {
     dump_firmware();
 } elsif (exists($opts->{'upload-firmware'})) {
     upload_firmware();
-    print "resetting...\n";
-    concord::reset_remote();
 } elsif (exists($opts->{'learn-ir'})) {
     learn_ir_commands();
+} elsif (exists($opts->{'reset-remote'})) {
+    concord::reset_remote(\&cb, 0);
 }
-

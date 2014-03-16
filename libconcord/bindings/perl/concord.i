@@ -25,7 +25,9 @@
  * This is the C callback that will wrap our perl callback and call
  * perl for us. SWIG can't handle this directly, we must do it.
  */
-void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
+void lc_cb_wrapper(uint32_t stage_id, uint32_t count, uint32_t curr,
+    uint32_t total, uint32_t counter_type, void *arg,
+    const uint32_t *stages)
 {
     AV *args = (AV*)arg;
     SV *cb;
@@ -47,12 +49,14 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
     PUSHMARK(SP);
 
     /*
-     * Push the first three variables into the stack and mortalize
+     * Push the first 5 variables into the stack and mortalize
      * them so that perl will clean them up after the call to cb.
      */
+    XPUSHs(sv_2mortal(newSViv(stage_id)));
     XPUSHs(sv_2mortal(newSViv(count)));
     XPUSHs(sv_2mortal(newSViv(curr)));
     XPUSHs(sv_2mortal(newSViv(total)));
+    XPUSHs(sv_2mortal(newSViv(counter_type)));
 
     /*
      * Next up, we recurse through the array in void *arg and pull
@@ -69,6 +73,8 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
     for (i = 1; i <= av_len(args); i++) {
         XPUSHs(*av_fetch(args, i, 0));
     }
+
+    XPUSHs(sv_2mortal(newSViv(stages)));
 
     /*
      * Tell it we're done pushing things onto the stack, so it should
@@ -236,6 +242,7 @@ void lc_cb_wrapper(uint32_t count, uint32_t curr, uint32_t total, void *arg)
  * outputs, we have to list these individually... ignore only works in input.
  */
 %typemap(argout) uint32_t *size,
+         uint32_t *type,
          uint32_t *binary_size,
          uint32_t *key_names_length,
          uint32_t *ir_signal_length,

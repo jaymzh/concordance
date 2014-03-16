@@ -441,7 +441,7 @@ const char *lc_cb_stage_str(int stage)
 /*
  * Wrapper around the OperationFile class.
  */
-int read_and_parse_file(char *filename, int *type)
+int read_and_parse_file(char *filename, uint32_t *type)
 {
     of = new OperationFile;
     return of->ReadAndParseOpFile(filename, type);
@@ -712,6 +712,7 @@ int init_concord()
 #endif
 
     if (InitUSB()) {
+        debug("InitUSB failed");
         return LC_ERROR_OS;
     }
 
@@ -810,7 +811,7 @@ int reset_remote(lc_callback cb, void *cb_arg)
                     LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
             sleep(1);
             secs++;
-	}
+        }
         err = init_concord();
         if (err == 0) {
             err = _get_identity(NULL, NULL, 0);

@@ -558,12 +558,12 @@ delete_blob = _create_func(
     _in('ptr', POINTER(c_ubyte))
 );
 
-# int read_and_parse_file(char *filename, int *type);
+# int read_and_parse_file(char *filename, uint32_t *type);
 read_and_parse_file = _create_func(
     'read_and_parse_file',
     _ret_lc_concord(),
     _in('filename', c_char_p),
-    _out('type', c_int)
+    _out('type', c_uint)
 )
 
 # void delete_opfile_obj();

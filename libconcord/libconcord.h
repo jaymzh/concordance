@@ -194,7 +194,7 @@ void delete_blob(uint8_t *ptr);
  * Read an operations file from the website, parse it, and return a mode
  * of operations.
  */
-int read_and_parse_file(char *filename, int *type);
+int read_and_parse_file(char *filename, uint32_t *type);
 /*
  * Free the memory used by the file as allocated in read_and_parse_file.
 */

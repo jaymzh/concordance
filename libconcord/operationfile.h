@@ -41,7 +41,7 @@ public:
     uint32_t GetXmlSize() {return xml_size;}
     uint8_t* GetData() {return data;}
     uint8_t* GetXml() {return xml;}
-    int ReadAndParseOpFile(char *file_name, int *type);
+    int ReadAndParseOpFile(char *file_name, uint32_t *type);
 };
 
 #endif /* OPERATIONFILE_H */
