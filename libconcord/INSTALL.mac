@@ -14,7 +14,7 @@ Install Homebrew from: http://brew.sh/
 
 Tell Homebrew to install all the requirements:
 
-  brew install libusb libusb-compat pkgconfig autoconf automake libtool libzip
+  brew install pkgconfig autoconf automake libtool libzip
 
 OPTION 2: MANUAL PACKAGE INSTALLATION
 
@@ -27,21 +27,6 @@ else to go smoothly:
   export PATH=$PATH:/opt/pkgconfig/bin
   export PKG_CONFIG=/opt/pkgconfig/bin/pkg-config
   export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/X11/lib/pkgconfig
-
-Next, install libusb-1.0. It's fairly straight forward to install, it should
-be:
-   ./configure --prefix=/usr
-   make
-   sudo make install
-
-If you get errors about -System while building libusb, upgrade your version of
-Xcode.
-
-You must install libusb-0.1-compat as well. This requires libusb-1.0 (it's not
-an alternative). It is also straight forward:
-   ./configure --prefix=/usr
-   make
-   sudo make install
 
 Finally, you will need to install libzip, which again is straight forward:
    ./configure --prefix=/usr
