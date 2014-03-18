@@ -1511,6 +1511,7 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 
         uint8_t *pf = in;
         const uint8_t *fwend = in + size;
+        of.write("<INFORMATION>\n");
         do {
             of.write("\t\t\t<DATA>");
             char hex[16];
@@ -1526,6 +1527,7 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
             }
             of.write("</DATA>\n");
         } while (pf < fwend);
+        of.write("</INFORMATION>\n");
     }
 
     if (of.close() != 0) {

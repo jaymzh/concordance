@@ -269,12 +269,23 @@ int OperationFile::ReadAndParseOpFile(char *file_name, uint32_t *type)
         err = GetTag("INFORMATION", xml, xml_size, start_info_ptr);
         debug("err is %d", err);
         if (err == -1) {
-            return LC_ERROR;
-        }
-
-        err = GetTag("/INFORMATION", xml, xml_size, end_info_ptr);
-        if (err == -1) {
-            return LC_ERROR;
+            /*
+             * In theory, we should always have an INFORMATION section
+             * so we used to return LC_ERROR here. However, for a long time
+             * when we generated firmware dump files, we didn't surround the
+             * data in INFORMATION tags. However, since that entire file is
+             * XML, we assume that's what we have and set the start/end
+             * of the XML section to the whole file.
+             */
+            debug("Unable to find INFORMATION tag, using whole file");
+            start_info_ptr = xml;
+            end_info_ptr = xml + xml_size;
+        } else {
+            err = GetTag("/INFORMATION", xml, xml_size, end_info_ptr);
+            if (err == -1) {
+                debug("Unable to find /INFORMATION tag");
+                return LC_ERROR;
+            }
         }
     }
     debug("start/end pointers populated");
@@ -310,11 +321,32 @@ int OperationFile::ReadAndParseOpFile(char *file_name, uint32_t *type)
     while (1) {
         uint8_t *tag_ptr;
         string tag_s;
+        /*
+         * Firmware files will have either a TYPE or a PATH tag with
+         * either a URL or a Firmware_Main string in them.
+         *
+         * Unless we created them, which is what the DATA check
+         * is for.
+         */
+        debug("Looking for TYPE tag...\n");
         err = GetTag("TYPE", tmp_data, tmp_size, tag_ptr, &tag_s);
         if (err == -1) {
+            debug("Looking for PATH tag...\n");
             err = GetTag("PATH", tmp_data, tmp_size, tag_ptr, &tag_s);
             if (err == -1) {
-                debug("not a firmware file");
+                debug("Looking for DATA tag...\n");
+                err = GetTag("DATA", tmp_data, tmp_size, tag_ptr, &tag_s);
+                if (err == -1) {
+                    debug("not a firmware file");
+                    break;
+                }
+                /*
+                 * If all we have is DATA tags, we made the the file, and
+                 * we won't have any of the special strings below, so just
+                 * bo ahead and break the loop, we know it's a firmware file.
+                 */
+                debug("Looks like a firmware file we made");
+                found_firmware = true;
                 break;
             }
         }
@@ -365,8 +397,7 @@ int OperationFile::ReadAndParseOpFile(char *file_name, uint32_t *type)
         *type = LC_FILE_TYPE_FIRMWARE;
         return 0;
     }
-    if (!found_get_zaps_only && !found_firmware &&
-        found_learn_ir) {
+    if (!found_get_zaps_only && !found_firmware && found_learn_ir) {
         debug("returning IR file");
         *type = LC_FILE_TYPE_LEARN_IR;
         return 0;
@@ -378,4 +409,3 @@ int OperationFile::ReadAndParseOpFile(char *file_name, uint32_t *type)
      */
     return LC_ERROR;
 }
-
