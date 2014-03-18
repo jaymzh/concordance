@@ -152,9 +152,15 @@ static int Zap(string &server, const char *s1, const char *s2)
     return 0;
 }
 
-// If find_attributes is set to true, finds an XML tag with attributes and will
-// return the attributes.  For example, if you have: <ELEMENT A="B" C="D"/> and
-// you search for a tag called "ELEMENT" the function will return A="B" C="D".
+// find is the tag.
+// data is the data to search through
+// data_size is the size of data
+// found is where we found it
+// s, if passed, will hold the strong of the entire element, unless
+// If find_attributes is set to true, and s is not null, will fill s with the
+// attributes for the requested tag. For example, if you have:
+// <ELEMENT A="B" C="D"/> and you search for a tag called "ELEMENT" the
+// function will return A="B" C="D".
 int GetTag(const char *find, uint8_t* data, uint32_t data_size, uint8_t *&found,
            string *s=NULL, bool find_attributes=false)
 {
