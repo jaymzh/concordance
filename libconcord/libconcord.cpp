@@ -441,7 +441,7 @@ const char *lc_cb_stage_str(int stage)
 /*
  * Wrapper around the OperationFile class.
  */
-int read_and_parse_file(char *filename, uint32_t *type)
+int read_and_parse_file(char *filename, int *type)
 {
     of = new OperationFile;
     return of->ReadAndParseOpFile(filename, type);
@@ -1512,6 +1512,9 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
         uint8_t *pf = in;
         const uint8_t *fwend = in + size;
         of.write("<INFORMATION>\n");
+        of.write("\t<PHASE>\n");
+        of.write("\t\t<TYPE>Firmware_Main</TYPE>\n");
+        of.write("\t\t<DATAS>\n");
         do {
             of.write("\t\t\t<DATA>");
             char hex[16];
@@ -1527,6 +1530,8 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
             }
             of.write("</DATA>\n");
         } while (pf < fwend);
+        of.write("\t\t</DATAS>\n");
+        of.write("\t</PHASE>\n");
         of.write("</INFORMATION>\n");
     }
 

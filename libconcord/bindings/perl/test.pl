@@ -142,7 +142,6 @@ sub learn_ir_commands
     my ($err, $type);
 
     print "Reading IR file ";
-    my $type;
     ($err, $type) = concord::read_and_parse_file(IR_FILE);
     print "done\n";
 

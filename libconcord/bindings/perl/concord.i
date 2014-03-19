@@ -31,7 +31,6 @@ void lc_cb_wrapper(uint32_t stage_id, uint32_t count, uint32_t curr,
 {
     AV *args = (AV*)arg;
     SV *cb;
-    SV *cbdata;
     int i;
 
     /* get a copy of the stack pointer into SP */
@@ -74,7 +73,7 @@ void lc_cb_wrapper(uint32_t stage_id, uint32_t count, uint32_t curr,
         XPUSHs(*av_fetch(args, i, 0));
     }
 
-    XPUSHs(sv_2mortal(newSViv(stages)));
+    XPUSHs(sv_2mortal(newSVpv((const char *)stages, sizeof(stages))));
 
     /*
      * Tell it we're done pushing things onto the stack, so it should
@@ -113,7 +112,6 @@ void lc_cb_wrapper(uint32_t stage_id, uint32_t count, uint32_t curr,
  */
 %typemap(in) lc_callback %{
     AV* args;
-    SV *tmp;
 
     /*
      * create a new array, store our perl callback in it. We also
@@ -152,6 +150,7 @@ void lc_cb_wrapper(uint32_t stage_id, uint32_t count, uint32_t curr,
      * add the arg to our array. See the typemap for lc_callback
      * for more details
      */
+    SvREFCNT_inc($input);
     av_store(args, 1, $input);
     /* The array is our callback's argument */
     $1 = (void *)args;
@@ -181,6 +180,10 @@ void lc_cb_wrapper(uint32_t stage_id, uint32_t count, uint32_t curr,
  * as a scalar in the return list.
  */
 %typemap(in, numinputs=0) uint32_t* (uint32_t num) {
+    $1 = &num;
+}
+
+%typemap(in, numinputs=0) int* (int num) {
     $1 = &num;
 }
 
@@ -242,7 +245,7 @@ void lc_cb_wrapper(uint32_t stage_id, uint32_t count, uint32_t curr,
  * outputs, we have to list these individually... ignore only works in input.
  */
 %typemap(argout) uint32_t *size,
-         uint32_t *type,
+         int *type,
          uint32_t *binary_size,
          uint32_t *key_names_length,
          uint32_t *ir_signal_length,
