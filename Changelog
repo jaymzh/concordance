@@ -1,3 +1,30 @@
+1.1
+Released:
+phil@ipom.com:
+- libconcord: fix firmware dump file generation so we can read files we create.
+- libconcord: bindings: perl bindings work again
+- libconcord: mac: revamp instructions, include homebrew option
+- libconcord: mac: tons of compile and runtime fixes
+- libconcord: move to HIDAPI for Linux and Mac
+- libconcord: detect a new type of firmware file
+- move to four-space indentation, massive style cleanup
+swt@techie.net:
+- libconcord: windows: check sequence numbers
+- libconcord: windows: code cleanup
+- fixed all compiler warnings
+- libconcord: fix serial number handling for Harmony 650
+- libconcord: fix startup of USBNet DHCP server by udev
+- libconcord: fix USBNET remote detection on Windows.
+- windows: move to mingw for building, drop all visual c++ support files
+- libconcord: move to HIDAPI for Windows, drop all WinHID code
+- libconcord: Harmony Link support
+- libconcord: MH remote support
+- libconcord: split codepath for IR learning for zwave-hid vs zwave-usbnet
+- libconcord: fix serial number handling for ZWave-HID remotes
+- libconcord: incorporate MIME type patch from Fedora. Fixes bug #7
+- libconcord: incorporate long-standing Debian patches to man page
+- libconcord: various windows fixes
+
 1.0
 Released: 04/15/13
 phil@ipom.com:

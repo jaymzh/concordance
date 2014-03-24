@@ -19,12 +19,15 @@
 
 - Change version in Changelog, commit
 
-- CVS Tag release
+- Git tag release
+  git tag -a v1.1 -m 'Concordance version 1.1'
 
 - Make tarbal
-  cd /tmp
-  cvs export -r $tag -d concordance-$version concordance
-  cd concordance-$version/libconcord
+  # from top-level
+  git archive --format=tar --prefix=concordance-$version/ v$version | \
+     bzip2 > /tmp/concordance-$version-prep.tar.bz2
+  cd /tmp && tar jxf concordance-$version.tar.bz2
+  cd /tmp/concordance-$versionp/libconcord
   mkdir m4; autoreconf -i
   cd ../concordance
   mkdir m4; autoreconf -i
