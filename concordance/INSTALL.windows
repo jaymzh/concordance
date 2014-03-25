@@ -11,8 +11,10 @@ has been compiled on Fedora using MinGW - other distributions may work as well.
 Building concordance with MinGW is fairly straight forward (you will need to
 specify the include and library paths for libconcord as below if you did not
 install it to the MinGW sysroot):
-   mingw32-configure CPPFLAGS="-I../libconcord" LDFLAGS="-L../libconcord/.libs"
-   mingw32-make
+
+   ./configure --host=i686-w64-mingw32 \
+     CPPFLAGS="-I../libconcord" LDFLAGS="-L../libconcord/.libs"
+   make
 
 To build a Win32 installer, you will need to have NSIS installed.
 Additionally, you will need to set some environment variables.

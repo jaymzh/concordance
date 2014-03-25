@@ -6,22 +6,50 @@ Compiling libconcord with MinGW is now the officially supported method.  Other
 methods may work, but are not officially supported at this time.  Libconcord
 has been compiled on Fedora using MinGW - other distributions may work as well.
 
-In order to build libconcord, you will need to install libzip and hidapi.  For
-libzip, the Fedora mingw32-libzip package can be used.  As hidapi is not yet
-packaged for MinGW, you will have to download and build it separately.  Get it
-from https://github.com/signal11/hidapi.  Grab the source from git (NOT a
-release).  Once you unpackage it, you can build it which is fairly straight
-forward:
-   ./bootstrap
-   mingw32-configure
-   mingw32-make
+If you are cross-compiling on Linux, your life will be easier if you make
+a directory where you will install all of the dependencies in with --prefix.
+For the purposes of this document, we'll assume that's /tmp/buildroot.
+
+ZLIB
+In Fedora, simply install the mingw32-zlib package.
+
+For other distributions, including building on Windows directly, grab the
+pre-built DLL from zlib.net. In the unzip'd directory do:
+  mkdir -p /tmp/buildroot/{include,lib}
+  cp lib/zdll.lib lib/libzdll.a # See USAGE.txt in zlib for details
+  cp -r lib/* /tmp/buildroot/lib/
+  cp -r include/* /tmp/buildroot/include/
+
+LIBZIP
+In Fedora, simply install mingw32-libzip.
+
+For other distributions, including building on Windows directly, grab the
+source, and then:
+  ./configure --host=i686-w64-mingw32 --prefix=/tmp/buildroot \
+    --with-zlib=/tmp/buildroot/zlib \
+    LDFLAGS="-lzdll -L/tmp/buildroot/zlib/lib"
+  make
+  make install
+
+HIDAPI
+In Fedora, simply install ming32-hidapi.
+
+For other distributions, including building on Windows directly, grab the
+source from https://github.com/signal11/hidapi. Get it from git (NOT a
+release) and then:
+  ./bootstrap
+  ./configure --host=i686-w64-mingw32 --prefix=/tmp/buildroot
+  make
+  make install
 
 1. BUILD THE SOFTWARE
 
 Building libconcord with MinGW is also fairly straight forward (you will need
 to specify the include and library paths for hidapi as below if you did not
 install it to the MinGW sysroot):
-   mingw32-configure CPPFLAGS="-I/path/to/hidapi" LDFLAGS="-L/path/to/hidapi/libs"
-   mingw32-make
+   ./configure --host=i686-w64-mingw32 --prefix=/tmp/buildroot \
+     CPPFLAGS="-I/tmp/buildroot/include" LDFLAGS="-L/tmp/buildroot/libs" \
+     PKG_CONFIG_PATH=/tmp/root/lib/pkgconfig
+   make
 
 vim:textwidth=78:
