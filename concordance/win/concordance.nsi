@@ -40,11 +40,15 @@ Section "Concordance"
   SetOutPath "$INSTDIR"
   File "$%MINGW_SYSROOT_BIN%/libgcc_s_sjlj-1.dll"
   File "$%MINGW_SYSROOT_BIN%/libstdc++-6.dll"
-  File "$%MINGW_SYSROOT_BIN%/libzip-2.dll"
-  File "$%MINGW_SYSROOT_BIN%/zlib1.dll"
+  File "$%LIBZIP_LIB_PATH%/libzip-2.dll"
+  File "$%ZLIB_LIB_PATH%/zlib1.dll"
   File "$%HIDAPI_LIB_PATH%/libhidapi-0.dll"
   File "../../libconcord/.libs/libconcord-3.dll"
   File "../.libs/concordance.exe"
+  !if $%MINGW_SYSROOT_DEVLIB% != $%MINGW_SYSROOT_BIN%
+    File "$%MINGW_SYSROOT_DEVLIB%/libwinpthread-1.dll"
+  !endif
+
 SectionEnd
 
 Section "Start Menu Shortcuts"
