@@ -20,21 +20,32 @@
 - Change version in Changelog, commit
 
 - Git tag release
-  git tag -a v1.1 -m 'Concordance version 1.1'
+  version="1.1"
+  git tag -a v$version -m "Concordance version $version"
+  git push origin --tags
 
 - Make tarbal
   # from top-level
-  git archive --format=tar --prefix=concordance-$version/ v$version | \
-     bzip2 > /tmp/concordance-$version-prep.tar.bz2
-  cd /tmp && tar jxf concordance-$version.tar.bz2
-  cd /tmp/concordance-$versionp/libconcord
+  git archive --format=tar --prefix=concordance-$version/ v$version \
+     > /tmp/concordance-$version-prep.tar
+  cd /tmp && tar xf concordance-$version-prep.tar
+  cd /tmp/concordance-$version/libconcord
   mkdir m4; autoreconf -i
   cd ../concordance
   mkdir m4; autoreconf -i
   cd ../..
   tar jcf concordance-$version.tar.bz2 concordance-$version
 
-- test compile, upload
+- test compile
+
+- sign
+  gpg -ab /tmp/concordance-$version.tar.bz2
+
+- Write up release notes
+
+- Build Windows binaries
+
+- Upload to SourceForce. Add to phildev.net/concordance and Freshmeat.
 
 
 vim:textwidth=78:

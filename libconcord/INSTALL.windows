@@ -27,8 +27,8 @@ In Fedora, simply install mingw32-libzip.
 For other distributions, including building on Windows directly, grab the
 source, and then:
   ./configure --host=i686-w64-mingw32 --prefix=/tmp/buildroot \
-    --with-zlib=/tmp/buildroot/zlib \
-    LDFLAGS="-lzdll -L/tmp/buildroot/zlib/lib"
+    --with-zlib=/tmp/buildroot \
+    LDFLAGS="-lzdll -L/tmp/buildroot/lib"
   make
   make install
 
@@ -49,8 +49,9 @@ Building libconcord with MinGW is also fairly straight forward (you will need
 to specify the include and library paths for hidapi as below if you did not
 install it to the MinGW sysroot):
    ./configure --host=i686-w64-mingw32 --prefix=/tmp/buildroot \
-     CPPFLAGS="-I/tmp/buildroot/include" LDFLAGS="-L/tmp/buildroot/libs" \
-     PKG_CONFIG_PATH=/tmp/root/lib/pkgconfig
+     CPPFLAGS="-I/tmp/buildroot/include" \
+     LDFLAGS="-L/tmp/buildroot/libs -L/tmp/buildroot/libs/bin" \
+     PKG_CONFIG_PATH=/tmp/buildroot/lib/pkgconfig
    make
 
 vim:textwidth=78:
