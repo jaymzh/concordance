@@ -1,5 +1,5 @@
 1.1
-Released:
+Released: 03/28/14
 phil@ipom.com:
 - libconcord: fix firmware dump file generation so we can read files we create.
 - libconcord: bindings: perl bindings work again
