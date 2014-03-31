@@ -103,7 +103,7 @@ int OperationFile::ReadZipFile(char *file_name)
         if ((strcmp(stat.name, "Data.xml") == 0) ||
             (strcmp(stat.name, "Description.xml") == 0)) {
             debug("Internal file is %s", stat.name);
-            debug("Size is %d", stat.size);
+            debug("Size is %lu", stat.size);
             xml_size = stat.size;
             xml = new uint8_t[xml_size];
             zip_fread(file, xml, xml_size);
