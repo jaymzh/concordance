@@ -26,3 +26,14 @@ m4
 missing
 stamp-h1
 concordance/concordance
+
+## libconcord perl bindings
+libconcord/bindings/perl/MYMETA.json
+libconcord/bindings/perl/MYMETA.yml
+libconcord/bindings/perl/concord.pm
+libconcord/bindings/perl/concord_wrap.c
+libconcord/bindings/perl/pm_to_blib
+libconcord/bindings/perl/blib/
+
+## libconcord python bindings
+libconcord/bindings/python/build/
