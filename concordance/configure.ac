@@ -1,4 +1,4 @@
-AC_INIT([concordance], [1.1+git], [bug-automake@gnu.org])
+AC_INIT([concordance], [1.1+git], [concordance-devel@lists.sourceforge.net])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_PROG_CC_C_O
 AC_CONFIG_MACRO_DIR([m4])
