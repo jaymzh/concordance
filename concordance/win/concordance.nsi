@@ -49,19 +49,24 @@ Section "Concordance"
     File "$%MINGW_SYSROOT_DEVLIB%/libwinpthread-1.dll"
   !endif
 
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Concordance" "DisplayName" "Concordance"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Concordance" "UninstallString" "$\"$INSTDIR\Uninstall Concordance.exe$\""
 SectionEnd
 
 Section "Start Menu Shortcuts"
+  SetShellVarContext all
   CreateDirectory "$SMPROGRAMS\Concordance"
   CreateShortCut "$SMPROGRAMS\Concordance\Uninstall Concordance.lnk" "$INSTDIR\Uninstall Concordance.exe" "" "$INSTDIR\Uninstall Concordance.exe" 0
   CreateShortCut "$SMPROGRAMS\Concordance\concordance.exe.lnk" "$INSTDIR\concordance.exe" "" "$INSTDIR\concordance.exe" 0
 SectionEnd
 
 Section "Desktop Icons"
+  SetShellVarContext all
   CreateShortCut "$DESKTOP\concordance.exe.lnk" "$INSTDIR\concordance.exe" "" "$INSTDIR\concordance.exe" 0
 SectionEnd
 
 Section "Uninstall"
+  SetShellVarContext all
   Delete /rebootok "$DESKTOP\concordance.exe.lnk"
   Delete /rebootok "$SMPROGRAMS\Concordance\concordance.exe.lnk"
   Delete /rebootok "$SMPROGRAMS\Concordance\Uninstall Concordance.lnk"
@@ -74,7 +79,10 @@ Section "Uninstall"
   Delete /rebootok "$INSTDIR\concordance.exe"
   Delete /rebootok "$INSTDIR\libconcord-3.dll"
   Delete /rebootok "$INSTDIR\libhidapi-0.dll"
+  Delete /rebootok "$INSTDIR\Uninstall Concordance.exe"
   RMDir "$INSTDIR"
+
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Concordance"
 SectionEnd
 
 Section -post

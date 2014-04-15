@@ -33,7 +33,7 @@ source, and then:
   make install
 
 HIDAPI
-In Fedora, simply install ming32-hidapi.
+In Fedora, simply install mingw32-hidapi.
 
 For other distributions, including building on Windows directly, grab the
 source from https://github.com/signal11/hidapi. Get it from git (NOT a
@@ -45,9 +45,13 @@ release) and then:
 
 1. BUILD THE SOFTWARE
 
-Building libconcord with MinGW is also fairly straight forward (you will need
-to specify the include and library paths for hidapi as below if you did not
-install it to the MinGW sysroot):
+Building libconcord with MinGW is also fairly straight forward.
+
+In Fedora:
+   mingw32-configure
+   mingw32-make
+
+For other distributions:
    ./configure --host=i686-w64-mingw32 --prefix=/tmp/buildroot \
      CPPFLAGS="-I/tmp/buildroot/include" \
      LDFLAGS="-L/tmp/buildroot/libs -L/tmp/buildroot/libs/bin" \

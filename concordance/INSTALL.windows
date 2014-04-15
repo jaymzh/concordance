@@ -26,7 +26,7 @@ Assuming you were following the Fedora instructions in
    export MINGW_SYSROOT_DEVLIB="$MINGW_SYSROOT_BIN"
    export ZLIB_LIB_PATH="$MINGW_SYSROOT_BIN"
    export LIBZIP_LIB_PATH="$MINGW_SYSROOT_BIN"
-   export HIDAPI_LIB_PATH="/tmp/buildroot/bin"
+   export HIDAPI_LIB_PATH="$MINGW_SYSROOT_BIN"
 
 Or if you used the non-Fedora instructions:
    export MINGW_SYSROOT_BIN="/usr/lib/gcc/i686-w64-mingw32/4.8"
