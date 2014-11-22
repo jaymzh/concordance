@@ -19,6 +19,7 @@
  * (C) Copyright Phil Dibowitz 2008
  */
 
+#include <stdarg.h>
 #include <string.h>
 #include "libconcord.h"
 #include "lc_internal.h"
@@ -61,6 +62,28 @@ static const uint8_t urlencodemap[32]={
     0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF
 };
+
+/*
+ * This function does C-style string formatting, but uses a C++ string and
+ * automatically handles buffer sizing.  It is intended to be used in place of
+ * sprintf()/snprintf() where we don't necessarily know the required buffer
+ * size in advance.  The formatted string is appended to the supplied C++
+ * string.
+ */
+void format_string(string *str, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int size = vsnprintf(NULL, 0, format, args);
+    va_end(args);
+    size++; // Add room for \0
+    char *buffer = new char[size];
+    va_start(args, format);
+    vsnprintf(buffer, size, format, args);
+    va_end(args);
+    *str += buffer;
+    delete[] buffer;
+}
 
 static void UrlEncode(const char *in, string &out)
 {
@@ -351,25 +374,26 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 
     string post;
     if (learn_seq == NULL) {
-        char serial[144];
-        sprintf(serial, "%s%s%s", ri.serial1, ri.serial2, ri.serial3);
-        char post_data[4000]; // large enough for extra usbnet headers
+        string serial;
+        format_string(&serial, "%s%s%s", ri.serial1, ri.serial2, ri.serial3);
+        string post_data;
         if (z_post) {
-            sprintf(post_data, z_post_xml, ri.hw_ver_major, ri.hw_ver_minor,
-                    ri.flash_mfg, ri.flash_id, ri.fw_ver_major,
+            format_string(&post_data, z_post_xml, ri.hw_ver_major,
+                    ri.hw_ver_minor, ri.flash_mfg, ri.flash_id, ri.fw_ver_major,
                     ri.fw_ver_minor);
         } else {
-            sprintf(post_data, post_xml, ri.fw_ver_major, ri.fw_ver_minor,
-                    ri.fw_type, serial, ri.hw_ver_major, ri.hw_ver_minor,
-                    ri.hw_ver_micro, ri.flash_mfg, ri.flash_id, ri.protocol,
-                    ri.architecture, ri.skin);
-            sprintf(post_data+strlen(post_data), "%s", post_xml_trailer);
+            format_string(&post_data, post_xml, ri.fw_ver_major,
+                    ri.fw_ver_minor, ri.fw_type, serial.c_str(),
+                    ri.hw_ver_major, ri.hw_ver_minor, ri.hw_ver_micro,
+                    ri.flash_mfg, ri.flash_id, ri.protocol, ri.architecture,
+                    ri.skin);
+            format_string(&post_data, "%s", post_xml_trailer);
         }
 
-        debug("post data: %s",post_data);
+        debug("post data: %s", post_data.c_str());
 
         string post_data_encoded;
-        UrlEncode(post_data, post_data_encoded);
+        UrlEncode(post_data.c_str(), post_data_encoded);
 
         post = "Data=" + post_data_encoded;
     } else {
@@ -382,11 +406,11 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 
     debug("%s", post.c_str());
 
-    char http_header[1000];
-    sprintf(http_header, post_header, path.c_str(), server.c_str(),
+    string http_header;
+    format_string(&http_header, post_header, path.c_str(), server.c_str(),
             cookie.c_str(), post.length());
 
-    debug("%s", http_header);
+    debug("%s", http_header.c_str());
 
-    return Zap(server, http_header,post.c_str());
+    return Zap(server, http_header.c_str(), post.c_str());
 }
