@@ -367,13 +367,15 @@ int CRemoteMH::WriteFile(const char *filename, uint8_t *wr,
      */
     const uint8_t param = rsp[5];
 
-    uint8_t pkts_to_send = wrlen / MH_MAX_DATA_SIZE;
+    uint32_t pkts_to_send = wrlen / MH_MAX_DATA_SIZE;
     if ((wrlen % MH_MAX_DATA_SIZE) != 0)
         pkts_to_send++;
     pkts_to_send++; // count is always one more than the actual count
 
     uint8_t msg_ack[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x03, get_seq(seq), 0x02, 0x01, param, 0x01, pkts_to_send };
+        { 0xFF, 0x03, get_seq(seq), 0x02, 0x01, param, 0x01, 0x33 };
+    if (pkts_to_send < 0x33)
+        msg_ack[7] = pkts_to_send;
 
     if ((err = HID_WriteReport(msg_ack))) {
         debug("Failed to write to remote");
@@ -386,6 +388,7 @@ int CRemoteMH::WriteFile(const char *filename, uint8_t *wr,
     uint32_t tlen = wrlen;
     uint8_t pkt_len;
     uint8_t tmp_pkt[MH_MAX_PACKET_SIZE];
+    int pkt_count = 0;
     while (tlen) {
         pkt_len = MH_MAX_DATA_SIZE;
         if (tlen < pkt_len) {
@@ -405,6 +408,29 @@ int CRemoteMH::WriteFile(const char *filename, uint8_t *wr,
             return err;
         }
         wr_ptr += pkt_len;
+        pkt_count++;
+        pkts_to_send--;
+
+        /* Every 50 data packets, the remote seems to send us an "ack"
+           of some sort.  Read it and send a response back. */
+        if (pkt_count == 50) {
+            if ((err = HID_ReadReport(rsp, MH_TIMEOUT))) {
+                debug("Failed to read from remote");
+                return LC_ERROR_READ;
+            }
+            debug_print_packet(rsp);
+            /* 3rd byte is the sequence number */
+            msg_ack[2] = get_seq(seq);
+            /* 2nd parameter is the number of packets remaining,
+               plus one */
+            if (pkts_to_send < 0x33)
+                msg_ack[7] = pkts_to_send;
+            if ((err = HID_WriteReport(msg_ack))) {
+                debug("Failed to write to remote");
+                return LC_ERROR_WRITE;
+            }
+            pkt_count = 0;
+        }
     }
 
     /*
@@ -503,38 +529,6 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
 
     setup_ri_pointers(ri);
 
-    if (cb) {
-        cb(cb_stage, cb_count++, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
-    }
-
-    // Send the read config message to find the config bytes used.
-    const uint8_t msg_read_config[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x01, 0x00, 0x03, 0x80, '/', 'c', 'f', 'g', '/',
-          'u', 's', 'e', 'r', 'c', 'f', 'g', 0x00, 0x80, 'R', 0x00 };
-    if ((err = HID_WriteReport(msg_read_config))) {
-        debug("Failed to write to remote");
-        return LC_ERROR_WRITE;
-    }
-
-    if ((err = HID_ReadReport(rsp))) {
-        debug("Failed to read from remote");
-        return LC_ERROR_READ;
-    }
-    debug("msg_read_config");
-    debug_print_packet(rsp);
-
-    // In ReadFlash() we add an extra four bytes to the end of the config file
-    // buffer, so we include space for those bytes here.
-    ri.config_bytes_used = (rsp[7] << 24) + (rsp[8] << 16) + (rsp[9] << 8)
-        + rsp[10] + 4;
-    debug("ri.config_bytes_used = %d", ri.config_bytes_used);
-    ri.max_config_size = (ri.flash->size << 10);
-    ri.valid_config = 1;
-
-    if (cb) {
-        cb(cb_stage, cb_count++, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
-    }
-
     string guid_str = find_value(identity, "guid");
     if (guid_str.length() >= 98) {
         uint8_t guid[48];
@@ -549,9 +543,45 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         }
         make_serial(guid, ri);
     }
+    ri.mh_serial = find_value(identity, "serial_number");
 
-    if ((err = reset_sequence(0x01, 0x06)))
-        return err;
+    if (cb) {
+        cb(cb_stage, cb_count++, 1, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+    }
+
+    /* Arch 17 (Link/Touch) don't have the '/cfg/usercfg' so don't read it */
+    if (ri.architecture != 17) {
+        // Send the read config message to find the config bytes used.
+        const uint8_t msg_read_config[MH_MAX_PACKET_SIZE] =
+            { 0xFF, 0x01, 0x00, 0x03, 0x80, '/', 'c', 'f', 'g', '/',
+              'u', 's', 'e', 'r', 'c', 'f', 'g', 0x00, 0x80, 'R', 0x00 };
+        if ((err = HID_WriteReport(msg_read_config))) {
+            debug("Failed to write to remote");
+            return LC_ERROR_WRITE;
+        }
+
+        if ((err = HID_ReadReport(rsp))) {
+            debug("Failed to read from remote");
+            return LC_ERROR_READ;
+        }
+        debug("msg_read_config");
+        debug_print_packet(rsp);
+
+        if ((err = reset_sequence(0x01, 0x06)))
+            return err;
+
+        // In ReadFlash() we add an extra four bytes to the end of the config
+        // file buffer, so we include space for those bytes here.
+        ri.config_bytes_used = (rsp[7] << 24) + (rsp[8] << 16) + (rsp[9] << 8)
+            + rsp[10] + 4;
+        debug("ri.config_bytes_used = %d", ri.config_bytes_used);
+    }
+    ri.max_config_size = (ri.flash->size << 10);
+    ri.valid_config = 1;
+
+    if (cb) {
+        cb(cb_stage, cb_count++, 2, 2, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+    }
 
     return 0;
 }
@@ -684,12 +714,32 @@ int CRemoteMH::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
                        lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {
     /* 
-     * MH remotes do not support SetTime() operations, but we return
+     * Some MH remotes do not support SetTime() operations, but we return
      * success because some higher level operations (for example, update
      * configuration) call SetTime() and thus the whole operation would be
      * declared a failure, which we do not want.
      */
-    return 0;
+    if (ri.architecture != 17) {
+        return 0;
+    } else {
+        /* Yes, the official sw seems to hard code the US-East TZ */
+        const char *tz_str = "EST5EDT,M3.2.0,M11.1.0";
+        size_t tz_str_len = strlen(tz_str);
+        const uint32_t tsv_len = 16 + tz_str_len;
+        uint8_t tsv[tsv_len];
+        tsv[0] = ht.year >> 8;
+        tsv[1] = ht.year;
+        tsv[2] = ht.month;
+        tsv[3] = ht.day;
+        tsv[4] = ht.hour;
+        tsv[5] = ht.minute;
+        tsv[6] = ht.second;
+        tsv[7] = ht.dow;
+        for (int i = 8; i < 16; i++)
+            tsv[i] = 0;
+        memcpy(&tsv[16], tz_str, tz_str_len);
+        return WriteFile("/sys/time", tsv, tsv_len);
+    }
 }
 
 int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,

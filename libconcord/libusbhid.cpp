@@ -149,11 +149,6 @@ int FindRemote(THIDINFO &hid_info)
 #endif
 
     int err;
-    if ((err = usb_set_configuration(h_hid, 1))) {
-        debug("Failed to set device configuration: %d (%s)", err,
-              usb_strerror());
-        return err;
-    }
 
     if ((err=usb_claim_interface(h_hid, 0))) {
         debug("Failed to claim interface: %d (%s)", err,

@@ -973,3 +973,30 @@ mh_set_wifi_config = _create_func(
     _ret_lc_concord(),
     _in('config', POINTER(mh_wifi_config))
 )
+
+# const char *mh_get_serial();
+mh_get_serial = _create_func(
+    'mh_get_serial',
+    c_char_p
+)
+
+#int mh_read_file(const char *filename, uint8_t *buffer, const uint32_t buflen,
+#                 uint32_t *data_read);
+mh_read_file = _create_func(
+    'mh_read_file',
+    _ret_lc_concord(),
+    _in('filename', c_char_p),
+    _in('buffer', POINTER(c_ubyte)),
+    _in('buflen', c_uint),
+    _out('data_read', c_uint)
+)
+
+#int mh_write_file(const char *filename, uint8_t *buffer,
+#                  const uint32_t buflen);
+mh_write_file = _create_func(
+    'mh_write_file',
+    _ret_lc_concord(),
+    _in('filename', c_char_p),
+    _in('buffer', POINTER(c_ubyte)),
+    _in('buflen', c_uint)
+)

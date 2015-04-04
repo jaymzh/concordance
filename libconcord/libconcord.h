@@ -527,6 +527,11 @@ int mh_set_cfg_properties(const struct mh_cfg_properties *properties);
 int mh_get_wifi_networks(struct mh_wifi_networks *networks);
 int mh_get_wifi_config(struct mh_wifi_config *config);
 int mh_set_wifi_config(const struct mh_wifi_config *config);
+const char *mh_get_serial();
+int mh_read_file(const char *filename, uint8_t *buffer, const uint32_t buflen,
+                 uint32_t *data_read);
+int mh_write_file(const char *filename, uint8_t *buffer,
+                  const uint32_t buflen);
 
 #ifdef __cplusplus
 }

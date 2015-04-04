@@ -900,8 +900,16 @@ int print_version_info(struct options_t *options)
         printf("  USB PID: %04X\n", get_usb_pid());
         printf("  USB Ver: %04X\n", get_usb_bcd());
 
-        printf("  Serial Number: %s\n\t%s\n\t%s\n", get_serial(1),
-               get_serial(2), get_serial(3));
+       /*
+        * Certain MH remotes (but not all) such as the Harmony Touch use a
+        * different serial number format.  In this case, mh_get_serial() will
+        * return a non-zero-length string which will have the correct serial.
+        */
+        if (strlen(mh_get_serial()) != 0)
+            printf("  Serial Number: %s\n", mh_get_serial());
+        else
+            printf("  Serial Number: %s\n\t%s\n\t%s\n", get_serial(1),
+                   get_serial(2), get_serial(3));
     }
 
     used = get_config_bytes_used();

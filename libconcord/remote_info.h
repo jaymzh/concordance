@@ -129,7 +129,18 @@ static const TModel ModelList[]={
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 // 90
-	{ MFG_UNK,	"Unknown",			NULL }
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony Hub",			NULL },
+	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony Touch",		NULL },
+// 100
+	{ MFG_HAR,	"Harmony Ultimate",		NULL }
 };
 
 static const unsigned int max_model=sizeof(ModelList)/sizeof(TModel)-1;
@@ -500,7 +511,7 @@ static const TArchInfo ArchList[]={
 		0,				// eeprom_size
 		"",				// usb
 	},
-	/* arch 17: Link */
+	/* arch 17: Link/Touch */
 	{
 		0,				// serial_location
 		0,				// serial_address

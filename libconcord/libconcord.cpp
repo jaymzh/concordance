@@ -229,6 +229,8 @@ int is_mh_pid(unsigned int pid)
         case 0xC124: /* Harmony 300 */
         case 0xC125: /* Harmony 200 */
         case 0xC126: /* Harmony Link */
+        case 0xC129: /* Harmony Hub */
+        case 0xC12B: /* Harmony Touch/Ultimate */
             return 1;
         default:
             return 0;
@@ -1940,6 +1942,27 @@ int mh_set_wifi_config(const struct mh_wifi_config *config)
     err = rmt->WriteFile("/sys/wifi/connect", (uint8_t*)str_buffer.c_str(),
                          strlen(str_buffer.c_str()));
     return err;
+}
+
+const char *mh_get_serial()
+{
+    return ri.mh_serial.c_str();
+}
+
+int mh_read_file(const char *filename, uint8_t *buffer, const uint32_t buflen,
+                 uint32_t *data_read)
+{
+    if (!is_mh_remote())
+        return LC_ERROR;
+    return rmt->ReadFile(filename, buffer, buflen, data_read, 0x00, NULL, NULL,
+                         0);
+}
+
+int mh_write_file(const char *filename, uint8_t *buffer, const uint32_t buflen)
+{
+    if (!is_mh_remote())
+        return LC_ERROR;
+    return rmt->WriteFile(filename, buffer, buflen);
 }
 
 /*

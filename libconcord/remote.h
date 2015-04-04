@@ -133,6 +133,8 @@ struct TRemoteInfo {
     uint8_t node_id;
     char *tid;
     char *xml_user_rf_setting;
+    /* Special serial number that some MH remotes use */
+    string mh_serial;
 };
 
 struct THarmonyTime {
