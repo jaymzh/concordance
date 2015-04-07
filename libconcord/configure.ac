@@ -53,6 +53,16 @@ case $host_os in
     AC_DEFINE([WANT_HIDAPI], [1], [Want hidapi])
     LIBCONCORD_LDFLAGS="-l$USBLIB -lwsock32 -no-undefined"
     ;;
+  k*bsd*-gnu)
+    USBLIB="hidapi"
+    AC_DEFINE([WANT_HIDAPI], [1], [Want hidapi])
+    LIBCONCORD_LDFLAGS="-l$USBLIB"
+    ;;
+  gnu*)
+    USBLIB="usb"
+    AC_DEFINE([WANT_LIBUSB], [1], [Want libusb])
+    LIBCONCORD_LDFLAGS="-l$USBLIB"
+    ;;
 esac
 AC_SUBST([LIBCONCORD_LDFLAGS], [$LIBCONCORD_LDFLAGS])
 a=1

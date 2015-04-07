@@ -43,12 +43,17 @@ if [ "$ACTION" = "add" ]; then
     fi
     echo "Configuring $INTERFACE interface." >>$LOG
     ifconfig $INTERFACE $LOCAL_IP netmask $NETMASK >>$LOG 2>&1
-    echo "Adding iptables rule." >>$LOG
-    iptables -I $IPTABLES_RULE >>$LOG 2>&1
+    if [ -x `which iptables` ]; then
+        echo "Adding iptables rule." >>$LOG
+        iptables -I $IPTABLES_RULE >>$LOG 2>&1
+    fi
     dnsmasq --port=0 --interface=$INTERFACE --bind-interfaces --leasefile-ro \
             --dhcp-range=$REMOTE_IP,$REMOTE_IP --pid-file=$PID_FILE
 else
-    echo "Stopping dnsmasq and removing iptables rule." >>$LOG
+    echo "Stopping dnsmasq." >>$LOG
     kill $(cat $PID_FILE)
-    iptables -D $IPTABLES_RULE >>$LOG 2>&1
+    if [ -x `which iptables` ]; then
+        echo "Removing iptables rule." >>$LOG
+        iptables -D $IPTABLES_RULE >>$LOG 2>&1
+    fi
 fi
