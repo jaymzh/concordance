@@ -7,7 +7,7 @@ libconcord_la_SOURCES = remote.cpp remote_z.cpp libconcord.cpp binaryfile.cpp \
 	operationfile.cpp remote_mh.cpp libusbhid.cpp libhidapi.cpp
 include_HEADERS = libconcord.h
 libconcord_la_CPPFLAGS = -Wall
-libconcord_la_LDFLAGS = -version-info 3:0:0 $(LIBCONCORD_LDFLAGS) -lzip
+libconcord_la_LDFLAGS = -version-info 4:0:0 $(LIBCONCORD_LDFLAGS) -lzip
 libconcord_la_CXXFLAGS = $(ZIP_CFLAGS)
 UDEVROOT ?= /
 UDEVLIBDIR ?= $(UDEVROOT)/lib

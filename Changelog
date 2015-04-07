@@ -1,3 +1,12 @@
+1.2
+Released: 04/06/15
+mathieu.tl@gmail.com:
+- Build fixes for non-Linux Debian platforms
+swt@techie.net
+- Add Ultimate One, 350, Touch, and Home Hub support
+- Fix buffer overrun crash in website communications
+- Windows install/documentation fixes
+
 1.1
 Released: 03/28/14
 phil@ipom.com:
