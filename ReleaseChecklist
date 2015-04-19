@@ -3,7 +3,7 @@
     integer for our so-version and we bump it anytime we change the API for
     safety (i.e. libconcord.h)
     * vi libconcord/Makefile.am libconcord/bindings/python/libconcord.py \
-         concordance/configure.ac
+         concordance/configure.ac concordance/win/concordance.nsi
 
 - Bump concordance version number
   * vi concordance/concordance.c concordance/configure.ac \
