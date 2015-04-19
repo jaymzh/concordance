@@ -751,9 +751,13 @@ int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,
     const uint8_t msg_one[MH_MAX_PACKET_SIZE] =
         { 0xFF, 0x01, 0x00, 0x02, 0x80, '/', 'i', 'r', '/', 'i', 'r',
           '_', 'c', 'a', 'p', 0x00, 0x80, 'R', 0x00 };
-    const uint8_t msg_two[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x04, 0x01, 0x02, 0x01, 0x0C, 0x01, 0x00 };
     uint8_t rsp[MH_MAX_PACKET_SIZE];
+
+    uint8_t start_seq = 0x90;
+    /* Arch 17 uses a different starting sequence number for IR learning */
+    if (get_arch() == 17) {
+        start_seq = 0x00;
+    }
 
     if (cb) {
         cb(cb_stage, 0, 0, 1, LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
@@ -770,6 +774,14 @@ int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,
     debug("msg_one");
     debug_print_packet(rsp);
 
+    /*
+     * First parameter in the read file "ack" message is reused in subsequent
+     * messages to the remote.  Save it.
+     */
+    const uint8_t param = rsp[5];
+    const uint8_t msg_two[MH_MAX_PACKET_SIZE] =
+        { 0xFF, 0x04, 0x01, 0x02, 0x01, param, 0x01, 0x00 };
+
     if ((err = HID_WriteReport(msg_two))) {
         debug("Failed to write to remote");
         return LC_ERROR_WRITE;
@@ -781,11 +793,11 @@ int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,
     debug("msg_two");
     debug_print_packet(rsp);
 
-    err = LearnIRInnerLoop(freq, ir_signal, ir_signal_length, 0x90);
+    err = LearnIRInnerLoop(freq, ir_signal, ir_signal_length, start_seq);
 
     /* send stop message */
     const uint8_t msg_stop[MH_MAX_PACKET_SIZE] =
-        { 0xFF, 0x06, 0x02, 0x02, 0x01, 0x0C, 0x01, 0x06 };
+        { 0xFF, 0x06, 0x02, 0x02, 0x01, param, 0x01, 0x06 };
     if (HID_WriteReport(msg_stop) != 0) {
         debug("Failed to write to remote");
         err = LC_ERROR_WRITE;
@@ -797,7 +809,7 @@ int CRemoteMH::LearnIR(uint32_t *freq, uint32_t **ir_signal,
     debug("msg_stop");
     debug_print_packet(rsp);
 
-    if ((err = reset_sequence(0x03, 0x0C)))
+    if ((err = reset_sequence(0x03, param)))
         return err;
 
     if (cb && !err) {
