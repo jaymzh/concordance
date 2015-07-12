@@ -45,9 +45,7 @@ Section "Concordance"
   File "$%HIDAPI_LIB_PATH%/libhidapi-0.dll"
   File "../../libconcord/.libs/libconcord-4.dll"
   File "../.libs/concordance.exe"
-  !if $%MINGW_SYSROOT_DEVLIB% != $%MINGW_SYSROOT_BIN%
-    File "$%MINGW_SYSROOT_DEVLIB%/libwinpthread-1.dll"
-  !endif
+  File "$%MINGW_SYSROOT_DEVLIB%/libwinpthread-1.dll"
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Concordance" "DisplayName" "Concordance"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Concordance" "UninstallString" "$\"$INSTDIR\Uninstall Concordance.exe$\""
@@ -79,6 +77,7 @@ Section "Uninstall"
   Delete /rebootok "$INSTDIR\concordance.exe"
   Delete /rebootok "$INSTDIR\libconcord-3.dll"
   Delete /rebootok "$INSTDIR\libhidapi-0.dll"
+  Delete /rebootok "$INSTDIR\libwinpthread-1.dll"
   Delete /rebootok "$INSTDIR\Uninstall Concordance.exe"
   RMDir "$INSTDIR"
 
