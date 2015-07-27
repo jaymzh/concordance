@@ -1,4 +1,4 @@
-= Concordance =
+# Concordance
 
 This software allows you to program your Logitech Harmony remote using a
 configuration object retreived from the harmony website:
@@ -25,89 +25,89 @@ need to use sudo or be root.
 
 0. I got a file from the website, do something useful with it.
 
-```
-concordance <filename>
-```
+  ```
+  concordance <filename>
+  ```
 
-This will attempt to figure out what to do, and do it. Note that the update
-process sends TWO files: a connectivity test and the update. You will need
-to do both.
+  This will attempt to figure out what to do, and do it. Note that the update
+  process sends TWO files: a connectivity test and the update. You will need
+  to do both.
 
 1. Backup the config
 
-```
-concordance --dump-config=/tmp/config.EZHex
-```
+  ```
+  concordance --dump-config=/tmp/config.EZHex
+  ```
 
-This will read the config off of your remote and write it to /tmp/config.EZHex.
-It's a good tool for development as well as backing up your config. This can
-however be created from the members.harmonyremote.com website. The equals
-is needed if you pass in a filename since the filename is optional. If
-you don't specify, concordance will use 'config.EZHex' in the current directory.
+  This will read the config off of your remote and write it to /tmp/config.EZHex.
+  It's a good tool for development as well as backing up your config. This can
+  however be created from the members.harmonyremote.com website. The equals
+  is needed if you pass in a filename since the filename is optional. If
+  you don't specify, concordance will use 'config.EZHex' in the current directory.
 
 2. Connectivity test
 
-Go to members.harmonyremote.com, and when you're ready, choose "Update My
-Remote." Before Logitech provides an actual config, they will first attempt to
-do a connectivity test. Downloaded the Connectivity.EZHex file, and then run
-the test:
+  Go to members.harmonyremote.com, and when you're ready, choose "Update My
+  Remote." Before Logitech provides an actual config, they will first attempt to
+  do a connectivity test. Downloaded the Connectivity.EZHex file, and then run
+  the test:
 
-```
-concordance Connectivity.EZHex
-```
+  ```
+  concordance Connectivity.EZHex
+  ```
 
-If that doesn't work, you can tell concordance what it is manually:
+  If that doesn't work, you can tell concordance what it is manually:
 
-```
-concordance --connectivity-test Connectivity.EZHex
-```
+  ```
+  concordance --connectivity-test Connectivity.EZHex
+  ```
 
 3. Write a config
 
-Once the connectivity test is successfully completed, the site will prompt you
-to download the actual config in a file called Update.EZHex. Save it and then
-you can use it with:
+  Once the connectivity test is successfully completed, the site will prompt you
+  to download the actual config in a file called Update.EZHex. Save it and then
+  you can use it with:
 
-```
-concordance Update.EZHex
-```
+  ```
+  concordance Update.EZHex
+  ```
 
-Again, concordance should do the right thing here, but in case of problems you
-can explicitly tell concordance what to do with:
+  Again, concordance should do the right thing here, but in case of problems you
+  can explicitly tell concordance what to do with:
 
-```
-concordance --write-config Update.EZHex
-```
+  ```
+  concordance --write-config Update.EZHex
+  ```
 
 4. Backup the firmware
 
-Sometimes the site will want to update your firmware. Concordance allows you to
-backup your old firmware so you may later revert if you prefer. You can do this
-with:
+  Sometimes the site will want to update your firmware. Concordance allows you to
+  backup your old firmware so you may later revert if you prefer. You can do this
+  with:
 
-```
-concordance --dump-firmware
-```
+  ```
+  concordance --dump-firmware
+  ```
 
-This will read the firmware off of your remote and write it to fimrware.EZHex.
-See "1. Backup the config" for more information.
+  This will read the firmware off of your remote and write it to fimrware.EZHex.
+  See "1. Backup the config" for more information.
 
 5. Write firmware
 
-NOTE: This feature is only implemented for certain models. Please see:
-  http://www.phildev.net/concordance/supported_models.shtml
+  NOTE: This feature is only implemented for certain models. Please see:
+    http://www.phildev.net/concordance/supported_models.shtml
 
-However for models we support this on, it works like this:
+  However for models we support this on, it works like this:
 
-```
-concordance Firmware.EZHex
-```
+  ```
+  concordance Firmware.EZHex
+  ```
 
-Again, if you have a problem, you can tell concordance what to do explicitly:
+  Again, if you have a problem, you can tell concordance what to do explicitly:
 
-```
-concordance --write-firmware Firmware.EZHex
-```
+  ```
+  concordance --write-firmware Firmware.EZHex
+  ```
 
 There are other options - check out the --help one!
 
