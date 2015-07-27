@@ -1,3 +1,5 @@
+= Concordance =
+
 This software allows you to program your Logitech Harmony remote using a
 configuration object retreived from the harmony website:
   http://members.harmonyremote.com/
@@ -21,13 +23,11 @@ NOTE TO LINUX USERS: This assumes you have proper udev support setup
 (see the INSTALL.Linux file in the libconcord source). If not, you'll
 need to use sudo or be root.
 
-NOTE TO LINUX USERS OF HARMONY 700: You need a kernel patch you can find here:
-https://sourceforge.net/tracker/index.php?func=detail&aid=3011845&group_id=201579&atid=978130
-It will be included in 2.6.36.
-
 0. I got a file from the website, do something useful with it.
 
-  $ concordance <filename>
+```
+concordance <filename>
+```
 
 This will attempt to figure out what to do, and do it. Note that the update
 process sends TWO files: a connectivity test and the update. You will need
@@ -35,7 +35,9 @@ to do both.
 
 1. Backup the config
 
-  $ concordance --dump-config=/tmp/config.EZHex
+```
+concordance --dump-config=/tmp/config.EZHex
+```
 
 This will read the config off of your remote and write it to /tmp/config.EZHex.
 It's a good tool for development as well as backing up your config. This can
@@ -50,11 +52,15 @@ Remote." Before Logitech provides an actual config, they will first attempt to
 do a connectivity test. Downloaded the Connectivity.EZHex file, and then run
 the test:
 
-  $ concordance Connectivity.EZHex
+```
+concordance Connectivity.EZHex
+```
 
 If that doesn't work, you can tell concordance what it is manually:
 
-  $ concordance --connectivity-test Connectivity.EZHex
+```
+concordance --connectivity-test Connectivity.EZHex
+```
 
 3. Write a config
 
@@ -62,12 +68,16 @@ Once the connectivity test is successfully completed, the site will prompt you
 to download the actual config in a file called Update.EZHex. Save it and then
 you can use it with:
 
-  $ concordance Update.EZHex
+```
+concordance Update.EZHex
+```
 
 Again, concordance should do the right thing here, but in case of problems you
 can explicitly tell concordance what to do with:
 
-  $ concordance --write-config Update.EZHex
+```
+concordance --write-config Update.EZHex
+```
 
 4. Backup the firmware
 
@@ -75,7 +85,9 @@ Sometimes the site will want to update your firmware. Concordance allows you to
 backup your old firmware so you may later revert if you prefer. You can do this
 with:
 
-  $ concordance --dump-firmware
+```
+concordance --dump-firmware
+```
 
 This will read the firmware off of your remote and write it to fimrware.EZHex.
 See "1. Backup the config" for more information.
@@ -87,20 +99,20 @@ NOTE: This feature is only implemented for certain models. Please see:
 
 However for models we support this on, it works like this:
 
-  $ concordance Firmware.EZHex
+```
+concordance Firmware.EZHex
+```
 
 Again, if you have a problem, you can tell concordance what to do explicitly:
 
-  $ concordance --write-firmware Firmware.EZHex
-
+```
+concordance --write-firmware Firmware.EZHex
+```
 
 There are other options - check out the --help one!
 
 
 THIS SOFTWARE IS NOT SUPPORTED BY OR IN ANY WAY RELATED TO LOGITECH!
-
-
-- Phil Dibowitz
 
 
 vim:textwidth=78:
