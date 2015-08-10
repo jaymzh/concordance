@@ -2,7 +2,7 @@
 
 This software allows you to program your Logitech Harmony remote using a
 configuration object retreived from the harmony website:
-  http://members.harmonyremote.com/
+  http://members.harmonyremote.com/EasyZapper/
 
 The website is required. The website is required in Logitech's software as
 well, it's just that their software wraps the website. Their website has
@@ -41,16 +41,17 @@ need to use sudo or be root.
 
   This will read the config off of your remote and write it to /tmp/config.EZHex.
   It's a good tool for development as well as backing up your config. This can
-  however be created from the members.harmonyremote.com website. The equals
-  is needed if you pass in a filename since the filename is optional. If
-  you don't specify, concordance will use 'config.EZHex' in the current directory.
+  however be created from the members.harmonyremote.com/EasyZapper website. The
+  equals is needed if you pass in a filename since the filename is optional.
+  If you don't specify, concordance will use 'config.EZHex' in the current
+  directory.
 
 2. Connectivity test
 
-  Go to members.harmonyremote.com, and when you're ready, choose "Update My
-  Remote." Before Logitech provides an actual config, they will first attempt to
-  do a connectivity test. Downloaded the Connectivity.EZHex file, and then run
-  the test:
+  Go to members.harmonyremote.com/EasyZapper, and when you're ready, choose
+  "Update My Remote." Before Logitech provides an actual config, they will
+  first attempt to do a connectivity test. Downloaded the Connectivity.EZHex
+  file, and then run the test:
 
   ```
   concordance Connectivity.EZHex
