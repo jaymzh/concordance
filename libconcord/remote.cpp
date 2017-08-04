@@ -811,7 +811,7 @@ int CRemote::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
         cb(cb_stage, cb_count++, 2, 3, LC_CB_COUNTER_TYPE_STEPS, cb_arg,
             NULL);
 
-        if (err != 0) {
+    if (err != 0) {
         return err;
     }
 

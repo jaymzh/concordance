@@ -825,8 +825,8 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         CRemoteZ_Base::TParamList rzp;
         ParseParams(len, rgz, rzp);
         ri.region_ids[0] = 0x00; // Store region 0.
-        ri.region_versions[0] = new char[4];
-        snprintf(ri.region_versions[0], 4, "%d.%d", *(rzp.p[0]+1), *rzp.p[0]);
+        ri.region_versions[0] = new char[8];
+        snprintf(ri.region_versions[0], 8, "%d.%d", *(rzp.p[0]+1), *rzp.p[0]);
 
         for(unsigned int r = 0; r < rc; ++r) {
             const uint8_t rn = *(pl.p[0]+r);
@@ -845,8 +845,8 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
             CRemoteZ_Base::TParamList rp;
             ParseParams(len, rgv, rp);
             ri.region_ids[r+1] = rn;
-            ri.region_versions[r+1] = new char[4];
-            snprintf(ri.region_versions[r+1], 4, "%d.%d", *(rp.p[0]+1),
+            ri.region_versions[r+1] = new char[8];
+            snprintf(ri.region_versions[r+1], 8, "%d.%d", *(rp.p[0]+1),
                      *rp.p[0]);
         }
     }

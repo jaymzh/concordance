@@ -20,7 +20,6 @@
  */
 
 /* Platform-agnostic includes */
-#define _SVID_SOURCE
 #include <getopt.h>
 #include <libconcord.h>
 #include <stdio.h>

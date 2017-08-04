@@ -54,7 +54,7 @@ int find_config_binary(uint8_t *config, uint32_t config_size,
     err = GetTag("BINARYDATASIZE", config, config_size, n, &binary_tag_size_s);
     if (err == -1)
         return LC_ERROR;
-        uint32_t binary_tag_size = (uint32_t)atoi(binary_tag_size_s.c_str());
+    uint32_t binary_tag_size = (uint32_t)atoi(binary_tag_size_s.c_str());
 
     debug("actual data size %i", *binary_size);
     debug("reported data size %i", binary_tag_size);
