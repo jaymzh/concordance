@@ -36,7 +36,7 @@
 /* BEGIN GLOBAL SECTION */
 
 #ifdef _DEBUG
-#define debug(FMT,...) fprintf(stderr, "DEBUG (%s): "FMT"\n", __FUNCTION__,\
+#define debug(FMT,...) fprintf(stderr, "DEBUG (%s): " FMT "\n", __FUNCTION__,\
          ##__VA_ARGS__);
 #else
 #define debug(FMT,...)
