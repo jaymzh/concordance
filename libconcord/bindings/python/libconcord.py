@@ -16,6 +16,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+from __future__ import absolute_import
+from __future__ import print_function
 from ctypes import *
 from ctypes import _Pointer
 import platform
@@ -101,7 +103,7 @@ class LibConcordException(Exception):
         self.func = func
         self.result = result
         try:
-            self.result_str = lc_strerror(self.result)
+            self.result_str = lc_strerror(self.result).decode('utf-8')
         except:
             self.result_str = 'Unknown'
 
@@ -208,7 +210,7 @@ def from_param(obj):
         return obj.value
     if isinstance(obj, _Pointer):
         return obj.contents
-    raise TypeError, "Output parameters should be byref/pointers"
+    raise TypeError("Output parameters should be byref/pointers")
 
 class _DebugWrapper(object):
     def __init__(self, callable):
@@ -233,14 +235,14 @@ class _DebugWrapper(object):
                 value = "???"
             sys.stdout.write("%s%s=%s" % (delim, name, value))
             delim = ", "
-        print ")"
+        print(")")
         try:
             ret = self.callable(*args)
             if isinstance(self.callable._lcpy_rettype, _ret):
                 valstr = self.callable._lcpy_rettype.dumper(ret)
             else:
                 valstr = repr(ret)
-            print "    Returned: " + valstr
+            print("    Returned: " + valstr)
             for (val, proto) in zip(args, self.callable._lcpy_protos):
                 if not isinstance(proto, _out):
                     continue
@@ -250,13 +252,13 @@ class _DebugWrapper(object):
                     value = _dumpers[type](from_param(val))
                 except:
                     value = "???"
-                print "    <<out>> %s=%s" % (name, value)
+                print("    <<out>> %s=%s" % (name, value))
             return ret
         except:
-            print "    Threw: "
+            print("    Threw: ")
             s = traceback.format_exc()
             for sl in s.split('\n'):
-                print "        " + sl
+                print("        " + sl)
             raise
 
 # Internal ctypes function wrapper creation
