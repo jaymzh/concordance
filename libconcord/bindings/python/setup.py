@@ -21,7 +21,7 @@ from distutils.core import setup
 
 setup(
     name='libconcord',
-    version='1.2',
+    version='1.3',
     py_modules=['libconcord'],
 )
 

@@ -1,3 +1,16 @@
+1.3
+Released: 06/08/18
+swt@techie.net
+- Update libzip version in Win32 installer script
+- Support Python 3 in libconcord bindings
+- Fix warnings reported by GCC 7
+- Update Logitech website address in documentation
+- Include libwinpthread unconditionally and ensure it is uninstalled
+- Fix IR learning for Arch 17 (Touch/Ultimate/etc.)
+- Bump libconcord version in Windows installer
+phil@ipom.com
+- Move README to markdown
+
 1.2
 Released: 04/06/15
 mathieu.tl@gmail.com:
