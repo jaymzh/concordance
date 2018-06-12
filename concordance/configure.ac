@@ -5,19 +5,6 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_LIBTOOL
 AC_PROG_CXX
 AC_CANONICAL_HOST
-LIBCONCORD_VERSION="4"
-case $host_os in
-  darwin*)
-    LIBCONCORD_LDFLAGS="-lconcord.$LIBCONCORD_VERSION"
-    ;;
-  mingw*)
-    LIBCONCORD_LDFLAGS="-l:libconcord-$LIBCONCORD_VERSION.dll -lwsock32"
-    ;;
-  *)
-    LIBCONCORD_LDFLAGS="-l:libconcord.so.$LIBCONCORD_VERSION"
-    ;;
-esac
-AC_SUBST([LIBCONCORD_LDFLAGS], [$LIBCONCORD_LDFLAGS])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
  Makefile
