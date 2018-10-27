@@ -15,6 +15,12 @@ However, this software has some extra functionality such as being able to
 dump (backup) your existing config, being cross-platform, and giving you
 extra visibility into what's actually happening with your remote.
 
+NOTE: the Logitech web server now is setting a header 'X-Frame-Options: DENY'
+which prevents the update process from working correctly with Concordance.  In
+order to work around this, you will have to use a web browser that ignores
+this header.  For Firefox, the 'Ignore X-Frame-Options Header' Add-on has been
+used successfully.  For other browsers, there may be similar add-ons available.
+
 Here is how you use this software:
 
 NOTE TO MAC USERS: You need to use 'sudo' since you don't have udev.
