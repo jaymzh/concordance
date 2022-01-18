@@ -1,8 +1,8 @@
 # Concordance
 
 This software allows you to program your Logitech Harmony remote using a
-configuration object retreived from the harmony website:
-  http://members.harmonyremote.com/EasyZapper/
+configuration object retrieved from the harmony website:
+  https://members.harmonyremote.com/EasyZapper/New/ProcLogin/Start.asp?BrowserIsChecked=True
 
 The website is required. The website is required in Logitech's software as
 well, it's just that their software wraps the website. Their website has
