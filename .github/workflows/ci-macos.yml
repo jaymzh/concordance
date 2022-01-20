@@ -1,0 +1,32 @@
+name: macOS CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: brew install autoconf automake hidapi libzip
+    - name: Build libconcord
+      run: |
+        cd libconcord
+        mkdir m4; autoreconf --install
+        ./configure
+        make
+        sudo make install
+        cd -
+    - name: Build libconcord Python bindings
+      run: |
+        cd libconcord/bindings/python
+        sudo python3 setup.py install
+        python3 -c 'import libconcord; print(libconcord)'
+        cd -
+    - name: Build concordance
+      run: |
+        cd concordance
+        mkdir m4; autoreconf --install
+        ./configure
+        make
+        sudo make install
+        cd -
+        concordance --version
