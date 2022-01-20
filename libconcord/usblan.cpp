@@ -34,6 +34,7 @@
 #define closesocket close
 #define SOCKET int
 #define SOCKET_ERROR -1
+#define INVALID_SOCKET -1
 #endif
 
 #ifdef __FreeBSD__
@@ -43,7 +44,7 @@
 #include "libconcord.h"
 #include "lc_internal.h"
 
-static SOCKET sock = SOCKET_ERROR;
+static SOCKET sock = INVALID_SOCKET;
 
 const char * const remote_ip_address = "169.254.1.2";
 const uint16_t remote_port = 3074;
@@ -65,7 +66,7 @@ int ShutdownUsbLan(void)
     int err=0;
 
     // Close the socket
-    if (sock != SOCKET_ERROR) {
+    if (sock != INVALID_SOCKET) {
         if ((err = closesocket(sock))) {
             report_net_error("closesocket()");
             return LC_ERROR_OS_NET;

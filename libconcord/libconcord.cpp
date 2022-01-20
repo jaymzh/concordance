@@ -1169,7 +1169,7 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
             ri.flash_mfg, ri.flash_id, ri.hw_ver_major, ri.hw_ver_minor,
             ri.fw_type, ri.config_bytes_used, chk);
         of.write(reinterpret_cast<uint8_t*>(ch), chlen);
-        free(ch);
+        delete[] ch;
     }
 
     of.write(in, ri.config_bytes_used);
