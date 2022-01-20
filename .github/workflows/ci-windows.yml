@@ -1,0 +1,26 @@
+name: Windows CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: dnf install -y autoconf automake diffutils libtool mingw32-gcc-c++ mingw32-hidapi mingw32-libzip
+    - name: Build libconcord
+      run: |
+        cd libconcord
+        mkdir m4; autoreconf --install
+        mingw32-configure
+        mingw32-make
+        mingw32-make install
+        cd -
+    - name: Build concordance
+      run: |
+        cd concordance
+        mkdir m4; autoreconf --install
+        mingw32-configure LDFLAGS="$(rpm -E %{mingw32_ldflags}) -L$(rpm -E %{mingw32_bindir})"
+        mingw32-make
+        mingw32-make install
+        cd -
