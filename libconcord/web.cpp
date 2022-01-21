@@ -21,27 +21,12 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include <curl/curl.h>
 #include "libconcord.h"
 #include "lc_internal.h"
 #include "hid.h"
 #include "remote.h"
 #include "xml_headers.h"
-
-#ifdef _WIN32
-#include <winsock.h>
-#else /* non _WIN32 */
-#include <strings.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <unistd.h>
-#define closesocket close
-#define SOCKET int
-#define SOCKET_ERROR -1
-#endif
-
-#ifdef __FreeBSD__
-#include <netinet/in.h>
-#endif
 
 static const uint8_t urlencodemap[32]={
     0xFF, 0xFF, 0xFF, 0xFF,  //   0 Control chars
@@ -106,73 +91,48 @@ static void UrlEncode(const char *in, string &out)
     }
 }
 
-static int Zap(string &server, const char *s1, const char *s2)
+#ifndef _DEBUG
+static size_t dummy_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    int err;
+    return size * nmemb;
+}
+#endif
 
-    // Get the numeric address of host
-    hostent* addr = gethostbyname(server.c_str());
-    if (!addr) {
-        report_net_error("gethostbyname()");
-        return LC_ERROR_OS_NET;
+static int Zap(string &server, string &path, string &cookie, string &post)
+{
+    int ret = 0;
+    string url = "https://" + server + "/" + path;
+
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    CURL *curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent);
+        curl_easy_setopt(curl, CURLOPT_COOKIE, cookie.c_str());
+#ifdef _DEBUG
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, stderr);
+#else
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dummy_cb);
+#endif
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            debug("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            ret = LC_ERROR_OS_NET;
+        }
+
+        curl_easy_cleanup(curl);
+    } else {
+        debug("curl_easy_init() failed");
+        ret = LC_ERROR_OS_NET;
     }
 
-    // Fill in the sockaddr structure
-    sockaddr_in sa;
-    memcpy(&(sa.sin_addr), addr->h_addr, addr->h_length);
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(80);
+    curl_global_cleanup();
 
-    // Create a socket
-    // SOCK_STREAM = Stream (TCP) socket
-    SOCKET sock = socket(sa.sin_family, SOCK_STREAM, 0);
-
-    // Connect
-    if ((err = connect(sock,(struct sockaddr*)&sa, sizeof(sa)))) {
-        report_net_error("connect()");
-        return LC_ERROR_OS_NET;
-    }
-
-    debug("Connected!");
-
-    err = send(sock, s1, strlen(s1), 0);
-    if (err == SOCKET_ERROR) {
-        report_net_error("send()");
-        return LC_ERROR_OS_NET;
-    }
-
-    debug("%i bytes sent", err);
-
-    err = send(sock, s2, strlen(s2), 0);
-    if (err == SOCKET_ERROR) {
-        report_net_error("send()");
-        return LC_ERROR_OS_NET;
-    }
-
-    debug("%i bytes sent", err);
-
-    char buf[1000];
-    err = recv(sock,buf,999,0);
-
-    if (err == SOCKET_ERROR) {
-        report_net_error("recv()");
-        return LC_ERROR_OS_NET;
-    }
-
-    // Show the received received data
-    buf[err]=0;
-
-    debug("Received: %s", buf);
-
-    // Close the socket
-    if ((err = closesocket(sock))) {
-        report_net_error("closesocket()");
-        return LC_ERROR_OS_NET;
-    }
-
-    debug("done with web post");
-    
-    return 0;
+    return ret;
 }
 
 // find is the tag.
@@ -406,11 +366,5 @@ int Post(uint8_t *xml, uint32_t xml_size, const char *root, TRemoteInfo &ri,
 
     debug("%s", post.c_str());
 
-    string http_header;
-    format_string(&http_header, post_header, path.c_str(), server.c_str(),
-            cookie.c_str(), post.length());
-
-    debug("%s", http_header.c_str());
-
-    return Zap(server, http_header.c_str(), post.c_str());
+    return Zap(server, path, cookie, post);
 }

@@ -85,6 +85,7 @@ then
   AC_MSG_ERROR([$errorstr])
 fi
 PKG_CHECK_MODULES([ZIP], [libzip])
+PKG_CHECK_MODULES([CURL], [libcurl])
 AC_CONFIG_FILES([
     Makefile
 ])

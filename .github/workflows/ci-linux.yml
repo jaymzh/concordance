@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: sudo apt-get install libhidapi-dev libzip-dev
+      run: sudo apt-get install libcurl4-openssl-dev libhidapi-dev libzip-dev
     - name: Build libconcord
       run: |
         cd libconcord

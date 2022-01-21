@@ -43,6 +43,13 @@ release) and then:
   make
   make install
 
+LIBCURL
+In Fedora, simply install mingw32-curl.
+
+For other distributions, including building on Windows directly, grab the
+source from https://curl.se/download.html and follow the instructions for
+building and installing it to /tmp/buildroot.
+
 1. BUILD THE SOFTWARE
 
 Building libconcord with MinGW is also fairly straight forward.
