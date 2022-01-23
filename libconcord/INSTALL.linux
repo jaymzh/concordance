@@ -7,7 +7,7 @@ source, see the instructions below.
 
 0. INSTALL REQUIRED SOFTWARE
 
-You *MUST* install libusb and libzip. These libraries are in most
+You *MUST* install libusb, libzip, and libcurl. These libraries are in most
 distributions, so apt-get/yum/up2date/urpmi/etc. it.
 
 You also need hidapi which can be found at: https://github.com/signal11/hidapi
@@ -29,8 +29,8 @@ Also, if you are using 900/1000/1100 remotes, then dnsmasq is a requirement,
 as well as installing the udev support files for libconcord (see below).
 
 If you're compiling libconcord from source, you'll also need the development
-packages - usually libusb-dev or libusb-devel (and libzip-dev/libzip-devel),
-depending on your distribution.
+packages - usually libusb-dev or libusb-devel (also libzip-dev/libzip-devel
+and libcurl-dev/libcurl-devel), depending on your distribution.
 
 1. BUILD LIBCONCORD
 
