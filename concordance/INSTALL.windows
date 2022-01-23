@@ -16,29 +16,19 @@ install it to the MinGW sysroot):
      CPPFLAGS="-I../libconcord" LDFLAGS="-L../libconcord/.libs"
    make
 
-To build a Win32 installer, you will need to have NSIS installed.
+To build a Win32 installer, you will need to have NSIS and mingw-ldd installed.
 Additionally, you will need to set some environment variables.
 
 Assuming you were following the Fedora instructions in
 ../libconcord/INSTALL.windows:
    export MINGW_SYSROOT_BIN="/usr/i686-w64-mingw32/sys-root/mingw/bin"
           # the path where the MinGW DLL files can be found
-   export MINGW_SYSROOT_DEVLIB="$MINGW_SYSROOT_BIN"
-   export ZLIB_LIB_PATH="$MINGW_SYSROOT_BIN"
-   export LIBZIP_LIB_PATH="$MINGW_SYSROOT_BIN"
-   export HIDAPI_LIB_PATH="$MINGW_SYSROOT_BIN"
 
 Or if you used the non-Fedora instructions:
    export MINGW_SYSROOT_BIN="/usr/lib/gcc/i686-w64-mingw32/4.8"
           # the path where the MinGW DLL files can be found
-   export MINGW_SYSROOT_DEVLIB="/usr/i686-w64-mingw32/lib"
-          # where libwinpthread-1.dll can be found, typically in the -dev
-          #package
-   export ZLIB_LIB_PATH="/tmp/buildroot/lib"
-   export LIBZIP_LIB_PATH="/tmp/buildroot/bin"
-   export HIDAPI_LIB_PATH="/tmp/buildroot/bin"
 
 Then, build the installer:
-   make win32-installer
+   win/make_installer.py
 
 vim:textwidth=78:
