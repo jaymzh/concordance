@@ -5,6 +5,3 @@ concordance_LDFLAGS = $(LIBCONCORD_LDFLAGS)
 # -Wall just makes good sense
 concordance_CFLAGS = -Wall
 man1_MANS = concordance.1
-
-win32-installer:
-	makensis win/concordance.nsi
