@@ -43,4 +43,6 @@ jobs:
     - name: Install and test
       run: |
         ${{steps.download.outputs.download-path}}\concordance-installer.exe /S
-        "C:\Program Files (x86)\Concordance\concordance.exe --version"
+        Start-Sleep -Seconds 5
+        cd "C:\Program Files (x86)\Concordance"
+        .\concordance.exe --version
