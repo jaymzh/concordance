@@ -61,8 +61,15 @@ gpg -ab /tmp/concordance-$version.tar.bz2
 
 ## Write up release notes
 
-## Build Windows binaries
+## Retrieve Windows binaries
 
-## Upload to SourceForce. Add to phildev.net/concordance and Freshmeat.
+They will be in the Actions run for the PR with the version bump.
+
+## Upload tarballs and windows binaries
+
+* To GitHub
+* To Sourceforge
+
+## Update website
 
 vim:textwidth=78:
