@@ -1,3 +1,11 @@
+1.5
+Released: 04/27/22
+swt@techie.net
+- Various windows build improvements
+- Support (the now-required) HTTPS communication with harmonyremote
+- Fix various compiler warnings
+- Add CI
+
 1.4
 Released: 11/08/19
 swt@techie.net

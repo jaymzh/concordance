@@ -1,4 +1,4 @@
-AC_INIT([libconcord], [1.4], [concordance-devel@lists.sourceforge.net])
+AC_INIT([libconcord], [1.5], [concordance-devel@lists.sourceforge.net])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_MACRO_DIR([m4])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])

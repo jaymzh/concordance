@@ -32,7 +32,7 @@ debug = (os.environ.get("LIBCONCORD_PY_TRACE", "0") == "1")
 # Define the libconcord ABI this libconcord.py corresponds to
 # Bump this when the .so file version gets bumped
 
-ABI_VERSION = 5
+ABI_VERSION = 6
 
 # Load the DLL
 
