@@ -1,8 +1,8 @@
 # Concordance
 
 This software allows you to program your Logitech Harmony remote using a
-configuration object retrieved from the harmony website:
-  https://members.harmonyremote.com/EasyZapper/New/ProcLogin/Start.asp?BrowserIsChecked=True
+configuration object retrieved from the [harmony
+website](https://members.harmonyremote.com/EasyZapper/New/ProcLogin/Start.asp?BrowserIsChecked=True)
 
 The website is required. The website is required in Logitech's software as
 well, it's just that their software wraps the website. Their website has
@@ -101,8 +101,8 @@ need to use sudo or be root.
 
 5. Write firmware
 
-  NOTE: This feature is only implemented for certain models. Please see:
-    http://www.phildev.net/concordance/supported_models.shtml
+  NOTE: This feature is only implemented for certain models. Please see
+    [supported models](SupportedModels.md)
 
   However for models we support this on, it works like this:
 
@@ -118,8 +118,10 @@ need to use sudo or be root.
 
 There are other options - check out the --help one!
 
+## Related Software
 
-THIS SOFTWARE IS NOT SUPPORTED BY OR IN ANY WAY RELATED TO LOGITECH!
+* [Congruity](https://github.com/congruity/congruity) is a cross-platform graphical front-end for libconcord written in python
 
+## Disclaimer
 
-vim:textwidth=78:
+*THIS SOFTWARE IS NOT SUPPORTED BY OR IN ANY WAY RELATED TO LOGITECH!*
