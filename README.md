@@ -21,11 +21,20 @@ order to work around this, you will have to use a web browser that ignores
 this header.  For Firefox, the 'Ignore X-Frame-Options Header' Add-on has been
 used successfully.  For other browsers, there may be similar add-ons available.
 
-Here is how you use this software:
+## Installing
 
-NOTE TO MAC USERS: You need to use 'sudo' since you don't have udev.
+Concordance is packaged in a wide variety of Linux distributions and other
+OS package repositories. The easiest path is to use such a package if it's available for your OS/distro.
 
-NOTE TO LINUX USERS: This assumes you have proper udev support setup
+[![Packaging status](https://repology.org/badge/vertical-allrepos/concordance.svg)](https://repology.org/project/concordance/versions)
+
+If it's not packaged for your OS/distro, then refer to the appropriate `INSTALL` file in this repository for your OS.
+
+## Usage
+
+*NOTE TO MAC USERS*: You need to use 'sudo' since you don't have udev.
+
+*NOTE TO LINUX USERS*: This assumes you have proper udev support setup
 (see the INSTALL.Linux file in the libconcord source). If not, you'll
 need to use sudo or be root.
 
