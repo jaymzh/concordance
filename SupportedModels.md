@@ -1,0 +1,126 @@
+# Supported Models
+
+The following is a table of models and their known working status.
+
+Don't see your model? We may have missed one. Just give it a shot, and if you run into a problem, [file an issue](https://github.com/jaymzh/concordance/issues)!
+
+# Legend</h3>
+
+* <span class="green">Working</span> - Fully functionaly, no known (major) problems
+* <span class="blue">Believed to Work</span> - We believe this works, but need confirmation
+* <span class="orange">Almost Working</span> - The functionality is not yet available, but we feel it should be soon
+* <span class="red">Not Working</span> - Not functional
+
+<table width="60%" cellpadding="4" cellspacing="0" border="2"
+  style="margin-left: 20%; margin-right: 20%;">
+
+  <tr>
+    <th>Arch</th>
+    <th>Models</th>
+    <th>Config Update</th>
+    <th>Learn IR</th>
+    <th>Firmware Update</th>
+    <th>Comments</th>
+  </tr>
+
+  <tr>
+    <td>2</td>
+    <td>745</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="red">Not working</td>
+    <td></td>
+  </tr>
+  
+  <tr>
+    <td>3</td>
+    <td>748<br/>768</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>7</td>
+    <td>6xx</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>8</td>
+    <td>720<br/>785<br/>88x<br/>AV-100<br/>TC30</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>9</td>
+    <td>36x<br/>51x<br/>52x<br/>55x</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>10</td>
+    <td>890<br/>895</td>
+    <td class="green">Working</td>
+    <td class="red">Not working</td>
+    <td class="red">Not working</td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>12</td>
+    <td>One</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="red">Not working</td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>14</td>
+    <td>700</td>
+    <td class="green">Working</td>
+    <td class="blue">Believed working</td>
+    <td class="red">Not working</td>
+    <td>Needs kernel &gt; 2.6.37 (see <a href="http://sourceforge.net/p/concordance/feature-requests/9/">#9</a>)</td>
+  </tr>
+
+  <tr>
+    <td>15</td>
+    <td>900<br/>1000<br/>1000i<br/>1100<br/>Xbox</td>
+    <td class="green">Working</td>
+    <td class="red">Not working</td>
+    <td class="red">Not working</td>
+    <td>Not yet supported on Mac</td>
+  </tr>
+
+  <tr>
+    <td>16</td>
+    <td>200<br/>300</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="red">Not working</td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>17</td>
+    <td>Link</td>
+    <td class="green">Working</td>
+    <td class="green">Working</td>
+    <td class="red">Not working</td>
+    <td></td>
+  </tr>
+
+</table>
+
