@@ -22,7 +22,7 @@ jobs:
         cd libconcord/bindings/python
         python3 -m build
         pip3 install dist/*.whl
-        python3 -c 'import libconcord; print(libconcord)'
+        DYLD_FALLBACK_LIBRARY_PATH=/usr/local/lib python3 -c 'import libconcord; print(libconcord)'
         cd -
     - name: Build concordance
       run: |
