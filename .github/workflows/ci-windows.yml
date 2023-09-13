@@ -7,7 +7,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies
-      run: dnf install -y autoconf automake diffutils libtool mingw32-curl mingw32-gcc-c++ mingw32-hidapi mingw32-libzip mingw32-nsis python3-pip python3-wheel
+      run: dnf install -y autoconf automake diffutils libtool mingw32-curl mingw32-gcc-c++ mingw32-hidapi mingw32-libstdc++ mingw32-libzip mingw32-nsis python3-pip python3-wheel
     - name: Build libconcord
       run: |
         cd libconcord
