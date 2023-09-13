@@ -4,9 +4,11 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Install dependencies
-      run: brew install autoconf automake hidapi libzip
+      run: |
+        brew install autoconf automake hidapi libzip
+        pip3 install build
     - name: Build libconcord
       run: |
         cd libconcord
@@ -18,7 +20,8 @@ jobs:
     - name: Build libconcord Python bindings
       run: |
         cd libconcord/bindings/python
-        sudo python3 setup.py install
+        python3 -m build
+        pip3 install dist/*.whl
         python3 -c 'import libconcord; print(libconcord)'
         cd -
     - name: Build concordance

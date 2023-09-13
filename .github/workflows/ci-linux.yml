@@ -4,9 +4,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Install dependencies
-      run: sudo apt-get install libcurl4-openssl-dev libhidapi-dev libzip-dev
+      run: |
+        sudo apt-get install libcurl4-openssl-dev libhidapi-dev libzip-dev
+        pip install build
     - name: Build libconcord
       run: |
         cd libconcord
@@ -19,7 +21,8 @@ jobs:
     - name: Build libconcord Python bindings
       run: |
         cd libconcord/bindings/python
-        sudo python3 setup.py install
+        python3 -m build
+        pip install dist/*.whl
         python3 -c 'import libconcord; print(libconcord)'
         cd -
     - name: Build concordance
