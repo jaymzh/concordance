@@ -8,9 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     container: fedora:latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Install dependencies
-      run: dnf install -y autoconf automake diffutils libtool mingw32-curl mingw32-gcc-c++ mingw32-hidapi mingw32-libzip mingw32-nsis python3-pip python3-wheel
+      run: dnf install -y autoconf automake diffutils libtool mingw32-curl mingw32-gcc-c++ mingw32-hidapi mingw32-libstdc++ mingw32-libzip mingw32-nsis python3-pip python3-wheel
     - name: Build libconcord
       run: |
         cd libconcord
@@ -31,7 +31,7 @@ jobs:
       run: |
         pip install mingw-ldd
         MINGW_SYSROOT_BIN="/usr/i686-w64-mingw32/sys-root/mingw/bin" concordance/win/make_installer.py
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: windows-installer
         path: concordance/win/concordance-installer.exe
@@ -39,7 +39,7 @@ jobs:
     needs: build
     runs-on: windows-latest
     steps:
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v3
       id: download
       with:
         name: windows-installer
