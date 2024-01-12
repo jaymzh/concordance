@@ -1,5 +1,9 @@
 # Concordance
 
+[![Linux Build](https://github.com/jaymzh/concordance/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-linux.yml)
+[![MacOS Build](https://github.com/jaymzh/concordance/actions/workflows/ci-macos.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-macos.yml)
+[![Windows Build](https://github.com/jaymzh/concordance/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-windows.yml)
+
 This software allows you to program your Logitech Harmony remote using a
 configuration object retrieved from the [harmony
 website](https://members.harmonyremote.com/EasyZapper/New/ProcLogin/Start.asp?BrowserIsChecked=True)
