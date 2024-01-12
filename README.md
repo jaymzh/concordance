@@ -1,5 +1,9 @@
 # Concordance
 
+[![Linux Build](https://github.com/jaymzh/concordance/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-linux.yml)
+[![MacOS Build](https://github.com/jaymzh/concordance/actions/workflows/ci-macos.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-macos.yml)
+[![Windows Build](https://github.com/jaymzh/concordance/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-windows.yml)
+
 This software allows you to program your Logitech Harmony remote using a
 configuration object retrieved from the [harmony
 website](https://members.harmonyremote.com/EasyZapper/New/ProcLogin/Start.asp?BrowserIsChecked=True)
@@ -26,7 +30,7 @@ used successfully.  For other browsers, there may be similar add-ons available.
 Concordance is packaged in a wide variety of Linux distributions and other
 OS package repositories. The easiest path is to use such a package if it's available for your OS/distro.
 
-[![Packaging status](https://repology.org/badge/vertical-allrepos/concordance.svg)](https://repology.org/project/concordance/versions)
+[![Packaging status](https://repology.org/badge/vertical-allrepos/concordance.svg?exclude_unsupported=1)](https://repology.org/project/concordance/versions)
 
 If it's not packaged for your OS/distro, then refer to the appropriate `INSTALL` file in this repository for your OS.
 
