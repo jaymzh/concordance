@@ -26,7 +26,7 @@ used successfully.  For other browsers, there may be similar add-ons available.
 Concordance is packaged in a wide variety of Linux distributions and other
 OS package repositories. The easiest path is to use such a package if it's available for your OS/distro.
 
-[![Packaging status](https://repology.org/badge/vertical-allrepos/concordance.svg)](https://repology.org/project/concordance/versions)
+[![Packaging status](https://repology.org/badge/vertical-allrepos/concordance.svg?exclude_unsupported=1)](https://repology.org/project/concordance/versions)
 
 If it's not packaged for your OS/distro, then refer to the appropriate `INSTALL` file in this repository for your OS.
 
