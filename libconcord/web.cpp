@@ -117,6 +117,9 @@ static int Zap(string &server, string &path, string &cookie, string &post)
 #else
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, dummy_cb);
 #endif
+#if LIBCURL_VERSION_NUM >= 0x074700
+        curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+#endif
 
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
