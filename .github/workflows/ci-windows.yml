@@ -36,6 +36,14 @@ jobs:
       with:
         name: windows-installer
         path: concordance/win/concordance-installer.exe
+    - name: Build Python wheel
+      run: |
+        pip install build
+        MINGW_SYSROOT_BIN="/usr/i686-w64-mingw32/sys-root/mingw/bin" concordance/win/make_wheel.py
+    - uses: actions/upload-artifact@v3
+      with:
+        name: windows-wheel
+        path: concordance/win/*.whl
   test:
     needs: build
     runs-on: windows-latest
