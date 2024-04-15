@@ -52,9 +52,22 @@ jobs:
       id: download
       with:
         name: windows-installer
-    - name: Install and test
+    - name: Install and test installer
       run: |
         ${{steps.download.outputs.download-path}}\concordance-installer.exe /S
         Start-Sleep -Seconds 5
         cd "C:\Program Files (x86)\Concordance"
         .\concordance.exe --version
+    - uses: actions/download-artifact@v3
+      id: downloadwheel
+      with:
+        name: windows-wheel
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        architecture: 'x86'
+    - name: Install and test wheel
+      run: |
+        pip install (gci ${{steps.downloadwheel.outputs.download-path}}\*.whl).FullName
+        python3 -c 'import libconcord; print(libconcord)'
+ 
