@@ -18,10 +18,32 @@
 #
 
 from setuptools import setup
+import os
 
-setup(
-    name='libconcord',
-    version='1.5',
-    py_modules=['libconcord'],
-)
+common_name='libconcord'
+common_version='1.5'
+
+if os.environ.get("WIN32WHEEL", None) == "1": 
+    #Win32 Wheel Option Set
+    setup(
+        name=common_name,
+        version=common_version,
+        packages=['libconcord'],
+        zip_safe=False,
+        package_data={
+                '': ['*.dll', '*.exe']
+            },
+        options={
+                "bdist_wheel": {
+                    "plat_name": "win32",
+                },
+            },
+    )
+else:
+    #Default Option Set
+    setup(
+        name=common_name,
+        version=common_version,
+        py_modules=['libconcord'],
+    )
 

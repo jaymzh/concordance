@@ -22,13 +22,14 @@ with tempfile.TemporaryDirectory() as tempdir:
             shutil.copy2(dll, subdir)
     shutil.copy2(os.path.dirname(os.path.abspath(__file__)) + '/../.libs/concordance.exe', subdir)
     shutil.copy2(os.path.dirname(os.path.abspath(__file__)) + '/../../libconcord/bindings/python/libconcord.py', subdir + '/__init__.py')
-    shutil.copy2(os.path.dirname(os.path.abspath(__file__)) + '/setup.py.win32-wheel', tempdir + '/setup.py')
-    shutil.copy2(os.path.dirname(os.path.abspath(__file__)) + '/pyproject.toml.win32-wheel', tempdir + '/pyproject.toml')
+    shutil.copy2(os.path.dirname(os.path.abspath(__file__)) + '/../../libconcord/bindings/python/setup.py', tempdir)
+    shutil.copy2(os.path.dirname(os.path.abspath(__file__)) + '/../../libconcord/bindings/python/pyproject.toml', tempdir)
 
     curdir = os.getcwd()
     os.chdir(tempdir)
 
-    subprocess.run([ 'python3', '-m', 'build', ])
+    os.environ["WIN32WHEEL"]="1"
+    subprocess.run([ 'python3', '-m', 'build', '-w' ])
     for file in glob.glob('dist/*.whl'):
         print("Found wheel: " + file)
         shutil.copy2(file, os.path.dirname(os.path.abspath(__file__)))
