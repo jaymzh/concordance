@@ -54,7 +54,7 @@ jobs:
         name: windows-installer
     - name: Install and test installer
       run: |
-        ${{steps.download.outputs.download-path}}\concordance-installer.exe /S
+        Start-Process -FilePath ${{steps.download.outputs.download-path}}\concordance-installer.exe -ArgumentList "/S" -NoNewWindow -Wait
         Start-Sleep -Seconds 5
         cd "C:\Program Files (x86)\Concordance"
         .\concordance.exe --version
