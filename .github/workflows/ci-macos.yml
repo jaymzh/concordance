@@ -6,11 +6,17 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      CPATH: /opt/homebrew/include
+      LIBRARY_PATH: /opt/homebrew/lib
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
     - name: Install dependencies
       run: |
-        brew install autoconf automake hidapi libzip
+        brew install autoconf automake hidapi libtool libzip
         pip3 install build
     - name: Build libconcord
       run: |
