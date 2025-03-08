@@ -31,7 +31,7 @@ if os.environ.get("WIN32WHEEL", None) == "1":
         packages=['libconcord'],
         zip_safe=False,
         package_data={
-                '': ['*.dll', '*.exe']
+                '': ['*.dll']
             },
         options={
                 "bdist_wheel": {
