@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,6 +36,14 @@ jobs:
       with:
         name: windows-installer
         path: concordance/win/concordance-installer.exe
+    - name: Build Python wheel
+      run: |
+        pip install build
+        MINGW_SYSROOT_BIN="/usr/i686-w64-mingw32/sys-root/mingw/bin" concordance/win/make_wheel.py
+    - uses: actions/upload-artifact@v4
+      with:
+        name: windows-wheel
+        path: concordance/win/*.whl
   test:
     needs: build
     runs-on: windows-latest
@@ -43,9 +52,22 @@ jobs:
       id: download
       with:
         name: windows-installer
-    - name: Install and test
+    - name: Install and test installer
       run: |
-        ${{steps.download.outputs.download-path}}\concordance-installer.exe /S
+        Start-Process -FilePath ${{steps.download.outputs.download-path}}\concordance-installer.exe -ArgumentList "/S" -NoNewWindow -Wait
         Start-Sleep -Seconds 5
         cd "C:\Program Files (x86)\Concordance"
         .\concordance.exe --version
+    - uses: actions/download-artifact@v4
+      id: downloadwheel
+      with:
+        name: windows-wheel
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        architecture: 'x86'
+    - name: Install and test wheel
+      run: |
+        pip install (gci ${{steps.downloadwheel.outputs.download-path}}\*.whl).FullName
+        python3 -c 'import libconcord; print(libconcord)'
+ 
