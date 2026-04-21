@@ -4,6 +4,29 @@
 [![MacOS Build](https://github.com/jaymzh/concordance/actions/workflows/ci-macos.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-macos.yml)
 [![Windows Build](https://github.com/jaymzh/concordance/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/jaymzh/concordance/actions/workflows/ci-windows.yml)
 
+> [!IMPORTANT]
+>
+> As of May 2025, Logitech has shutdown the service and database (aka
+> members.harmonyremote.com) that generated the configuration "blobs" require
+> for cocordance to update the configuration of Harmony remote controls that
+> Concordance would otherwise support.
+>
+> Unfortunately, this significantly limits the usefulness of Concordance, as it
+> can no longer make changes to the remotes it would otherwise support.
+>
+> However, one thing it can still do is backup the configuration of any
+> existing remote control, and in the event of a failure, restore that config
+> to a similar remote. As such, we highly recommend you use generate a backup
+> via:
+>
+>     concordance -c <filename> -w
+>
+> And store it in a safe place.
+>
+> Thanks to all of our users and contributors over the years, it's been a
+> blast. We will continue to keep an eye on this repo and accept PRs that
+> support the remaining functionality.
+
 This software allows you to program your Logitech Harmony remote using a
 configuration object retrieved from the [harmony
 website](https://members.harmonyremote.com/EasyZapper/New/ProcLogin/Start.asp?BrowserIsChecked=True)
