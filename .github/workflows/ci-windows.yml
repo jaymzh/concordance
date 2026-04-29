@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,27 +11,73 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: Install dependencies
-      run: dnf install -y autoconf automake diffutils libtool mingw32-curl mingw32-gcc-c++ mingw32-hidapi mingw32-libstdc++ mingw32-libzip mingw32-nsis python3-pip python3-wheel
+      run: |
+        # We have to install mingw32-nsis even though we're building a 64-bit installer. We've configured nsis to produce a 64-bit exe
+        dnf install -y autoconf automake diffutils fedpkg libtool mingw64-gcc-c++ mingw64-hidapi mingw64-libstdc++ mingw64-libzip mingw32-nsis mingw64-nsis mingw64-libpsl mingw64-libidn2 python3-pip python3-wheel
+    - name: Prep libcurl
+      run: |
+        mkdir mingw-curl
+        cd mingw-curl
+        dnf download mingw-curl --source
+        rpm2cpio *.src.rpm | cpio -idmv
+        cp mingw-curl.spec mingw-curl.original_spec
+        sed -i -f ../concordance/win/mingw-curl-spec-changes.sed mingw-curl.spec
+        cd -
+    - uses: actions/upload-artifact@v7
+      with:
+        name: src-spec
+        path: |
+          mingw-curl/*.spec
+          mingw-curl/*.original_spec
+    - name: Restore libcurl from cache (if available)
+      id: restore-curl
+      uses: actions/cache/restore@v5
+      with:
+        path: mingw-curl/noarch/*.rpm
+        key: libcurl-mingw64-schannel-${{ hashFiles('mingw-curl/*.spec') }}
+    - name: Build libcurl if it wasn't in the cache
+      if: steps.restore-curl.outputs.cache-hit != 'true'
+      run: |
+        cd mingw-curl
+        dnf -y builddep mingw-curl.spec
+        fedpkg local
+        cd -
+# Explicit save/restore so that if libcurl compiles, it is cached and reused even if concordance/libconcord fail
+    - name: Save libcurl to cache
+      if: steps.restore-curl.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: mingw-curl/noarch/*.rpm
+        key: libcurl-mingw64-schannel-${{ hashFiles('mingw-curl/*.spec') }}
+    - uses: actions/upload-artifact@v7
+      with:
+        name: src-rpm
+        path: mingw-curl/*.rpm
+    - uses: actions/upload-artifact@v7
+      with:
+        name: bin-rpms
+        path: mingw-curl/noarch/*.rpm
     - name: Build libconcord
       run: |
+        rpm -i mingw-curl/noarch/*.rpm
         cd libconcord
         mkdir m4; autoreconf --install
-        mingw32-configure
-        mingw32-make
-        mingw32-make install
+        mingw64-configure
+        mingw64-make
+        mingw64-make install
         cd -
     - name: Build concordance
       run: |
         cd concordance
         mkdir m4; autoreconf --install
-        mingw32-configure LDFLAGS="$(rpm -E %{mingw32_ldflags}) -L$(rpm -E %{mingw32_bindir})"
-        mingw32-make
-        mingw32-make install
+        mingw64-configure LDFLAGS="$(rpm -E %{mingw64_ldflags}) -L$(rpm -E %{mingw64_bindir})"
+        mingw64-make
+        mingw64-make install
         cd -
     - name: Build installer
       run: |
         pip install mingw-ldd
-        MINGW_SYSROOT_BIN="/usr/i686-w64-mingw32/sys-root/mingw/bin" concordance/win/make_installer.py
+        MINGW_SYSROOT_BIN="/usr/x86_64-w64-mingw32/sys-root/mingw/bin" concordance/win/make_installer.py
     - uses: actions/upload-artifact@v7
       with:
         name: windows-installer
@@ -47,5 +94,5 @@ jobs:
       run: |
         ${{steps.download.outputs.download-path}}\concordance-installer.exe /S
         Start-Sleep -Seconds 5
-        cd "C:\Program Files (x86)\Concordance"
+        cd "C:\Program Files\Concordance"
         .\concordance.exe --version

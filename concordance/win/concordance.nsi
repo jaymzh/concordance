@@ -11,7 +11,7 @@
 #
 # which will generate the output file 'installer.exe' which is a Windows
 # installer containing your program.
-
+Target amd64-unicode
 Name "Concordance"
 OutFile "concordance-installer.exe"
 InstallDir "$ProgramFiles\Concordance"
