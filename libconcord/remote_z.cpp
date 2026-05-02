@@ -619,7 +619,7 @@ int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
     uint32_t pkt_len;
     unsigned int data_to_read = rgn_len;
     uint8_t *rd_ptr = rd;
-    uint8_t tmp_pkt[USBNET_MAX_PACKET_SIZE];
+    uint8_t tmp_pkt[USBNET_MAX_PACKET_SIZE+3]; /* add standard 3-byte header */
     cmd[0] = 0x01; // 1 parameter
     cmd[1] = 0x01; // 1st parameter, 1 byte (region id)
     cmd[2] = region;
