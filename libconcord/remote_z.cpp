@@ -26,6 +26,11 @@
 #include "remote.h"
 #include "usblan.h"
 #include "protocol_z.h"
+#include "remote_z_learn/single.h"
+#include "remote_z_learn/start.h"
+#include "remote_z_learn/stop.h"
+#include "remote_z_learn/stream.h"
+#include "remote_z_learn/data.h"
 
 /* Have we acked the syn packet yet? */
 static bool SYN_ACKED = false;
@@ -583,7 +588,177 @@ int CRemoteZ_USBNET::LearnIR(uint32_t *freq, uint32_t **ir_signal,
                              uint32_t *ir_signal_length, lc_callback cb,
                              void *cb_arg, uint32_t cb_stage)
 {
-    return LC_ERROR_UNSUPP;
+    int err = 0;
+
+    *freq = 0;
+    *ir_signal_length = 0;
+    *ir_signal = nullptr;
+
+    if ((err = SendLearnStart())) {
+        debug("Failed starting learn mode");
+        return err;
+    }
+
+    if ((err = ReadIrData(
+             freq, ir_signal, ir_signal_length, cb, cb_arg, cb_stage))) {
+        SendLearnStop();  //always close!
+        debug("Failed starting learn mode");
+        return err;
+    }
+
+    if ((err = SendLearnStop())) {
+        debug("Failed stopping learn mode");
+        return err;
+    }
+
+    return 0;
+}
+
+int CRemoteZ_USBNET::SendLearnStart()
+{
+    remote_z::Start start;
+    uint8_t rsp[USBNET_MAX_PACKET_SIZE + 3]; /* add standard 3-byte header */
+
+    debug("START_IR_LEARN");
+
+    int err = 0;
+    auto req = start.get();
+    if ((err = Write(
+             TYPE_REQUEST, COMMAND_LEARNIR_START, req.size(), req.data()))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+    unsigned int len;
+    uint8_t status;
+    if ((err = Read(status, len, rsp))) {
+        debug("Failed to read to remote");
+        return LC_ERROR_READ;
+    }
+
+    auto ret = start.check(std::vector<uint8_t>(rsp, rsp + len));
+    if (ret != remote_z::Start::Status::OK) {
+        debug("Incorrect response type from remote");
+        return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+    }
+    return 0;
+}
+
+int CRemoteZ_USBNET::SendLearnStop()
+{
+    remote_z::Stop stop;
+    uint8_t rsp[USBNET_MAX_PACKET_SIZE + 3]; /* add standard 3-byte header */
+
+    debug("STOP_IR_LEARN");
+
+    int err = 0;
+    auto req = stop.get();
+    if ((err = Write(
+             TYPE_REQUEST, COMMAND_LEARNIR_DONE, req.size(), req.data()))) {
+        debug("Failed to write to remote");
+        return LC_ERROR_WRITE;
+    }
+    unsigned int len;
+    uint8_t status;
+    if ((err = Read(status, len, rsp))) {
+        debug("Failed to read to remote");
+        return LC_ERROR_READ;
+    }
+
+    auto ret = stop.check(std::vector<uint8_t>(rsp, rsp + len));
+    if (ret != remote_z::Stop::Status::OK) {
+        debug("Incorrect response type from remote");
+        return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+    }
+    return 0;
+}
+
+int CRemoteZ_USBNET::ReadIrData(uint32_t *freq, uint32_t **ir_signal,
+                             uint32_t *ir_signal_length, lc_callback cb,
+                             void *cb_arg, uint32_t cb_stage)
+{
+    remote_z::Single single;
+    uint8_t rsp[USBNET_MAX_PACKET_SIZE + 3]; /* add standard 3-byte header */
+    int err = 0;
+    int cb_count = 0;
+    bool firstChunk = true;
+
+    debug("READING_IR_DATA");
+
+    /*
+     * Caller is responsible for deallocation of *ir_signal after use.
+     *
+     * Loop while we haven not:
+     * - any error
+     * - Timeout. Timeout is set by the remote itself answering "timeout", you can't change it.
+     * - EoF
+     */
+    while (err == 0) {
+        auto req = single.get();
+        if ((err = Write(TYPE_REQUEST,
+                         COMMAND_LEARNIR_SINGLE,
+                         req.size(),
+                         req.data()))) {
+            debug("Failed to write to remote");
+            err = LC_ERROR_WRITE;
+            break;
+        }
+        unsigned int len;
+        uint8_t status;
+        if ((err = Read(status, len, rsp))) {
+            debug("Failed to read to remote");
+            err = LC_ERROR_READ;
+            break;
+        }
+
+        debug("DATA %d, read %d bytest", cb_count, len)
+
+            auto ret = single.addChunk(std::vector<uint8_t>(rsp, rsp + len),
+                                       firstChunk);
+        if (ret == remote_z::Single::Status::DONE) break;
+        switch (ret) {
+            case remote_z::Single::Status::OK:
+                break;
+            case remote_z::Single::Status::ERR_TIMEOUT:
+                err = LC_ERROR_IR_TIMEOUT;
+                break;
+            default:
+                debug("Incorrect response type from remote (%d)", (int)ret);
+                err = LC_ERROR_INVALID_DATA_FROM_REMOTE;
+                break;
+        }
+
+        firstChunk = false;
+
+        if (cb) {
+            cb(cb_stage,
+               cb_count++,
+               single.getPayload().size(),
+               0,
+               LC_CB_COUNTER_TYPE_STEPS,
+               cb_arg,
+               NULL);
+        }
+    }
+
+    if (err != 0) return err;
+
+    debug("DECODING_IR_DATA");
+
+    //standardise
+    auto payload = single.getPayload();
+    if (payload.empty()) return 0;
+    auto timingStream = remote_z::TimingStream::fromMarkSegment(payload);
+
+    //convert to libconcord format
+    const auto &t = timingStream.convertMarkPause();
+    *freq = single.getClock();
+    *ir_signal_length = t.size();
+    *ir_signal = new uint32_t[t.size()];
+    for (uint32_t i = 0; i < t.size(); i++) (*ir_signal)[i] = t[i];
+
+    debug("READ_IR_DONE");
+
+    return 0;
 }
 
 int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,

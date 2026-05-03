@@ -42,6 +42,7 @@
 #define LC_ERROR_UNSUPP 15
 #define LC_ERROR_INVALID_CONFIG 16
 #define LC_ERROR_IR_OVERFLOW 17
+#define LC_ERROR_IR_TIMEOUT 18
 
 /*
  * Filetypes, used by identity_file()
