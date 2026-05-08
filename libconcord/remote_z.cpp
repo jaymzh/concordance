@@ -584,6 +584,18 @@ int CRemoteZ_USBNET::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
     return 0;
 }
 
+
+int CRemoteZ_USBNET::SetIrMode(int mode, uint32_t stream_timeout_ms)
+{
+  if (mode == LC_LEARN_SINGLE || mode == LC_LEARN_STREAM) {
+    ir_learn_mode = mode;
+  } else {
+    return -1;
+  }
+  ir_stream_timeout_ms = stream_timeout_ms;
+  return 0;
+}
+
 int CRemoteZ_USBNET::LearnIR(uint32_t *freq, uint32_t **ir_signal,
                              uint32_t *ir_signal_length, lc_callback cb,
                              void *cb_arg, uint32_t cb_stage)
@@ -599,8 +611,14 @@ int CRemoteZ_USBNET::LearnIR(uint32_t *freq, uint32_t **ir_signal,
         return err;
     }
 
-    if ((err = ReadIrData(
-             freq, ir_signal, ir_signal_length, cb, cb_arg, cb_stage))) {
+    if (ir_learn_mode == LC_LEARN_STREAM) {
+      err = ReadIrStream(freq, ir_signal, ir_signal_length, cb, cb_arg,
+          cb_stage);
+    } else {
+      err = ReadIrData(freq, ir_signal, ir_signal_length, cb, cb_arg,
+          cb_stage);
+    }
+    if (err) {
         SendLearnStop();  //always close!
         debug("Failed starting learn mode");
         return err;
@@ -712,8 +730,8 @@ int CRemoteZ_USBNET::ReadIrData(uint32_t *freq, uint32_t **ir_signal,
 
         debug("DATA %d, read %d bytest", cb_count, len)
 
-            auto ret = single.addChunk(std::vector<uint8_t>(rsp, rsp + len),
-                                       firstChunk);
+        auto ret = single.addChunk(std::vector<uint8_t>(rsp, rsp + len),
+                                   firstChunk);
         if (ret == remote_z::Single::Status::DONE) break;
         switch (ret) {
             case remote_z::Single::Status::OK:
@@ -746,7 +764,8 @@ int CRemoteZ_USBNET::ReadIrData(uint32_t *freq, uint32_t **ir_signal,
 
     //standardise
     auto payload = single.getPayload();
-    if (payload.empty()) return 0;
+    if (payload.empty())
+      return 0;
     auto timingStream = remote_z::TimingStream::fromMarkSegment(payload);
 
     //convert to libconcord format
@@ -754,7 +773,110 @@ int CRemoteZ_USBNET::ReadIrData(uint32_t *freq, uint32_t **ir_signal,
     *freq = single.getClock();
     *ir_signal_length = t.size();
     *ir_signal = new uint32_t[t.size()];
-    for (uint32_t i = 0; i < t.size(); i++) (*ir_signal)[i] = t[i];
+    for (uint32_t i = 0; i < t.size(); i++) {
+      (*ir_signal)[i] = t[i];
+    }
+
+    debug("READ_IR_DONE");
+
+    return 0;
+}
+
+int CRemoteZ_USBNET::ReadIrStream(uint32_t *freq, uint32_t **ir_signal,
+                             uint32_t *ir_signal_length, lc_callback cb,
+                             void *cb_arg, uint32_t cb_stage)
+{
+    remote_z::Stream stream;
+    uint8_t rsp[USBNET_MAX_PACKET_SIZE + 3]; /* add standard 3-byte header */
+    int err = 0;
+    int cb_count = 0;
+    bool firstChunk = true;
+    chrono::milliseconds timeout(ir_stream_timeout_ms);
+
+    debug("READING_IR_STREAM");
+
+    auto t_start = chrono::steady_clock::now();
+
+    /*
+     * Caller is responsible for deallocation of *ir_signal after use.
+     *
+     * Loop while we haven not:
+     * - any error
+     * - timeout (not an error, we record for this amount of time)
+     *   be aware that timeout is a minimum value. the remote will
+     *   always fill a data frame before returning.
+     */
+    while (err == 0) {
+        auto req = stream.get();
+        if ((err = Write(TYPE_REQUEST,
+                         COMMAND_LEARNIR_STREAM,
+                         req.size(),
+                         req.data()))) {
+            debug("Failed to write to remote");
+            err = LC_ERROR_WRITE;
+            break;
+        }
+        unsigned int len;
+        uint8_t status;
+        if ((err = Read(status, len, rsp))) {
+            debug("Failed to read to remote");
+            err = LC_ERROR_READ;
+            break;
+        }
+
+        debug("DATA %d, read %d bytest", cb_count, len)
+
+        auto ret = stream.addChunk(std::vector<uint8_t>(rsp, rsp + len),
+                                   firstChunk);
+        if (ret == remote_z::Single::Status::DONE) break;
+        switch (ret) {
+            case remote_z::Single::Status::OK:
+                break;
+            case remote_z::Single::Status::ERR_TIMEOUT:
+                err = LC_ERROR_IR_TIMEOUT;
+                break;
+            default:
+                debug("Incorrect response type from remote (%d)", (int)ret);
+                err = LC_ERROR_INVALID_DATA_FROM_REMOTE;
+                break;
+        }
+
+        firstChunk = false;
+
+        if (cb) {
+            cb(cb_stage,
+               cb_count++,
+               stream.getPayload().size(),
+               0,
+               LC_CB_COUNTER_TYPE_STEPS,
+               cb_arg,
+               NULL);
+        }
+
+        auto t_now = chrono::steady_clock::now();
+        if ((t_now - t_start) > timeout) {
+          break;
+        }
+    }
+
+    if (err != 0) return err;
+
+    debug("DECODING_IR_DATA");
+
+    //standardise
+    auto payload = stream.getPayload();
+    if (payload.empty())
+      return 0;
+    auto timingStream = remote_z::TimingStream::fromMarkSegment(payload);
+
+    //convert to libconcord format
+    const auto &t = timingStream.convertMarkPause();
+    *freq = stream.getClock();
+    *ir_signal_length = t.size();
+    *ir_signal = new uint32_t[t.size()];
+    for (uint32_t i = 0; i < t.size(); i++) {
+      (*ir_signal)[i] = t[i];
+    }
 
     debug("READ_IR_DONE");
 

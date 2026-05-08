@@ -369,6 +369,9 @@ public:
 class CRemoteZ_USBNET : public CRemoteZ_Base
 {
 protected:
+    int ir_learn_mode = LC_LEARN_SINGLE;
+    uint32_t ir_stream_timeout_ms = 1000;
+
     int TCPSendAndCheck(uint8_t cmd, uint32_t len=0, uint8_t *data=NULL);
     virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
         uint8_t *data=NULL);
@@ -385,6 +388,9 @@ protected:
     virtual int ReadIrData(uint32_t *freq, uint32_t **ir_signal,
         uint32_t *ir_signal_length, lc_callback cb, void *cb_arg,
         uint32_t cb_stage);
+    virtual int ReadIrStream(uint32_t *freq, uint32_t **ir_signal,
+            uint32_t *ir_signal_length, lc_callback cb, void *cb_arg,
+            uint32_t cb_stage);
 
 public:
     CRemoteZ_USBNET() {};
@@ -395,6 +401,7 @@ public:
     int GetTime(const TRemoteInfo &ri, THarmonyTime &ht);
     int SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
         lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);
+    int SetIrMode(int mode = LC_LEARN_SINGLE, uint32_t stream_timeout_ms = 1000);
     int LearnIR(uint32_t *freq, uint32_t **ir_signal,
         uint32_t *ir_signal_length, lc_callback cb=NULL,
         void *cb_arg=NULL, uint32_t cb_stage=0);
