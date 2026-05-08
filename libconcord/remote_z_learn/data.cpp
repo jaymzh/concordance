@@ -31,14 +31,14 @@ namespace remote_z
 
 void TimingStream::addMarkSegment(const vector<uint16_t> &raw)
 {
-    for (int i = 0; i < raw.size(); i += 2)
+    for (size_t i = 0; i < raw.size(); i += 2)
         if (i + 1 < raw.size())
             data.push_back(Block::fromMarkSegment(raw[i], raw[i + 1]));
 }
 
 void TimingStream::addMarkPause(const vector<uint16_t> &raw)
 {
-    for (int i = 0; i < raw.size(); i += 2)
+    for (size_t i = 0; i < raw.size(); i += 2)
         if (i + 1 < raw.size())
             data.push_back(Block::fromMarkPause(raw[i], raw[i + 1]));
 }
