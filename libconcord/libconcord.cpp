@@ -1702,6 +1702,22 @@ void delete_key_names(char **key_names, uint32_t key_names_length)
 }
 
 /*
+ * set USBNET learn mode / time
+ */
+int set_learning_mode(int mode, uint32_t timeout_ms)
+{
+  if (rmt == NULL){
+      return LC_ERROR_CONNECT;
+  }
+
+  auto *p = dynamic_cast<CRemoteZ_USBNET*>(rmt);
+  if (p == nullptr) {
+      return LC_ERROR;
+  }
+  return p->SetIrMode(mode, timeout_ms);
+}
+
+/*
  * Fill ir_data with IR code learned from other remote
  * via Harmony IR receiver.
  * Returns 0 for success, error code for failure.
