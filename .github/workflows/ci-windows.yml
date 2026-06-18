@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     container: fedora:latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Install dependencies
       run: |
         # We have to install mingw32-nsis even though we're building a 64-bit installer. We've configured nsis to produce a 64-bit exe
