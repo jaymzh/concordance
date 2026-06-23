@@ -31,7 +31,7 @@ jobs:
           mingw-curl/*.original_spec
     - name: Restore libcurl from cache (if available)
       id: restore-curl
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         path: mingw-curl/noarch/*.rpm
         key: libcurl-mingw64-schannel-${{ hashFiles('mingw-curl/*.spec') }}
@@ -45,7 +45,7 @@ jobs:
 # Explicit save/restore so that if libcurl compiles, it is cached and reused even if concordance/libconcord fail
     - name: Save libcurl to cache
       if: steps.restore-curl.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: mingw-curl/noarch/*.rpm
         key: libcurl-mingw64-schannel-${{ hashFiles('mingw-curl/*.spec') }}
