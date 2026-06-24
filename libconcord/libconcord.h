@@ -42,6 +42,7 @@
 #define LC_ERROR_UNSUPP 15
 #define LC_ERROR_INVALID_CONFIG 16
 #define LC_ERROR_IR_OVERFLOW 17
+#define LC_ERROR_IR_TIMEOUT 18
 
 /*
  * Filetypes, used by identity_file()
@@ -50,6 +51,11 @@
 #define LC_FILE_TYPE_CONFIGURATION 2
 #define LC_FILE_TYPE_FIRMWARE 3
 #define LC_FILE_TYPE_LEARN_IR 4
+/*
+ * IR Learn mode
+ */
+#define LC_LEARN_SINGLE 0
+#define LC_LEARN_STREAM 1
 /*
  * Callback counter types
  */
@@ -454,6 +460,17 @@ int write_firmware_to_file(uint8_t *in, uint32_t size, char *file_name,
 int get_key_names(char ***key_names, uint32_t *key_names_length);
 
 void delete_key_names(char **key_names, uint32_t key_names_length);
+
+/*
+ * H900 only
+ * Set mode that will be used for learing. There are two available
+ * - Single: Remote waits a fixed time for a command, and if received
+ *   returns the data of one single IR frame
+ * - Stream: Remote records IR data for the time given in _timeout_ms_
+ *   Any data within this window is returned, including silence. Data
+ *   before the first reception is dropped.
+ */
+int set_learning_mode(int mode, uint32_t timeout_ms);
 
 /*
  * Fill ir_data with IR code learned from other remote
