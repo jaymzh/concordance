@@ -1137,8 +1137,8 @@ int write_config_to_file(uint8_t *in, uint32_t size, char *file_name,
     // If this is an MH remote, need to find the real end of the binary
     if (is_mh_remote()) {
         size = _mh_get_config_len(in, size);
-        ri.config_bytes_used = size;
     }
+    ri.config_bytes_used = size;
 
     // If this is an MH remote, need to write out zip file with XML/binary
     if (!binary && is_mh_remote()) {
