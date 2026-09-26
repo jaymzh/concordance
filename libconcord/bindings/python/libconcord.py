@@ -37,7 +37,8 @@ ABI_VERSION = 6
 # Load the DLL
 
 if platform.system() == 'Windows':
-    _dll = cdll.LoadLibrary('libconcord.dll')
+    with os.add_dll_directory(os.path.dirname(__file__)):
+        _dll = cdll.LoadLibrary('libconcord-%i.dll' % ABI_VERSION)
 elif platform.system() == 'Darwin':
     _dll = cdll.LoadLibrary('libconcord.%i.dylib' % ABI_VERSION)
 else:
