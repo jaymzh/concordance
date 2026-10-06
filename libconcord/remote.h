@@ -37,6 +37,12 @@
 #define USBNET_MAX_PACKET_SIZE 1033
 const uint8_t MH_EOF_BYTES[] = { 0x50, 0x54, 0x59, 0x59 };
 
+/* Harmony 800 (arch 18): a GSGD config, based at 0x050000, closed by OGSA */
+#define MH_ARCH_800 18
+#define MH_800_CONFIG_BASE 0x050000
+const uint8_t MH_800_MAGIC[] = { 'G', 'S', 'G', 'D' };
+const uint8_t MH_800_EOF_BYTES[] = { 'O', 'G', 'S', 'A' };
+
 /*
  * limits for IR signal learning, stop when any is reached:
  * timeouts in milliseconds, length in number of mark/space durations

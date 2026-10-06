@@ -124,7 +124,7 @@ static const TModel ModelList[]={
 	{ MFG_HAR,	"Harmony Link (EMEA)",		NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
-	{ MFG_UNK,	"Unknown",			NULL },
+	{ MFG_HAR,	"Harmony 800",			NULL },	/* prototype */
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
 	{ MFG_UNK,	"Unknown",			NULL },
@@ -221,6 +221,8 @@ static const TFlash FlashList[]={
 	{ 0xFF,		0x11,	256,	1,	sectors3,	"25F020" },
 	{ 0xFF,		0x12,	512,	1,	sectors4,	"25F040" } ,
 	{ 0x1F,		0xC8,	4096,	8,	sectors6,	"Atmel AT49BV322A" } ,
+	/* Harmony 800: MH remotes report no flash, this is the board's chip */
+	{ 0x1C,		0x16,	4096,	1,	sectors5,	"EON EN25B32" } ,
 	{ 0,		0,		0,		0,	NULL,		"" }
 };
 
@@ -548,6 +550,24 @@ static const TArchInfo ArchList[]={
 		0,				// ram_size
 		0,				// eeprom_size
 		"",				// usb
+	},
+	/* arch 18: 800 (prototype) */
+	{
+		0,				// serial_location
+		0,				// serial_address
+		0,				// flash_base
+		0,				// firmware_base
+		0,				// config_base
+		0,				// firmware_update_base
+		0,				// firmware_4847_offset
+		0x44475347,			// cookie ("GSGD")
+		0,				// cookie_size
+		0,				// end_vector
+		"STM32F102",			// micro
+		0,				// flash_size
+		0,				// ram_size
+		0,				// eeprom_size
+		"Internal",			// usb
 	}
 };
 

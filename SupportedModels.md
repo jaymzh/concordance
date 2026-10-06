@@ -25,3 +25,4 @@ Don't see your model? We may have missed one. Just give it a shot, and if you ru
 | 15 | 1000<br/>1000i<br/>1100<br/>Xbox | Working | Not working | Not working | Not yet supported on Mac |
 | 16 | 200<br/>300 | Working | Working | Not working | |
 | 17 | Link | Working | Working | Not working | |
+| 18 | 800 (prototype) | Believed working (read) | Not working | Not working | MH reads verified on one unit with a probe; writing untested |
