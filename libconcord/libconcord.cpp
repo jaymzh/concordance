@@ -229,6 +229,7 @@ int is_mh_pid(unsigned int pid)
         case 0xC124: /* Harmony 300 */
         case 0xC125: /* Harmony 200 */
         case 0xC126: /* Harmony Link */
+        case 0xC127: /* Harmony 800 (prototype, "Ravenswood") */
         case 0xC129: /* Harmony Hub */
         case 0xC12B: /* Harmony Touch/Ultimate */
             return 1;
@@ -1056,6 +1057,22 @@ int _write_config_to_remote(lc_callback cb, void *cb_arg, uint32_t cb_stage)
  */
 uint32_t _mh_get_config_len(uint8_t *in, uint32_t size)
 {
+    /*
+     * The Harmony 800 (arch 18) returns its whole config partition and its
+     * config does not end in PTYY: it is a GSGD image, whose header holds an
+     * absolute end vector (based at 0x050000) pointing at a closing "OGSA".
+     */
+    if (ri.architecture == MH_ARCH_800 && size >= 8
+        && !memcmp(in, MH_800_MAGIC, 4)) {
+        uint32_t end = (in[4] | (in[5] << 8) | (in[6] << 16) | (in[7] << 24))
+            - MH_800_CONFIG_BASE;
+        if (end >= 8 && end <= size - 4
+            && !memcmp(&in[end], MH_800_EOF_BYTES, 4)) {
+            return end + 4;
+        }
+        debug("GSGD end vector does not point at OGSA");
+        return 0;
+    }
     for (uint32_t i = 0; (i + 3) < size; i++) {
         if (!memcmp(&in[i], MH_EOF_BYTES, 4)) {
             return i + 4;

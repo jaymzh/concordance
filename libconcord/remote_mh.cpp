@@ -523,6 +523,11 @@ int CRemoteMH::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
     ri.flash_id = 0x12; // TODO: FIXME
     ri.flash_mfg = 0xFF; // TODO: FIXME
     ri.architecture = strtol(find_value(identity, "arch").c_str(), NULL, 16);
+    if (ri.architecture == MH_ARCH_800) {
+        /* Its config partition is 3.6 MB, larger than the 25F040 above */
+        ri.flash_id = 0x16;
+        ri.flash_mfg = 0x1C;
+    }
     ri.fw_type = strtol(find_value(identity, "fw_type").c_str(), NULL, 16);
     ri.skin = strtol(find_value(identity, "skin").c_str(), NULL, 16);
     ri.protocol = 9; // TODO: FIXME
