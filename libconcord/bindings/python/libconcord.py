@@ -94,6 +94,8 @@ LC_CB_STAGE_RESET = 18
 LC_CB_STAGE_SET_TIME = 19
 LC_CB_STAGE_HTTP = 20
 LC_CB_STAGE_LEARN = 21
+LC_CB_STAGE_READ_FLASH = 22
+LC_CB_STAGE_VERIFY_FIRMWARE = 23
 
 # Public libconcord API: Exception types
 
@@ -825,6 +827,30 @@ write_firmware_to_file = _create_func(
     _in('size', c_uint),
     _in('file_name', c_char_p),
     _in('binary', c_int)
+)
+
+# int read_flash_range_from_remote(uint32_t addr, uint32_t size, uint8_t **out,
+#     lc_callback cb, void *cb_arg);
+read_flash_range_from_remote = _create_func(
+    'read_flash_range_from_remote',
+    _ret_lc_concord(),
+    _in('addr', c_uint),
+    _in('size', c_uint),
+    _out('out', POINTER(c_ubyte)),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
+)
+
+# int write_arch14_firmware(const uint8_t *img, uint32_t size, int dry_run,
+#     lc_callback cb, void *cb_arg);
+write_arch14_firmware = _create_func(
+    'write_arch14_firmware',
+    _ret_lc_concord(),
+    _in('img', POINTER(c_ubyte)),
+    _in('size', c_uint),
+    _in('dry_run', c_int),
+    _in('cb', callback_type),
+    _in('cb_arg', py_object)
 )
 
 # int get_key_names(char ***key_names, uint32_t *key_names_length);
