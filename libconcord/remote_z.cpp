@@ -107,7 +107,7 @@ int CRemoteZ_HID::UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
     return HID_WriteReport(pkt);
 }
 
-int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
+int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size)
 {
     uint8_t pkt[HID_UDP_MAX_PACKET_SIZE];
     int err;
@@ -135,6 +135,11 @@ int CRemoteZ_HID::UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
      * length of the packet minus one byte.  We want to copy everything but the
      * first byte, so we copy pkt[0] bytes.
      */
+    if ((size_t)pkt[0] > data_size) {
+        debug("UDP response (%u bytes) exceeds caller buffer (%zu bytes)",
+              pkt[0], data_size);
+        return LC_ERROR;
+    }
     memcpy(data, pkt + 1, pkt[0]);
     return 0;
 }
@@ -187,7 +192,7 @@ int CRemoteZ_HID::TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len,
 }
 
 
-int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
+int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size)
 {
     uint8_t pkt[HID_UDP_MAX_PACKET_SIZE];
     int err;
@@ -224,7 +229,13 @@ int CRemoteZ_HID::TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data)
     //if(!len) return 0;
     //memcpy(data, pkt + 6, len);
     // include headers, minus the size
-    memcpy(data, pkt + 1, len + HID_TCP_HDR_SIZE + HID_UDP_HDR_SIZE - 1);
+    uint32_t copy_len = len + HID_TCP_HDR_SIZE + HID_UDP_HDR_SIZE - 1;
+    if (copy_len > data_size) {
+        debug("TCP response (%u bytes) exceeds caller buffer (%zu bytes)",
+              copy_len, data_size);
+        return LC_ERROR;
+    }
+    memcpy(data, pkt + 1, copy_len);
     return 0;
 }
 
@@ -233,9 +244,9 @@ int CRemoteZ_HID::Write(uint8_t typ, uint8_t cmd, uint32_t len, uint8_t *data)
     return UDP_Write(typ, cmd, len, data);
 }
 
-int CRemoteZ_HID::Read(uint8_t &status, uint32_t &len, uint8_t *data)
+int CRemoteZ_HID::Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size)
 {
-    return UDP_Read(status, len, data);
+    return UDP_Read(status, len, data, data_size);
 }
 
 int CRemoteZ_HID::ParseParams(uint32_t len, uint8_t *data, TParamList &pl)
@@ -305,7 +316,7 @@ int CRemoteZ_USBNET::Write(uint8_t typ, uint8_t cmd, uint32_t len,
     return UsbLan_Write(len, pkt);
 }
 
-int CRemoteZ_USBNET::Read(uint8_t &status, uint32_t &len, uint8_t *data)
+int CRemoteZ_USBNET::Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size)
 {
     uint8_t buf[1600];
     len = sizeof(buf);
@@ -313,6 +324,11 @@ int CRemoteZ_USBNET::Read(uint8_t &status, uint32_t &len, uint8_t *data)
     if ((err = UsbLan_Read(len, buf)))
         return err;
 
+    if (len > data_size) {
+        debug("Response (%u bytes) exceeds caller buffer (%zu bytes)",
+              len, data_size);
+        return LC_ERROR_INVALID_DATA_FROM_REMOTE;
+    }
     memcpy(data, buf, len);
 
     return err;
@@ -365,7 +381,7 @@ int CRemoteZ_USBNET::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data)
         return LC_ERROR_WRITE;
     }
 
-    if ((err = Read(status, rlen, rsp))) {
+    if ((err = Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -520,7 +536,7 @@ int CRemoteZ_USBNET::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
     uint8_t time[60];
     unsigned int len;
     uint8_t status;
-    if ((err = Read(status, len, time))) {
+    if ((err = Read(status, len, time, sizeof(time)))) {
         debug("Failed to read to remote");
         return LC_ERROR_READ;
     }
@@ -648,7 +664,7 @@ int CRemoteZ_USBNET::SendLearnStart()
     }
     unsigned int len;
     uint8_t status;
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read to remote");
         return LC_ERROR_READ;
     }
@@ -677,7 +693,7 @@ int CRemoteZ_USBNET::SendLearnStop()
     }
     unsigned int len;
     uint8_t status;
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read to remote");
         return LC_ERROR_READ;
     }
@@ -722,7 +738,7 @@ int CRemoteZ_USBNET::ReadIrData(uint32_t *freq, uint32_t **ir_signal,
         }
         unsigned int len;
         uint8_t status;
-        if ((err = Read(status, len, rsp))) {
+        if ((err = Read(status, len, rsp, sizeof(rsp)))) {
             debug("Failed to read to remote");
             err = LC_ERROR_READ;
             break;
@@ -818,7 +834,7 @@ int CRemoteZ_USBNET::ReadIrStream(uint32_t *freq, uint32_t **ir_signal,
         }
         unsigned int len;
         uint8_t status;
-        if ((err = Read(status, len, rsp))) {
+        if ((err = Read(status, len, rsp, sizeof(rsp)))) {
             debug("Failed to read to remote");
             err = LC_ERROR_READ;
             break;
@@ -900,7 +916,7 @@ int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
         debug("Failed to write to remote");
         return LC_ERROR_WRITE;
     }
-    if ((err = Read(status, rlen, rsp))) {
+    if ((err = Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read to remote");
         return LC_ERROR_READ;
     }
@@ -926,7 +942,7 @@ int CRemoteZ_USBNET::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
             debug("Failed to write to remote");
             return LC_ERROR_WRITE;
         }
-        if ((err = Read(status, rlen, tmp_pkt))) {
+        if ((err = Read(status, rlen, tmp_pkt, sizeof(tmp_pkt)))) {
             debug("Failed to read to remote");
             return LC_ERROR_READ;
         }
@@ -983,7 +999,7 @@ int CRemoteZ_Base::Reset(uint8_t kind)
     uint8_t rsp[60];
     unsigned int len;
     uint8_t status;
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read to remote");
         return LC_ERROR_READ;
     }
@@ -1014,7 +1030,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
     uint8_t rsp[60];
     unsigned int len;
     uint8_t status;
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1058,7 +1074,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         debug("Failed to write to remote");
         return LC_ERROR_WRITE;
     }
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1096,7 +1112,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         return LC_ERROR;
     }
     uint8_t rgn[64];
-    if ((err = Read(status, len, rgn))) {
+    if ((err = Read(status, len, rgn, sizeof(rgn)))) {
         debug("Failed to read from remote");
         return LC_ERROR;
     }
@@ -1115,7 +1131,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
             return LC_ERROR;
         }
         uint8_t rgz[64];
-        if ((err = Read(status, len, rgz))) {
+        if ((err = Read(status, len, rgz, sizeof(rgz)))) {
             debug("Failed to read from remote");
             return LC_ERROR;
         }
@@ -1135,7 +1151,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
                 return LC_ERROR;
             }
             uint8_t rgv[64];
-            if ((err = Read(status, len, rgv))) {
+            if ((err = Read(status, len, rgv, sizeof(rgv)))) {
                 debug("Failed to read from remote");
                 return LC_ERROR;
             }
@@ -1153,7 +1169,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         debug("Failed to write to remote");
         return LC_ERROR;
     }
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR;
     }
@@ -1164,7 +1180,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         debug("Failed to write to remote");
         return LC_ERROR;
     }
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR;
     }
@@ -1176,7 +1192,7 @@ int CRemoteZ_Base::GetIdentity(TRemoteInfo &ri, THIDINFO &hid, lc_callback cb,
         debug("Failed to write to remote");
         return LC_ERROR;
     }
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR;
     }
@@ -1248,7 +1264,7 @@ int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
     }
 
     /* Make sure the remote is ready to start the TCP transfer */
-    if ((err = Read(status, rlen, rsp))) {
+    if ((err = Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1260,7 +1276,7 @@ int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
 
     /* Look for a SYN packet */
     debug("Looking for syn");
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read syn from remote");
         return LC_ERROR_READ;
     }
@@ -1278,7 +1294,7 @@ int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
         debug("Failed to write to remote");
         return LC_ERROR_WRITE;
     }
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read to remote");
         return LC_ERROR_READ;
     }
@@ -1302,7 +1318,7 @@ int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
             debug("Failed to write to remote");
             return LC_ERROR_WRITE;
         }
-        if ((err = TCP_Read(status, rlen, rsp))) {
+        if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
             debug("Failed to read to remote");
             return LC_ERROR_READ;
         }
@@ -1346,7 +1362,7 @@ int CRemoteZ_HID::ReadRegion(uint8_t region, uint32_t &rgn_len, uint8_t *rd,
         return LC_ERROR_WRITE;
     }
 
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1437,7 +1453,7 @@ int CRemoteZ_Base::GetTime(const TRemoteInfo &ri, THarmonyTime &ht)
     uint8_t time[60];
     unsigned int len;
     uint8_t status;
-    if ((err = Read(status, len, time))) {
+    if ((err = Read(status, len, time, sizeof(time)))) {
         debug("Failed to read to remote");
         return LC_ERROR_READ;
     }
@@ -1496,7 +1512,7 @@ int CRemoteZ_Base::SetTime(const TRemoteInfo &ri, const THarmonyTime &ht,
     uint8_t rsp[60];
     unsigned int len;
     uint8_t status;
-    if ((err = Read(status, len, rsp))) {
+    if ((err = Read(status, len, rsp, sizeof(rsp)))) {
         debug("failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1521,7 +1537,7 @@ int CRemoteZ_HID::TCPSendAndCheck(uint8_t cmd, uint32_t len, uint8_t *data,
         return LC_ERROR_WRITE;
     }
 
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1565,7 +1581,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
     uint8_t status;
 
     /* Make sure the remote is ready to start the TCP transfer */
-    if ((err = Read(status, rlen, rsp))) {
+    if ((err = Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1579,7 +1595,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
 
     /* Look for a SYN packet */
     debug("Looking for syn");
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read syn from remote");
         return LC_ERROR_READ;
     }
@@ -1599,7 +1615,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
         return LC_ERROR_WRITE;
     }
 
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1673,7 +1689,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
         return LC_ERROR_WRITE;
     }
 
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1685,7 +1701,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
         return LC_ERROR_WRITE;
     }
 
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1726,7 +1742,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
     }
 
     /* Read their empty ack */
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1736,7 +1752,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
     }
 
     /* And then we should have the response we want. */
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
@@ -1757,7 +1773,7 @@ int CRemoteZ_HID::UpdateConfig(const uint32_t len, const uint8_t *wr,
         return LC_ERROR_WRITE;
     }
 
-    if ((err = TCP_Read(status, rlen, rsp))) {
+    if ((err = TCP_Read(status, rlen, rsp, sizeof(rsp)))) {
         debug("Failed to read from remote");
         return LC_ERROR_READ;
     }
