@@ -59,7 +59,8 @@ jobs:
         path: mingw-curl/noarch/*.rpm
     - name: Build libconcord
       run: |
-        rpm -i mingw-curl/noarch/*.rpm
+        # the RPMs we created above aren't signed
+        rpm -i --nosignature mingw-curl/noarch/*.rpm
         cd libconcord
         mkdir m4; autoreconf --install
         mingw64-configure
