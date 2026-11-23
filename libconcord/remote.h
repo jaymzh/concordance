@@ -286,7 +286,7 @@ protected:
     };
     virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
         uint8_t *data=NULL)=0;
-    virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data)=0;
+    virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size)=0;
     virtual int ParseParams(uint32_t len, uint8_t *data,
         TParamList &pl)=0;
     virtual uint16_t GetWord(uint8_t *x)=0;
@@ -342,17 +342,17 @@ private:
     uint8_t m_rx_seq;
     int UDP_Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
         uint8_t *data=NULL);
-    int UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data);
+    int UDP_Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size);
     int TCP_Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
         uint8_t *data=NULL);
-    int TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data);
+    int TCP_Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size);
 
 protected:
     int TCPSendAndCheck(uint8_t cmd, uint32_t len=0, uint8_t *data=NULL,
         bool ackonly=false);
     virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
         uint8_t *data=NULL);
-    virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data);
+    virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size);
     virtual int ParseParams(uint32_t len, uint8_t *data,
         TParamList &pl);
     virtual uint16_t GetWord(uint8_t *x) { return x[1]<<8 | x[0]; };
@@ -381,7 +381,7 @@ protected:
     int TCPSendAndCheck(uint8_t cmd, uint32_t len=0, uint8_t *data=NULL);
     virtual int Write(uint8_t typ, uint8_t cmd, uint32_t len=0,
         uint8_t *data=NULL);
-    virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data);
+    virtual int Read(uint8_t &status, uint32_t &len, uint8_t *data, size_t data_size);
     virtual int ParseParams(uint32_t len, uint8_t *data,
         TParamList &pl);
     virtual uint16_t GetWord(uint8_t *x) { return x[0]<<8 | x[1]; };
