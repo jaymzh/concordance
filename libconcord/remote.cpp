@@ -547,6 +547,33 @@ int CRemote::ReadRam(uint32_t addr, const uint32_t len, uint8_t *rd)
     return ReadMiscByte(addr, len, COMMAND_MISC_RAM, rd);
 }
 
+/*
+ * Erase the single sector starting at sector_begin. Unlike EraseFlash this
+ * can erase the sector at flash_base itself (EraseFlash starts at the first
+ * boundary in the sector table, so it never erases the first sector).
+ */
+int CRemote::EraseSector(uint32_t sector_begin)
+{
+    uint8_t erase_cmd[64] = {0};
+    erase_cmd[0] = COMMAND_ERASE_FLASH;
+    erase_cmd[1] = (sector_begin >> 16) & 0xFF;
+    erase_cmd[2] = (sector_begin >> 8) & 0xFF;
+    erase_cmd[3] = sector_begin & 0xFF;
+
+    int err;
+    if ((err = HID_WriteReport(erase_cmd)))
+        return err;
+
+    uint8_t rsp[68];
+    return HID_ReadReport(rsp, 5000);
+}
+
+int CRemote::RestartConfig(uint8_t entry_point, uint8_t configuration)
+{
+    return WriteMiscByte(entry_point, 1, COMMAND_MISC_RESTART_CONFIG,
+                         &configuration);
+}
+
 int CRemote::WriteFlash(uint32_t addr, const uint32_t len, const uint8_t *wr,
     unsigned int protocol, lc_callback cb, void *cb_arg, uint32_t cb_stage)
 {

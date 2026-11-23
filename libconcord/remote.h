@@ -230,6 +230,8 @@ private:
 public:
     CRemote() {};
     virtual ~CRemote() {};
+    int EraseSector(uint32_t sector_begin);
+    int RestartConfig(uint8_t entry_point, uint8_t configuration);
     int Reset(uint8_t kind);
     int GetIdentity(struct TRemoteInfo &ri, struct THIDINFO &hid,
         lc_callback cb=NULL, void *cb_arg=NULL, uint32_t cb_stage=0);

@@ -83,6 +83,8 @@
 #define LC_CB_STAGE_SET_TIME 19
 #define LC_CB_STAGE_HTTP 20
 #define LC_CB_STAGE_LEARN 21
+#define LC_CB_STAGE_READ_FLASH 22
+#define LC_CB_STAGE_VERIFY_FIRMWARE 23
 
 
 /*
@@ -360,6 +362,30 @@ int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
 /*
  * NOTE: You CAN NOT WRITE SAFEMODE FIRMWARE OVER USB!
  */
+
+/*
+ * Read an arbitrary range of flash from the remote, read-only. This is
+ * for backing up regions (e.g. the full arch 14 firmware) that the other
+ * dump functions don't cover. Use delete_blob to reclaim the memory, and
+ * write_safemode_to_file to save it as pure binary.
+ */
+int read_flash_range_from_remote(uint32_t addr, uint32_t size, uint8_t **out,
+                                 lc_callback cb, void *cb_arg);
+
+/*
+ * Arch 14 (Harmony 650/700) only, EXPERIMENTAL: write a raw application
+ * firmware image (as decoded from Region_2.EZUpgrade) to external flash at
+ * 0x000000 using the same sequence as Logitech's updater, including the
+ * RAM[0] handshake, and read it back to verify. Does not reset the remote;
+ * the bootloader installs the image on the next reset.
+ *
+ * The image is checked first (header size field, 0x4847 marker, entry
+ * goto, header checksum) and the remote must be in application or safe
+ * mode; any failure returns before anything is written. With dry_run set,
+ * only the checks are done.
+ */
+int write_arch14_firmware(const uint8_t *img, uint32_t size, int dry_run,
+                          lc_callback cb, void *cb_arg);
 
 /*
  * Write aforementioned safemode data to a file. Note that this is always

@@ -421,6 +421,14 @@ const char *lc_cb_stage_str(int stage)
             return "Reading safemode fw";
             break;
 
+        case LC_CB_STAGE_READ_FLASH:
+            return "Reading flash";
+            break;
+
+        case LC_CB_STAGE_VERIFY_FIRMWARE:
+            return "Verifying fw";
+            break;
+
         case LC_CB_STAGE_RESET:
             return "Rebooting remote";
             break;
@@ -1382,6 +1390,161 @@ int read_safemode_from_remote(uint8_t **out, uint32_t *size, lc_callback cb,
     *size = FIRMWARE_MAX_SIZE;
     return _read_fw_from_remote(*out, *size, ri.arch->flash_base, cb,
         cb_arg, LC_CB_STAGE_READ_SAFEMODE);
+}
+
+int read_flash_range_from_remote(uint32_t addr, uint32_t size, uint8_t **out,
+                                 lc_callback cb, void *cb_arg)
+{
+    /* Flash commands carry a 24-bit address */
+    if (size == 0 || addr > 0xFFFFFF || size > 0x1000000 - addr) {
+        return LC_ERROR;
+    }
+
+    /*
+     * ReadFlash copies whole response packets, so it can run a few bytes
+     * past the requested length; pad the buffer for that.
+     */
+    *out = new uint8_t[size + 64];
+
+    if (!cb_arg) {
+        cb_arg = (void *)true;
+    }
+
+    if (rmt->ReadFlash(addr, size, *out, ri.protocol, false, cb, cb_arg,
+                       LC_CB_STAGE_READ_FLASH)) {
+        return LC_ERROR_READ;
+    }
+
+    return 0;
+}
+
+/* Arch 14 external flash layout: firmware image, then Region 3 at 0x20000 */
+#define ARCH14_FW_ADDR 0x000000
+/* The bootloader copies at most 0x15C00 bytes (internal 0x9000-0x1EC00) */
+#define ARCH14_FW_MAX_SIZE 0x015C00
+#define ARCH14_SECTOR_SIZE 0x010000
+#define ARCH14_FW_HEADER_SIZE 8
+
+/* Write a byte to remote RAM and read it back */
+static int _write_verify_ram(CRemote *r, uint8_t addr, uint8_t value)
+{
+    uint8_t v = value;
+    if (r->WriteRam(addr, 1, &v))
+        return LC_ERROR_WRITE;
+    if (r->ReadRam(addr, 1, &v))
+        return LC_ERROR_READ;
+    return v == value ? 0 : LC_ERROR_VERIFY;
+}
+
+/*
+ * Mirrors Logitech's updater (UpdateHidService.writeApplicationFirmware,
+ * region 2, architecture 14):
+ *   restart config (entry point 9) unless already in safe mode
+ *   RAM[0] = 0
+ *   invalidate flash, erase, write image at 0x000000, read back to verify
+ *   RAM[0] = 2   (tells the bootloader a new image is waiting)
+ * The caller then resets the remote so the bootloader copies the image
+ * into internal flash at 0x9000.
+ */
+int write_arch14_firmware(const uint8_t *img, uint32_t size, int dry_run,
+                          lc_callback cb, void *cb_arg)
+{
+    if (ri.architecture != 14 || !ri.flash
+        || ri.flash->sectors[0] != ARCH14_SECTOR_SIZE) {
+        debug("Not an arch 14 remote with 64KiB sectors");
+        return LC_ERROR_UNSUPP;
+    }
+    /* Logitech's updater allows application (0) and safe (4) mode only */
+    if (ri.fw_type != 0 && ri.fw_type != 4) {
+        debug("Remote is in firmware type %d", ri.fw_type);
+        return LC_ERROR_UNSUPP;
+    }
+    if (size <= 10 || size > ARCH14_FW_MAX_SIZE || (size & 1)) {
+        debug("Image size 0x%X out of range", size);
+        return LC_ERROR;
+    }
+    /*
+     * Header: [0-1] checksum, [2-3] FFFF, [4-6] payload size (LE, image
+     * size minus the 8-byte header), [7] version, [8-9] "HG" marker,
+     * then the entry goto (0xEF opcode) at 0x0A.
+     */
+    const uint32_t payload = img[4] | (img[5] << 8) | (img[6] << 16);
+    if (payload + ARCH14_FW_HEADER_SIZE != size) {
+        debug("Header size field 0x%X doesn't match image size 0x%X",
+              payload + ARCH14_FW_HEADER_SIZE, size);
+        return LC_ERROR;
+    }
+    if (img[2] != 0xFF || img[3] != 0xFF || img[8] != 0x48 || img[9] != 0x47
+        || img[0x0B] != 0xEF) {
+        debug("Image header doesn't look like an arch 14 firmware");
+        return LC_ERROR;
+    }
+    /* XOR of the 16-bit words from offset 4 to the end, seeded 0x4321 */
+    uint8_t suma = 0x21, sumb = 0x43;
+    for (uint32_t i = 4; i < size; i += 2) {
+        suma ^= img[i];
+        sumb ^= img[i + 1];
+    }
+    if (suma != img[0] || sumb != img[1]) {
+        debug("Header checksum %02X%02X, computed %02X%02X",
+              img[0], img[1], suma, sumb);
+        return LC_ERROR_VERIFY;
+    }
+
+    if (dry_run) {
+        return 0;
+    }
+
+    CRemote *r = dynamic_cast<CRemote *>(rmt);
+    if (!r) {
+        return LC_ERROR_UNSUPP;
+    }
+
+    int err;
+    if (ri.fw_type != 4 && r->RestartConfig(0x09, 0x00)) {
+        return LC_ERROR;
+    }
+    if ((err = _write_verify_ram(r, 0, 0))) {
+        return err;
+    }
+    if (r->InvalidateFlash()) {
+        return LC_ERROR_INVALIDATE;
+    }
+
+    const uint32_t num_sectors =
+        (size + ARCH14_SECTOR_SIZE - 1) / ARCH14_SECTOR_SIZE;
+    for (uint32_t i = 0; i < num_sectors; i++) {
+        if (cb)
+            cb(LC_CB_STAGE_ERASE_FLASH, i, i, num_sectors,
+               LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+        if (r->EraseSector(ARCH14_FW_ADDR + i * ARCH14_SECTOR_SIZE)) {
+            return LC_ERROR_ERASE;
+        }
+    }
+    if (cb)
+        cb(LC_CB_STAGE_ERASE_FLASH, num_sectors, num_sectors, num_sectors,
+           LC_CB_COUNTER_TYPE_STEPS, cb_arg, NULL);
+
+    if (!cb_arg) {
+        cb_arg = (void *)true;
+    }
+
+    if (r->WriteFlash(ARCH14_FW_ADDR, size, img, ri.protocol, cb, cb_arg,
+                      LC_CB_STAGE_WRITE_FIRMWARE)) {
+        return LC_ERROR_WRITE;
+    }
+
+    /* ReadFlash can copy a little past len, so pad the verify buffer */
+    uint8_t *buf = new uint8_t[size + 64];
+    memcpy(buf, img, size);
+    err = r->ReadFlash(ARCH14_FW_ADDR, size, buf, ri.protocol, true, cb,
+                       cb_arg, LC_CB_STAGE_VERIFY_FIRMWARE);
+    delete[] buf;
+    if (err) {
+        return LC_ERROR_VERIFY;
+    }
+
+    return _write_verify_ram(r, 0, 2);
 }
 
 int write_safemode_to_file(uint8_t *in, uint32_t size, char *file_name)
