@@ -29,6 +29,7 @@ The individual protocols are documented in the following files:
 
   protocol.txt - pre-z-wave remote (880 and earlier) documentation
   protocol_z.txt - z-wave remote documentation
+  ir_database.txt - SsIr.bin IR database format (zwave usbnet remotes)
 
 
 TOOLS

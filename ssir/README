@@ -1,0 +1,40 @@
+ssir_dump
+=========
+
+A standalone decoder for the SsIr.bin IR database carried in the userconfig
+region of a zwave usbnet Harmony remote (1000/1100/...). It walks the tail
+index, finds each device/sequence Press signal, detects the protocol from the
+pulse timing, and prints the decoded code.
+
+The on-disk format and the pulse encoding are documented in
+../specs/ir_database.txt.
+
+BUILD
+
+    make
+    (or: cc -O2 -Wall -o ssir_dump ssir_dump.c)
+
+USAGE
+
+Dump a remote's config first (see the top-level README), unzip the EZHex's
+inner PK zip, and point the tool at userconfig/SsIr.bin:
+
+    ssir_dump SsIr.bin
+
+Output is one line per device/sequence, e.g.:
+
+    # device 0  (74 sequences)
+      dev 0 seq 0   : NEC addr=0x0707 cmd=0x99
+    # device 4  (57 sequences)
+      dev 4 seq 0   : RC6 mode=6 customer=0x800F cmd=0x24
+    # device 5  (22 sequences)
+      dev 5 seq 0   : PD 112-bit: 11 11 11 11 11 24 03 09 04 ... 89 (chk ok)
+
+RECOGNISED PROTOCOLS
+
+    NEC / extended-NEC, RC6 mode 6A (MCE / eHome), a pulse-distance AC frame
+    (with a sum-mod-256 checksum), and a fixed-mark / quantized-gap scheme seen
+    on a PVR remote. Learned (ircap) or unrecognised signals are reported with
+    their raw lead-in timing rather than guessed.
+
+This decodes the stored mark/space timings; it does not talk to a remote.

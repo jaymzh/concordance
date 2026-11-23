@@ -1,0 +1,181 @@
+
++++ TABLE OF CONTENTS
+
+   - INTRO
+   - WHERE IT LIVES
+   - FILE LAYOUT (TAIL INDEX)
+   - PER-SEQUENCE SIGNAL HEADER
+   - PULSE STREAM ENCODING
+   - MAPPING TO UserConfiguration.xml
+   - OBSERVED IR PROTOCOLS
+   - NOTES / OPEN QUESTIONS
+
+
++++ INTRO
+
+This documents the IR database (SsIr.bin) carried in a ZWave usbnet remote's
+user-config region. It was worked out on a Harmony 1100 (arch 15, firmware
+"Ethanol" / QNX) by poking at a dump of the live region 4: cross-checking the
+decoded button codes against the plaintext UserConfiguration.xml in the same
+region, and against known public codes (Samsung NEC, Microsoft MCE RC6).
+
+All multi-byte values are LITTLE-ENDIAN. "u24" means a 3-byte little-endian
+unsigned integer. Byte offsets are from the start of SsIr.bin.
+
+Everything here was verified against one device's config; field names are ours.
+SsRf.bin (the ZWave/RF side) is NOT covered here.
+
+
++++ WHERE IT LIVES
+
+Region 4 (REGION_USER_CONFIG) of the remote is a PK zip containing:
+
+    userconfig/UserConfiguration.xml   (plaintext config: devices, activities)
+    userconfig/SsIr.bin                (IR database, this document)
+    userconfig/SsRf.bin                (RF/ZWave database)
+    userconfig/image/*.png
+    platformconfig/*
+
+UserConfiguration.xml references IR ONLY by DeviceIndex + SequenceIndex; there
+are no inline IR codes in the XML. SsIr.bin is the table those indices point
+into.
+
+
++++ FILE LAYOUT (TAIL INDEX)
+
+SsIr.bin is laid out like a zip: the bulk of the file is the pulse data, and a
+small index near the END of the file is reached via a pointer at the front.
+
+Header (file start):
+    byte[0]        section count (observed: 1)
+    u24 @ off 2    offset to the tail INDEX (near EOF)
+                   (bytes 2..3 also read as a 16-bit length field in some
+                    tooling; the index pointer uses bytes 2,3,4 as a u24.)
+
+Tail index (at the offset above):
+    byte[0]              device count N
+    then N * u24         device-header offset, one per device, in DeviceIndex
+                         order (device 0, 1, ... N-1)
+
+Device header (at each device offset):
+    byte[0]             (small count/flag; observed 0)
+    u16 @ +1            entry count = (sequence count) * 2
+    then (cnt) * u24    entry offsets
+
+    The entries are Press/Hold pairs per sequence:
+        entry[2*seq + 0] = offset of the PRESS signal for sequence `seq`
+        entry[2*seq + 1] = offset of the HOLD  signal for sequence `seq`
+
+    So sequence count = entry_count / 2, and the Press offset for a given
+    SequenceIndex is entry[2 * SequenceIndex].
+
+Device sequence counts verified against the XML device list (one remote):
+    Samsung TV      74    Yamaha AVR      75    Dreambox PVR    44
+    Nintendo Wii     1    Windows MCE     57    AC (climate)    22
+    Dehumidifier    16
+
+
++++ PER-SEQUENCE SIGNAL HEADER
+
+A Press/Hold offset points at a short signal header, then delimiters, then the
+pulse stream:
+
+    byte[0]        0x01     (alternative count?)
+    u24            self-ish pointer (observed == this_offset - 7)
+    byte[4]        TYPE byte: 0x01 for the NEC/pulse-distance family,
+                             0x02 for the RC6 device in our sample.
+    u24            second pointer
+    00 00 ...      zero padding
+    FF 7F x14+     a run of >=14 0x7FFF words marks the signal/record boundary
+    <lead-in>      see below
+    <pulses>
+
+A single 0x7FFF is a delimiter inside a signal; a run of 14 or more marks a
+record boundary.
+
+
++++ PULSE STREAM ENCODING
+
+Pulses are 16-bit LITTLE-ENDIAN words. IMPORTANT: the pulse stream is
+BYTE-aligned, not word-aligned -- it frequently begins at an ODD byte offset,
+so read 16-bit words starting from wherever the lead-in is found, not from an
+even boundary.
+
+    mark   = word with bit15 set;  duration_us = word & 0x7FFF  (carrier on)
+    space  = word with bit15 clear; duration_us = word          (carrier off)
+
+The carrier frequency is NOT in the stream; it is PWM-generated per sequence
+(irgen computes it from a packed "sigtype" struct; see GetFreqPerclk in the
+irgen binary).
+
+Lead-in: the pulses are preceded by one or two equal "pre-gap" words that are
+NOT emitted as IR -- observed values 0x5097 (20631) and 0x4351 (17233). Scan
+forward for one of these (skipping the 0x7FFF delimiters), skip the pre-gap
+word(s), and the first real mark follows.
+
+A space >= ~20000us (or a 0x7FFF) terminates a frame; signals often repeat.
+
+
++++ MAPPING TO UserConfiguration.xml
+
+    <Device>  elements appear in DeviceIndex order (0,1,2,...).
+    <Command><Name>X</Name>
+        <Data><Press><DeviceIndex>d</DeviceIndex>
+                     <SequenceIndex>s</SequenceIndex></Press>
+              <Hold>...</Hold></Data>
+
+So command "X" transmits the signal at device d, Press entry for sequence s,
+i.e. SsIr device[d] entry[2*s]. Input selection uses <State Id="Input"> with
+<SetAction><Name>Hdmi3</Name>...<Command>InputHdmi3</Command></SetAction>, which
+resolves back to a command Name and thus a sequence.
+
+
++++ OBSERVED IR PROTOCOLS
+
+The device's TYPE byte and the pulse timing identify the protocol. Decoders
+read the mark/space durations above.
+
+NEC / extended-NEC (e.g. TV, AVR, humidifier):
+    AGC lead mark (~4500us or ~9000us) + ~4500us space, then 32 bits as
+    mark + space pairs; space ~560=0, ~1690=1, LSB-first. Frame = addr_lo
+    addr_hi cmd ~cmd. Extended NEC uses a 16-bit command (byte 4 is not the
+    complement of byte 3).
+
+RC6 mode 6A (Microsoft MCE / eHome; the TYPE-0x02 device):
+    t ~= 444us. Leader 6t mark + 2t space, then bi-phase (Manchester):
+    start bit (1), 3 mode bits (110 = mode 6), 1 toggle bit (double width),
+    then 32-bit payload. Payload = 16-bit customer 0x800F + command. Decode by
+    expanding each pulse into round(dur/t) half-bit samples and Manchester-
+    decoding; the toggle bit is 2t per half.
+
+Pulse-distance "AC" (climate remote):
+    Lead-in 0x5097/0x4351, AGC ~3455us mark + ~1685us space, then mark ~430us
+    with space ~420us = 0 / ~1290us = 1, LSB-first. Observed a 112-bit (14
+    byte) frame: a fixed header, two state bytes (mode/fan/temperature), zero
+    padding, and a trailing checksum = (sum of the preceding 13 bytes) & 0xFF.
+    Some keys send the frame three times.
+
+Fixed-mark / quantized-gap (a PVR remote):
+    Lead-in 0x5097/0x4351, then a CONSTANT ~210us mark throughout and a space
+    quantized in ~136us steps (so the gap length, not a 2-level bit, carries
+    data -- 16 levels => a 4-bit symbol per mark). Frame = a fixed address
+    prefix + a ~525us sub-marker + a ~13000us separator + a short data field.
+    A per-symbol complement was observed in the data field.
+
+Learned (ircap) codes may be stored in any device slot and need not match that
+device's database protocol; their timing is captured raw.
+
+
++++ NOTES / OPEN QUESTIONS
+
+  - The TYPE byte at header+4 distinguished RC6 (0x02) from everything else
+    (0x01) in our sample, but we have only one remote's data; it may encode
+    more (carrier family / alternative count).
+  - The second u24 in the signal header and the per-device byte[0] count are
+    not fully pinned down.
+  - The exact carrier/timing bitfields live in a "sigtype" struct the irgen
+    resource manager reads (GetFreqPerclk); not decoded here since the stored
+    mark/space durations are already exact.
+
+# for vim
+vim:textwidth=79:
